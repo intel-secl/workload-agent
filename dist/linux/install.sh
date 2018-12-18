@@ -152,17 +152,17 @@ directory_layout
 ## detect_tpm_version
 
 # 6. install pre-required packages
-chmod +x install_prereq.sh
-./install_prereq.sh
-ipResult=$?
+##chmod +x install_prereq.sh
+##./install_prereq.sh
+##ipResult=$?
 
-if [ "${WORKLOAD_AGENT_SETUP_PREREQS:-yes}" == "yes" ]; then
+#i#f [ "${WORKLOAD_AGENT_SETUP_PREREQS:-yes}" == "yes" ]; then
   # set WORKLOAD_AGENT_REBOOT=no (in workloadagent.env) if you want to ensure it doesn't reboot
   # set WORKLOAD_AGENT_SETUP_PREREQS=no (in workloadagent.env) if you want to skip this step 
-  chmod +x setup_prereqs.sh
-  ./setup_prereqs.sh
-  spResult=$?
-fi
+##  chmod +x setup_prereqs.sh
+##  ./setup_prereqs.sh
+##  spResult=$?
+##fi
 
 ## TODO : determine if there is a reboot required. Commenting for now
 ## refactor this check after install_prereq.sh and setup_prereq.sh are sorted out
@@ -478,7 +478,9 @@ fi
 # the input file, the placeholder (such as <AUTOFILL_AT_INSTALL>) and the
 # destination file of the hooks script file
 
-fill_with_variable_value "hook.sh" "<AUTOFILL_AT_INSTALL>" "/etc/libvirt/hooks/iseclhook.sh"
+# destination file needs to be called qemu
+
+fill_with_variable_value "hook.sh" "<AUTOFILL_AT_INSTALL>" "/etc/libvirt/hooks/quemu"
 
 ##TODO - any sort of setup tasks after setup
 ## such as creating the hook for libvrt

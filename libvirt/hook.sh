@@ -10,3 +10,4 @@
 
 # export WORKLOAD_AGENT_HOME = <AUTOFILL_AT_INSTALL>
 echo "Libvirt hook files shall call wlagent vmstart"
+wlagent vmstart 
