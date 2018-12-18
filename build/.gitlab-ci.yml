@@ -1,0 +1,29 @@
+image: davidczech/go-tpm-sim:latest
+
+before_script:
+  - git config --global http.proxy "http://proxy-us.intel.com:911"
+  - echo "[http \"https://gitlab.devtools.intel.com\"]" >> ~/.gitconfig
+  - echo "        proxy = \"\"" >> ~/.gitconfig
+  - cd $CI_PROJECT_DIR
+
+stages:
+  - build
+  - test
+
+test:
+  stage: test
+  script:
+    - start12 > /dev/null &
+    - start20 > /dev/null &
+    - start20_legacy > /dev/null &
+    - sleep 3
+    - provision12 1234 5678
+    - provision20 1234 5678
+    - provision20_legacy 1234 5678
+    - go test -cover
+  
+compile:
+  stage: build
+  script:
+    - cd wlagent
+    - go build 

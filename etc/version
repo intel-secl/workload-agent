@@ -1,0 +1,3 @@
+ARTIFACT=workload-agent-installer
+VERSION=0.1
+BUILD="Pre-alpha version 12/13/2018 - will be updated automatically"
