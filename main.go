@@ -2,10 +2,13 @@ package main
 
 import (
 	"fmt"
-	"intel/isecl/wlagent"
+	"intel/isecl/wlagent/src/setuptasks/wlasetup"
+	//"setuptasks/wlasetup"
 	"os"
 	"strings"
 )
+
+
 
 func printUsage() {
 	fmt.Printf("Work Load Agent\n")
@@ -22,6 +25,7 @@ func printUsage() {
 	fmt.Printf("\t\t%s setup SigningKey\n", os.Args[0])
 }
 
+// main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
 
 
@@ -35,7 +39,7 @@ func main() {
 	switch arg := strings.ToLower(args[0]); arg {
 	case "setup":
 		
-		for name, task := range wlagent.GetSetupTasks(args) {
+		for name, task := range wlasetup.GetSetupTasks(args) {
 			fmt.Println("Running setup task : " + name)
 			if (! task.Installed()) {
 				if err := task.Execute(); err != nil {

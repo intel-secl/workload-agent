@@ -40,6 +40,7 @@ tar -tvf $WORKSPACEDIR/$COMPONENT.zip
 rm -rf $BUILDBINDIR
 cp ../common/bash/* $WORKSPACEDIR
 cp ../dist/linux/* $WORKSPACEDIR
+cp ../libvirt/* 
 
 cp ../files/* $WORKSPACEDIR
 cp version $WORKSPACEDIR
