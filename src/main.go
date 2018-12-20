@@ -2,18 +2,16 @@ package main
 
 import (
 	"fmt"
-	"intel/isecl/wlagent/src/setuptasks/wlasetup"
-	//"setuptasks/wlasetup"
+	"intel/isecl/wlagent/osutil"
+	"intel/isecl/wlagent/wlasetup"
 	"os"
 	"strings"
 )
 
-
-
 func printUsage() {
 	fmt.Printf("Work Load Agent\n")
 	fmt.Printf("===============\n\n")
-	fmt.Printf("usage : %s <command> [<args>]\n\n" , os.Args[0])
+	fmt.Printf("usage : %s <command> [<args>]\n\n", os.Args[0])
 	fmt.Printf("Following are the list of commands\n")
 	fmt.Printf("\tsetup|vmstart|vmstop\n\n")
 	fmt.Printf("setup command is used to run setup tasks\n")
@@ -28,7 +26,6 @@ func printUsage() {
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
 
-
 	args := os.Args[1:]
 	if len(args) <= 0 {
 		fmt.Println("Command not found. Usage below")
@@ -38,19 +35,22 @@ func main() {
 
 	switch arg := strings.ToLower(args[0]); arg {
 	case "setup":
-		
+		out, _, _ := osutil.RunCommandWithTimeout("echo hello", 2)
+		fmt.Println(out)
+
 		for name, task := range wlasetup.GetSetupTasks(args) {
 			fmt.Println("Running setup task : " + name)
-			if (! task.Installed()) {
+			if !task.Installed() {
 				if err := task.Execute(); err != nil {
 					fmt.Println(err)
 				}
 
 				fmt.Println("Need to execute task :" + name)
 			} else {
-				fmt.Println (name + "already installed .. skipping.. ")
+				fmt.Println(name + "already installed .. skipping.. ")
 			}
 		}
+
 	case "vmstart":
 
 	case "vmstop":

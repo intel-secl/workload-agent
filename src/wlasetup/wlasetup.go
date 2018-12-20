@@ -22,14 +22,14 @@ type SetupTask interface {
 // GetSetupTasks returns a map with SetupTasks in the module. These are all the struct/ class
 // that implements the SetupTask interface.
 // If there is a specific task(s) being requested, only the specific task(s) are returned
-func GetSetupTasks(commandargs []string) map[string]*SetupTask {
+func GetSetupTasks(commandargs []string) map[string]SetupTask {
 
 	//tasks = ParseSetupTasks(commandargs)
 	if len(commandargs) < 1 || strings.ToLower(commandargs[0]) != "setup" {
 		panic(fmt.Errorf("method GetSetupTasks need at least one parameter with command \"setup\". Arguments : %v", commandargs))
 	}
 
-	m := make(map[string]*SetupTask)
+	m := make(map[string]SetupTask)
 
 	if len(commandargs) > 1 {
 		// Todo - we should be able to find structs using reflection in this
@@ -41,9 +41,9 @@ func GetSetupTasks(commandargs []string) map[string]*SetupTask {
 
 			switch strings.ToLower(task) {
 			case "signingkey":
-				m["SigningKey"] = NewCertifiedKey("Signing")
+				m["SigningKey"], _ = NewCertifiedKey("Signing")
 			case "bindingkey":
-				m["BindingKey"] = NewCertifiedKey("Binding")
+				m["BindingKey"], _ = NewCertifiedKey("Binding")
 			default:
 				log.Printf("Unknown Setup Task in list : %s", task)
 			}
@@ -52,8 +52,8 @@ func GetSetupTasks(commandargs []string) map[string]*SetupTask {
 	} else {
 		fmt.Println("No arguments passed in")
 		// no specific tasks passed in. We will return a list of all tasks
-		m["SigningKey"] = NewCertifiedKey("Signing")
-		m["BindingKey"] = NewCertifiedKey("Binding")
+		m["SigningKey"], _ = NewCertifiedKey("Signing")
+		m["BindingKey"], _ = NewCertifiedKey("Binding")
 
 	}
 

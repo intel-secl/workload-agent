@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"./src/wlagent/osutil"
+	"intel/isecl/wlagent/osutil"
 )
 
 // WlaConfig is to be used for storing configuration of workloadagent
@@ -35,10 +35,10 @@ func GetSigningKeyFileName() string {
 }
 
 // This function returns the AIK Secret as a byte array running the tagent export config command
-func getAikSecret() ([]byte, error) {
+func GetAikSecret() ([]byte, error) {
 	tagentConfig, stderr, err := osutil.RunCommandWithTimeout(taConfigExportCmd, 2)
 	if err != nil {
-		log.Println("Error: getAikSecret: Command Failed. Details follow")
+		log.Println("Error: GetAikSecret: Command Failed. Details follow")
 		log.Printf("Issued Command: \n%s\n", taConfigExportCmd)
 		log.Printf("StdOut:\n%s\n", tagentConfig)
 		log.Printf("StdError:\n%s\n", stderr)

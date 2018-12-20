@@ -4,20 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"intel/isecl/lib/tpm"
-	"log"
-	"os"
-	"reflect"
-	"strings"
 	"intel/isecl/wlagent/osutil"
 	"intel/isecl/wlagent/wlaconfig"
+	"log"
+	"os"
+	"strings"
 )
-
 
 const secretKeyLength int = 20
 
 // tpmCertifiedKeySetup calls the TPM helper library to export a binding or signing keypair
 func (ck *CertifiedKey) tpmCertifiedKeySetup() (tpmck *tpm.CertifiedKey, err error) {
-
 
 	if ck.keyUsage != tpm.Binding && ck.keyUsage != tpm.Signing {
 
@@ -32,8 +29,8 @@ func (ck *CertifiedKey) tpmCertifiedKeySetup() (tpmck *tpm.CertifiedKey, err err
 			return nil, err
 		}
 
-		//get the aiksecret. This will return a byte array. 
-		aiksecret, err := wlaconfig.getAikSecret()
+		//get the aiksecret. This will return a byte array.
+		aiksecret, err := wlaconfig.GetAikSecret()
 		if err != nil {
 			return nil, err
 		}
@@ -74,40 +71,39 @@ func (*CertifiedKey) writeCertifiedKeyToDisk(tpmck *tpm.CertifiedKey, filepath s
 }
 
 // CeritifiedKey is class that represents setup for a Signing or bindingkey
-type CertifiedKey struct{
+type CertifiedKey struct {
 	keyUsage tpm.Usage
 }
 
-func NewCertifiedKey(certusage string) (*CertifiedKey, error){
+func NewCertifiedKey(certusage string) (*CertifiedKey, error) {
 
-	switch strings.ToLower(strings.Trimspace(certusage)) {
+	switch strings.ToLower(strings.TrimSpace(certusage)) {
 	case "signing", "sign":
-			return &CertifiedKey {
-				keyUsage = tpm.Signing
-			}, nil
-		
+		return &CertifiedKey{
+			keyUsage: tpm.Signing,
+		}, nil
+
 	case "binding", "bind":
-		return &CertifiedKey {
-			keyUsage = tpm.Binding
+		return &CertifiedKey{
+			keyUsage: tpm.Binding,
 		}, nil
 
 	}
 	return nil, fmt.Errorf("Unknown type of Setup CertifiedKey task - must be Signing or Binding")
 }
 
-
 // Execute method of BindingKey installs a binding key. It uses the AiKSecret
 // that is obtained from the trust agent, a randomn secret and uses the TPM
 // to generate a keypair that is tied to the TPM
 func (ck *CertifiedKey) Execute() error {
 
-	certKey, err := ck.tpmCertifiedKeySetup(this.keyUsage)
+	certKey, err := ck.tpmCertifiedKeySetup()
 	if err != nil {
 		log.Printf(err.Error())
 		return err
 	}
 	var filename string
-	switch (this.KeyUsage){
+	switch ck.keyUsage {
 	case tpm.Binding:
 		filename = wlaconfig.GetBindingKeyFileName()
 	case tpm.Signing:
@@ -135,7 +131,7 @@ func (ck *CertifiedKey) Execute() error {
 func (ck *CertifiedKey) Installed() bool {
 	var filename string
 
-	switch ck.keyUsage{
+	switch ck.keyUsage {
 	case tpm.Binding:
 		filename = wlaconfig.GetBindingKeyFileName()
 	case tpm.Signing:
@@ -143,7 +139,7 @@ func (ck *CertifiedKey) Installed() bool {
 	}
 
 	filepath, _ := osutil.MakeFilePathFromEnvVariable(wlaconfig.GetConfigDir(), filename, true)
-	if fi,err := os.Stat(filepath); err == nil && fi != nil && fi.Mode().IsRegular(){
+	if fi, err := os.Stat(filepath); err == nil && fi != nil && fi.Mode().IsRegular() {
 		return true
 	}
 	return false
