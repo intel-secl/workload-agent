@@ -25,5 +25,5 @@ test:
 compile:
   stage: build
   script:
-    - cd wlagent
+    - cd src
     - go build 

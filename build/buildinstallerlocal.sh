@@ -15,9 +15,9 @@ VERSION=0.1
 COMPONENTNAME=workloadagent
 COMPONENT=$COMPONENTNAME-$VERSION
 
-CURRENTDIR = `pwd`
-WORKSPACEDIR = $CURRENTDIR/out/linux/$COMPONENTNAME-$VERSION
-BUILDBINDIR = $WORKSPACEDIR/buildbin
+CURRENTDIR=`pwd`
+WORKSPACEDIR=$CURRENTDIR/out/linux/$COMPONENTNAME-$VERSION
+BUILDBINDIR=$WORKSPACEDIR/buildbin
 # make a clean workspace 
 
 
@@ -27,7 +27,7 @@ ls -l $WORKSPACEDIR
 
 
 # move to the binary directory temporarily to build the binary
-cd ../wlagent
+cd ../src
 go build -o $BUILDBINDIR/bin/wlagent
 
 # move back to working directory
@@ -40,10 +40,9 @@ tar -tvf $WORKSPACEDIR/$COMPONENT.zip
 rm -rf $BUILDBINDIR
 cp ../common/bash/* $WORKSPACEDIR
 cp ../dist/linux/* $WORKSPACEDIR
-cp ../libvirt/* 
+cp ../libvirt/* $WORKSPACEDIR
 
-cp ../files/* $WORKSPACEDIR
-cp version $WORKSPACEDIR
+cp ../version $WORKSPACEDIR
 
 . ./makebin-auto.sh $WORKSPACEDIR
 
