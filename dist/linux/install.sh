@@ -350,7 +350,7 @@ cp version $WORKLOAD_AGENT_CONFIGURATION/workloadagent-version
 
 # 15. extract workloadagent zip  (workloadagent-zip-0.1-SNAPSHOT.zip)
 echo "Copy workload agent binary"
-WORKLOAD_AGENT_ZIPFILE=`ls -1 workloadagent-*.zip 2>/dev/null | head -n 1`
+WORKLOAD_AGENT_ZIPFILE=`ls -1 workload-agent-*.zip 2>/dev/null | head -n 1`
 echo tar -xvf $WORKLOAD_AGENT_ZIPFILE -C $WORKLOAD_AGENT_HOME
 tar -xvf $WORKLOAD_AGENT_ZIPFILE -C $WORKLOAD_AGENT_HOME
 
