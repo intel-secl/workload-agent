@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This is now deprecated. This is now part of the Makefile
+
 # this file is to automate the steps that will be performed by buildsever
 # on the local machine to make an installer
 
@@ -15,6 +17,10 @@ VERSION=0.1
 COMPONENTNAME=workloadagent
 COMPONENT=$COMPONENTNAME-$VERSION
 
+if [ "$(basename $(pwd))" == "build" ]; then
+    cd ..
+fi
+
 CURRENTDIR=`pwd`
 WORKSPACEDIR=$CURRENTDIR/out/linux/$COMPONENTNAME-$VERSION
 BUILDBINDIR=$WORKSPACEDIR/buildbin
@@ -27,7 +33,7 @@ ls -l $WORKSPACEDIR
 
 
 # move to the binary directory temporarily to build the binary
-cd ../src
+cd src
 go build -o $BUILDBINDIR/bin/wlagent
 
 # move back to working directory
@@ -38,13 +44,13 @@ tar -tvf $WORKSPACEDIR/$COMPONENT.zip
 
 #delete
 rm -rf $BUILDBINDIR
-cp ../common/bash/* $WORKSPACEDIR
-cp ../dist/linux/* $WORKSPACEDIR
-cp ../libvirt/* $WORKSPACEDIR
+cp common/bash/* $WORKSPACEDIR
+cp dist/linux/* $WORKSPACEDIR
+cp libvirt/* $WORKSPACEDIR
 
-cp ../version $WORKSPACEDIR
+cp version $WORKSPACEDIR
 
-. ./makebin-auto.sh $WORKSPACEDIR
+. build/makebin-auto.sh $WORKSPACEDIR
 
 rm -rf $WORKSPACEDIR
 
