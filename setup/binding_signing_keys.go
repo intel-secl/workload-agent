@@ -1,4 +1,4 @@
-package wlasetup
+package setup
 
 import (
 	"encoding/json"
@@ -13,11 +13,29 @@ import (
 
 const secretKeyLength int = 20
 
+type BindingKey struct{}
+
+func (bk BindingKey) Run(c csetup.Context) error {
+
+}
+
+func (bk BindingKey) Validate(c csetup.Context) error {
+
+}
+
+type SigningKey struct{}
+
+func (sk SigningKey) Run(c csetup.Context) error {
+
+}
+
+func (sk SigningKey) Validate(c csetup.Context) error {
+
+}
+
 // tpmCertifiedKeySetup calls the TPM helper library to export a binding or signing keypair
-func (ck *CertifiedKey) tpmCertifiedKeySetup() (tpmck *tpm.CertifiedKey, err error) {
-
-	if ck.keyUsage != tpm.Binding && ck.keyUsage != tpm.Signing {
-
+func createKey(usage tpm.Usage) (tpmck *tpm.CertifiedKey, err error) {
+	if usage != tpm.Binding && usage != tpm.Signing {
 		return nil, fmt.Errorf("Function tpmCertifiedKeySetup - incorrect KeyUsage parameter - needs to be signing or binding")
 	}
 	t, err := tpm.Open()
@@ -28,14 +46,13 @@ func (ck *CertifiedKey) tpmCertifiedKeySetup() (tpmck *tpm.CertifiedKey, err err
 		if err != nil {
 			return nil, err
 		}
-
 		//get the aiksecret. This will return a byte array.
 		aiksecret, err := wlaconfig.GetAikSecret()
 		if err != nil {
 			return nil, err
 		}
 		log.Println(aiksecret)
-		tpmck, err = t.CreateCertifiedKey(ck.keyUsage, secretbytes, aiksecret)
+		tpmck, err = t.CreateCertifiedKey(usage, secretbytes, aiksecret)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +112,7 @@ func NewCertifiedKey(certusage string) (*CertifiedKey, error) {
 // Execute method of BindingKey installs a binding key. It uses the AiKSecret
 // that is obtained from the trust agent, a randomn secret and uses the TPM
 // to generate a keypair that is tied to the TPM
-func (ck *CertifiedKey) Execute() error {
+func (ck *CertifiedKey) Run() error {
 
 	certKey, err := ck.tpmCertifiedKeySetup()
 	if err != nil {
@@ -128,7 +145,7 @@ func (ck *CertifiedKey) Execute() error {
 // Installed method of the CertifiedKey checks if there is a key already installed.
 // For now, this only checks for the existence of the file and does not check if
 // contents of the file are indeed correct
-func (ck *CertifiedKey) Installed() bool {
+func (ck *CertifiedKey) Validate() bool {
 	var filename string
 
 	switch ck.keyUsage {

@@ -2,9 +2,12 @@
 # Makefile is written to be generic and be adapted to different components
 # should only have the modify the top section. 
 COMPONENT ?=workload-agent
-VERSION ?=0.1
+GITTAG := $(shell git describe --tags --abbrev=0 2> /dev/null)
+GITCOMMIT := $(shell git describe --always)
+GITCOMMITDATE := $(shell git log -1 --date=short --pretty=format:%cd)
+VERSION := $(or ${GITTAG}, v0.0.0)
 BUILDTYPE ?=dev
-BUILDID ?= $(shell date +"%F %R")
+BUILDID ?= $(GITCOMMIT)
 BIN_DIR_NAME ?=bin
 BUILDOUT_OS_NAME ?=linux
 BINARY_NAME ?=wlagent
@@ -70,7 +73,6 @@ ${BUILDDIR}:
 DEST_COPIED_FILES = $(patsubst dist/linux/%,$(BUILDDIR)/%,$(wildcard dist/linux/*))
 DEST_COPIED_FILES += $(patsubst libvirt/%,$(BUILDDIR)/%,$(wildcard libvirt/*))
 DEST_COPIED_FILES += $(patsubst common/bash/%,$(BUILDDIR)/%,$(wildcard common/bash/*))
-DEST_COPIED_FILES += $(BUILDDIR)/version
 
 # rules to copy files to destination from different directories. Not sure of there is a way
 # to make this into a single rule. 

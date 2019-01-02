@@ -2,8 +2,7 @@ package main
 
 import (
 	"fmt"
-	"intel/isecl/wlagent/osutil"
-	"intel/isecl/wlagent/wlasetup"
+	csetup "intel/isecl/lib/common"
 	"os"
 	"strings"
 	"time"
@@ -59,9 +58,12 @@ func main() {
 		printVersion()
 
 	case "setup":
-		out, _, _ := osutil.RunCommandWithTimeout("echo hello", 2)
-		fmt.Println(out)
-
+		setupRunner := &csetup.Runner{
+			Tasks: csetup.Task[] {
+				
+			},
+			AskInput: false,
+		}
 		for name, task := range wlasetup.GetSetupTasks(args) {
 			fmt.Println("Running setup task : " + name)
 			if !task.Installed() {
