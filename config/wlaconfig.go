@@ -10,10 +10,14 @@ import (
 
 // WlaConfig is to be used for storing configuration of workloadagent
 type WlaConfig struct {
-	WlsUserName string
-	WlsUserPass string
-	WlsShaSize  int
-	WlsTlsSha   string
+	MtwilsonAPIURL      string
+	MtwilsonAPIUsername string
+	MtwilsonAPIPassword string
+	MtwilsonTLSSHA256   string
+	WlsUserName         string
+	WlsUserPass         string
+	WlsShaSize          int
+	WlsTlsSha           string
 }
 
 const workloadAgentConfigDir string = "WORKLOAD_AGENT_CONFIGURATION"
@@ -21,6 +25,7 @@ const taConfigExportCmd string = "tagent export-config --stdout"
 const aikSecretKeyName string = "aik.secret"
 const bindingKeyFileName string = "bindingkey.json"
 const signingKeyFileName string = "signingkey.json"
+const configFilePath = "/opt/wpm/configuration/wpm.properties"
 
 func GetConfigDir() string {
 	return workloadAgentConfigDir
