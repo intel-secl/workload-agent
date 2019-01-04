@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	csetup "intel/isecl/lib/common"
+	csetup "intel/isecl/lib/common/setup"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -45,7 +46,6 @@ func printUsage() {
 
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
-
 	args := os.Args[1:]
 	if len(args) <= 0 {
 		fmt.Println("Command not found. Usage below")
@@ -59,22 +59,12 @@ func main() {
 
 	case "setup":
 		setupRunner := &csetup.Runner{
-			Tasks: csetup.Task[] {
-				
-			},
+			Tasks:    []csetup.Task{},
 			AskInput: false,
 		}
-		for name, task := range wlasetup.GetSetupTasks(args) {
-			fmt.Println("Running setup task : " + name)
-			if !task.Installed() {
-				if err := task.Execute(); err != nil {
-					fmt.Println(err)
-				}
-
-				fmt.Println("Need to execute task :" + name)
-			} else {
-				fmt.Println(name + "already installed .. skipping.. ")
-			}
+		err := setupRunner.RunTasks(args[1:]...)
+		if err != nil {
+			log.Fatal(err)
 		}
 
 	case "vmstart":
@@ -87,7 +77,5 @@ func main() {
 
 	case "help", "-help", "--help":
 		printUsage()
-
 	}
-
 }

@@ -1,4 +1,4 @@
-package wlaconfig
+package config
 
 import (
 	"encoding/hex"

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/osutil"
-	"intel/isecl/wlagent/wlaconfig"
+	"intel/isecl/wlagent/config"
 	"log"
 	"os"
 	"strings"
