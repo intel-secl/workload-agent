@@ -3,8 +3,9 @@ package main
 import (
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
-	"log"
+	"intel/isecl/wlagent/setup"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -58,18 +59,27 @@ func main() {
 		printVersion()
 
 	case "setup":
-		setupRunner := &csetup.Runner{
-			Tasks:    []csetup.Task{},
-			AskInput: false,
-		}
-		err := setupRunner.RunTasks(args[1:]...)
-		if err != nil {
-			log.Fatal(err)
+		if nosetup, err := strconv.ParseBool(os.Getenv("WA_NOSETUP")); err != nil && nosetup == false {
+			setupRunner := &csetup.Runner{
+				Tasks: []csetup.Task{
+					setup.SigningKey{},
+					setup.BindingKey{},
+				},
+				AskInput: false,
+			}
+			err := setupRunner.RunTasks(args[1:]...)
+			if err != nil {
+				fmt.Println("Error running setup: ", err)
+				os.Exit(1)
+			}
+		} else {
+			fmt.Println("WA_NOSETUP is set, skipping setup")
+			os.Exit(1)
 		}
 
-	case "vmstart":
+	case "start":
 
-	case "vmstop":
+	case "stop":
 
 	default:
 		fmt.Printf("Unrecognized option : %s\n", arg)
