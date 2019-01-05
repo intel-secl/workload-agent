@@ -6,13 +6,17 @@ package setup
 
 import (
 	"bytes"
+	"crypto/tls"
 	b "encoding/base64"
-	csetup "intel/isecl/lib/common/setup""encoding/json"
+	"encoding/json"
 	"fmt"
+	csetup "intel/isecl/lib/common/setup"
+	conf "intel/isecl/wlagent/config"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 type RegisterBindingKey struct {
@@ -29,8 +33,9 @@ type BindingKey struct {
 type BindingKeyCert struct {
 	BindingKeyCertificate string `json:"binding_key_der_certificate"`
 }
-func (rk RegisterBindingKey) Run(c csetup.Context) error{
-  var url string
+
+func (rb RegisterBindingKey) Run(c csetup.Context) error {
+	var url string
 	var requestBody []byte
 	var bindingkey BindingKey
 	var tpmVersion string
@@ -39,7 +44,8 @@ func (rk RegisterBindingKey) Run(c csetup.Context) error{
 
 	url = "https://10.105.168.177:8443/mtwilson/v2/rpc/certify-host-binding-key"
 
-	fileName := "bindingkey.json"
+	fileName := conf.GetBindingKeyFileName()
+	fmt.Println(fileName)
 	_, err := os.Stat(fileName)
 	if os.IsNotExist(err) {
 		log.Fatal("bindingkey file does not exist")
@@ -116,4 +122,36 @@ func detectOS() string {
 	} else {
 		return "Linux"
 	}
+}
+func sendRequest(req *http.Request) ([]byte, error) {
+	tlsConfig := tls.Config{
+		InsecureSkipVerify: true,
+	}
+	transport := http.Transport{
+		TLSClientConfig: &tlsConfig,
+	}
+	client := &http.Client{
+		Transport: &transport,
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		log.Println("Error in sending request.", err)
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	//create byte array of HTTP response body
+	body, err := ioutil.ReadAll(response.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	log.Println("status code returned : ", strconv.Itoa(response.StatusCode))
+	return body, nil
+}
+
+// Validate checks whether or not the Register Binding Key task was completed successfully
+func (rb RegisterBindingKey) Validate(c csetup.Context) error {
+	return nil
 }
