@@ -64,6 +64,8 @@ func main() {
 				Tasks: []csetup.Task{
 					setup.SigningKey{},
 					setup.BindingKey{},
+					setup.RegisterBindingKey{},
+					setup.RegisterSigningKey{},
 				},
 				AskInput: false,
 			}

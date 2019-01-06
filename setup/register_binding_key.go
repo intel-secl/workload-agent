@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
-	conf "intel/isecl/wlagent/config"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -24,7 +23,7 @@ const aikfileName = "/opt/trustagent/configuration/aik.pem"
 type RegisterBindingKey struct {
 }
 
-type BindingKey struct {
+type BindingKeyS struct {
 	Version        int    `json:"Version"`
 	KeyAttestation string `json:"KeyAttestation"`
 	PublicKey      string `json:"PublicKey"`
@@ -39,14 +38,14 @@ type BindingKeyCert struct {
 func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	var url string
 	var requestBody []byte
-	var bindingkey BindingKey
+	var bindingkey BindingKeyS
 	var tpmVersion string
 	var originalNameDigest []byte
 	var bindingKeyCert BindingKeyCert
 
 	url = "https://10.105.168.177:8443/mtwilson/v2/rpc/certify-host-binding-key"
 
-	fileName := conf.GetBindingKeyFileName()
+	fileName := "/opt/workloadagent/bindingkey.json" //conf.GetBindingKeyFileName()
 	fmt.Println(fileName)
 	_, err := os.Stat(fileName)
 	if os.IsNotExist(err) {
@@ -76,7 +75,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 
 	nameDigest := b.StdEncoding.EncodeToString(originalNameDigest)
 
-	operatingSystem := detectOS()
+	operatingSystem := getOSType()
 
 	if bindingkey.Version == 2 {
 		tpmVersion = "2.0"
@@ -99,7 +98,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 
 	//*******Remove hardcoded values
 	httpRequest.SetBasicAuth("admin", "password")
-	httpResponse, err := sendRequest(httpRequest)
+	httpResponse, err := sendRequest1(httpRequest)
 	if err != nil {
 		log.Fatal("Error in binding key registration.", err)
 	}
@@ -117,15 +116,16 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	if err != nil {
 		log.Fatal("Error in writing to file.", err)
 	}
+	return nil
 }
-func detectOS() string {
+func getOSType() string {
 	if os.PathSeparator == '\\' && os.PathListSeparator == ';' {
 		return "Windows"
 	} else {
 		return "Linux"
 	}
 }
-func sendRequest(req *http.Request) ([]byte, error) {
+func sendRequest1(req *http.Request) ([]byte, error) {
 	tlsConfig := tls.Config{
 		InsecureSkipVerify: true,
 	}

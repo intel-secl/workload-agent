@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
-	conf "intel/isecl/wlagent/config"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,7 +18,7 @@ import (
 type RegisterSigningKey struct {
 }
 
-type SigningKey struct {
+type SigningKeyS struct {
 	Version        int    `json:"Version"`
 	KeyAttestation string `json:"KeyAttestation"`
 	PublicKey      string `json:"PublicKey"`
@@ -34,14 +33,14 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 
 	var url string
 	var requestBody []byte
-	var signingkey SigningKey
+	var signingkey SigningKeyS
 	var tpmVersion string
 	var originalNameDigest []byte
 	var signingKeyCert SigningKeyCert
 
 	url = "https://10.105.168.177:8443/mtwilson/v2/rpc/certify-host-signing-key"
 
-	fileName := conf.GetSigningKeyFileName()
+	fileName := "/opt/workloadagent/signingkey.json" //conf.GetSigningKeyFileName()
 	_, err := os.Stat(fileName)
 	if os.IsNotExist(err) {
 		log.Fatal("signingkey file does not exist")
@@ -121,14 +120,13 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	if err != nil {
 		log.Fatal("Error in writing to file.", err)
 	}
-
+	return nil
 }
 func detectOS() string {
 	if os.PathSeparator == '\\' && os.PathListSeparator == ';' {
 		return "Windows"
 	}
 	return "Linux"
-
 }
 func sendRequest(req *http.Request) ([]byte, error) {
 	tlsConfig := tls.Config{
