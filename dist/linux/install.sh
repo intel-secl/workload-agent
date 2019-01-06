@@ -14,7 +14,7 @@ DEFAULT_WORKLOAD_AGENT_USERNAME=wlagent
 
 # check if we are running in a docker container or running as root. Product installation is only
 # allowed if we are running as root
-if [[ $EUID -ne 0]];  then
+if [ $EUID -ne 0 ];  then
   echo "Workload agent installation has to run as root. Exiting"
   exit 1
 fi
