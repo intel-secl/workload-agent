@@ -19,6 +19,8 @@ import (
 	"strconv"
 )
 
+const aikfileName = "/opt/trustagent/configuration/aik.pem"
+
 type RegisterBindingKey struct {
 }
 
