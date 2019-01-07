@@ -2,14 +2,15 @@ package config
 
 import (
 	"encoding/hex"
-	"fmt"
+	"io/ioutil"
 	"log"
+	"strings"
 
 	"intel/isecl/wlagent/osutil"
 )
 
 // WlaConfig is to be used for storing configuration of workloadagent
-type WlaConfig struct {
+var WlaConfig struct {
 	MtwilsonAPIURL      string
 	MtwilsonAPIUsername string
 	MtwilsonAPIPassword string
@@ -25,7 +26,7 @@ const taConfigExportCmd string = "tagent export-config --stdout"
 const aikSecretKeyName string = "aik.secret"
 const bindingKeyFileName string = "bindingkey.json"
 const signingKeyFileName string = "signingkey.json"
-const configFilePath = "/opt/wpm/configuration/wpm.properties"
+const configFilePath string = "/opt/workloadagent/configuration/wla.properties"
 
 func GetConfigDir() string {
 	return workloadAgentConfigDir
@@ -65,7 +66,24 @@ func GetAikSecret() ([]byte, error) {
 // to use a plain file. Need to sort out requirements around encrypting
 // this file. This process runs under the context of the launching user
 // So will probably need to set ownership of this file appropriately
-func LoadConfig() error {
-
-	return fmt.Errorf("LoadConfig Method - not yet implemented")
+func LoadConfig() {
+	fileContents, err := ioutil.ReadFile(configFilePath)
+	if err != nil {
+		log.Fatal("Error reading the config file")
+	}
+	configArray := strings.Split(string(fileContents), "\n")
+	for i := 0; i < len(configArray)-1; i++ {
+		tempConfig := strings.Split(configArray[i], "=")
+		key := tempConfig[0]
+		value := strings.Replace(tempConfig[1], "\"", "", -1)
+		if strings.Contains(strings.ToLower(key), "url") {
+			WlaConfig.MtwilsonAPIURL = value
+		} else if strings.Contains(strings.ToLower(key), "username") {
+			WlaConfig.MtwilsonAPIUsername = value
+		} else if strings.Contains(strings.ToLower(key), "password") {
+			WlaConfig.MtwilsonAPIPassword = value
+		} else if strings.Contains(strings.ToLower(key), "tls") {
+			WlaConfig.MtwilsonTLSSHA256 = value
+		}
+	}
 }

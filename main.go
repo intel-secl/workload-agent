@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
+	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/setup"
 	"os"
 	"strconv"
@@ -47,6 +48,7 @@ func printUsage() {
 
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
+	config.LoadConfig()
 	args := os.Args[1:]
 	if len(args) <= 0 {
 		fmt.Println("Command not found. Usage below")
