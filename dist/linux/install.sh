@@ -6,14 +6,58 @@
 
 # WARNING:
 # *** do NOT use TABS for indentation, use SPACES
-# *** TABS will cause errors in some linux distributions
+# *** TABS will cause errors in some linux distributions# TERM_DISPLAY_MODE can be "plain" or "color"
+TERM_DISPLAY_MODE=color
+TERM_COLOR_GREEN="\\033[1;32m"
+TERM_COLOR_CYAN="\\033[1;36m"
+TERM_COLOR_RED="\\033[1;31m"
+TERM_COLOR_YELLOW="\\033[1;33m"
+TERM_COLOR_NORMAL="\\033[0;39m"
 
-# application defaults (these are not configurable and used only in this script so no need to export)
-DEFAULT_WORKLOAD_AGENT_HOME=/opt/workload-agent
-DEFAULT_WORKLOAD_AGENT_USERNAME=wlagent
+# Environment:
+# - TERM_DISPLAY_MODE
+# - TERM_DISPLAY_GREEN
+# - TERM_DISPLAY_NORMAL
+echo_success() {
+  if [ "$TERM_DISPLAY_MODE" = "color" ]; then echo -en "${TERM_COLOR_GREEN}"; fi
+  echo ${@:-"[  OK  ]"}
+  if [ "$TERM_DISPLAY_MODE" = "color" ]; then echo -en "${TERM_COLOR_NORMAL}"; fi
+  return 0
+}
 
-# check if we are running in a docker container or running as root. Product installation is only
-# allowed if we are running as root
+# Environment:
+# - TERM_DISPLAY_MODE
+# - TERM_DISPLAY_RED
+# - TERM_DISPLAY_NORMAL
+echo_failure() {
+  if [ "$TERM_DISPLAY_MODE" = "color" ]; then echo -en "${TERM_COLOR_RED}"; fi
+  echo ${@:-"[FAILED]"}
+  if [ "$TERM_DISPLAY_MODE" = "color" ]; then echo -en "${TERM_COLOR_NORMAL}"; fi
+  return 1
+}
+
+# Environment:
+# - TERM_DISPLAY_MODE
+# - TERM_DISPLAY_YELLOW
+# - TERM_DISPLAY_NORMAL
+echo_warning() {
+  if [ "$TERM_DISPLAY_MODE" = "color" ]; then echo -en "${TERM_COLOR_YELLOW}"; fi
+  echo ${@:-"[WARNING]"}
+  if [ "$TERM_DISPLAY_MODE" = "color" ]; then echo -en "${TERM_COLOR_NORMAL}"; fi
+  return 1
+}
+
+
+echo_info() {
+  if [ "$TERM_DISPLAY_MODE" = "color" ]; then echo -en "${TERM_COLOR_CYAN}"; fi
+  echo ${@:-"[INFO]"}
+  if [ "$TERM_DISPLAY_MODE" = "color" ]; then echo -en "${TERM_COLOR_NORMAL}"; fi
+  return 1
+}
+
+############################################################################################################
+
+# Product installation is only allowed if we are running as root
 if [ $EUID -ne 0 ];  then
   echo "Workload agent installation has to run as root. Exiting"
   exit 1
@@ -36,8 +80,47 @@ if [ -n "$WORKLOAD_AGENT_NOSETUP" ]; then
   exit 0;
 fi
 
-# 33. wlagent setup
+# LOCAL CONFIGURATION
+directory_layout() {
+if [ "$WORKLOAD_AGENT_LAYOUT" == "linux" ]; then
+  export WORKLOAD_AGENT_CONFIGURATION=${WORKLOAD_AGENT_CONFIGURATION:-/etc/workloadagent}
+  export WORKLOAD_AGENT_REPOSITORY=${WORKLOAD_AGENT_REPOSITORY:-/var/opt/workloadagent}
+  export WORKLOAD_AGENT_LOGS=${WORKLOAD_AGENT_LOGS:-/var/log/workloadagent}
+elif [ "$WORKLOAD_AGENT_LAYOUT" == "home" ]; then
+  export WORKLOAD_AGENT_CONFIGURATION=${WORKLOAD_AGENT_CONFIGURATION:-$WORKLOAD_AGENT_HOME/configuration}
+  export WORKLOAD_AGENT_REPOSITORY=${WORKLOAD_AGENT_REPOSITORY:-$WORKLOAD_AGENT_HOME/repository}
+  export WORKLOAD_AGENT_LOGS=${WORKLOAD_AGENT_LOGS:-$WORKLOAD_AGENT_HOME/logs}
+fi
+export WORKLOAD_AGENT_VAR=${WORKLOAD_AGENT_VAR:-$WORKLOAD_AGENT_HOME/var}
+export WORKLOAD_AGENT_BIN=${WORKLOAD_AGENT_BIN:-$WORKLOAD_AGENT_HOME/bin}
+export WORKLOAD_AGENT_BACKUP=${WORKLOAD_AGENT_BACKUP:-$WORKLOAD_AGENT_REPOSITORY/backup}
+export INSTALL_LOG_FILE=$WORKLOAD_AGENT_LOGS/install.log
+}
+
+# 3. define application directory layout
+directory_layout
+
+# 4. create application directories (chown will be repeated near end of this script, after setup)
+for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_ENV $WORKLOAD_AGENT_REPOSITORY $WORKLOAD_AGENT_VAR $WORKLOAD_AGENT_LOGS; do
+  # mkdir -p will return 0 if directory exists or is a symlink to an existing directory or directory and parents can be created
+  mkdir -p $directory
+  if [ $? -ne 0 ]; then
+    echo_failure "Cannot create directory: $directory"
+    exit 1
+  fi
+  #chown -R $WORKLOAD_AGENT_USERNAME:$WORKLOAD_AGENT_USERNAME $directory
+  chmod 700 $directory
+done
+
+# 5. wlagent setup
 wlagent setup 
+
+# yum_packages="libvirt"
+
+# if [[ -n "$yum_packages" ]]; then
+#   sudo yum -y install $yum_packages
+
+sudo yum -y install libvirt
 
 echo_warning "TODO : Need to install hooks to libvrt - writing configuration directory "
 if [ ! -d "/etc/libvirt" ]; then
@@ -59,5 +142,5 @@ fi
 # destination file of the hooks script file
 
 # destination file needs to be called qemu
-
-fill_with_variable_value "hook.sh" "<AUTOFILL_AT_INSTALL>" "/etc/libvirt/hooks/quemu"
+cp qemu /etc/libvirt/hooks
+#fill_with_variable_value "hook.sh" "<AUTOFILL_AT_INSTALL>" "/etc/libvirt/hooks/qemu"

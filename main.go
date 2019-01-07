@@ -61,7 +61,7 @@ func main() {
 		printVersion()
 
 	case "setup":
-		if nosetup, err := strconv.ParseBool(os.Getenv("WA_NOSETUP")); err != nil && nosetup == false {
+		if nosetup, err := strconv.ParseBool(os.Getenv("WORKLOADAGENT_NOSETUP")); err != nil && nosetup == false {
 			setupRunner := &csetup.Runner{
 				Tasks: []csetup.Task{
 					setup.SigningKey{},
@@ -77,7 +77,7 @@ func main() {
 				os.Exit(1)
 			}
 		} else {
-			fmt.Println("WA_NOSETUP is set, skipping setup")
+			fmt.Println("WORKLOADAGENT_NOSETUP is set, skipping setup")
 			os.Exit(1)
 		}
 

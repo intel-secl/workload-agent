@@ -9,5 +9,5 @@
 # will be replaced with the right value from the variable value. 
 
 # export WORKLOAD_AGENT_HOME = <AUTOFILL_AT_INSTALL>
-echo "Libvirt hook files shall call wlagent vmstart"
-wlagent vmstart 
+echo "Libvirt hook files shall call wlagent start"
+wlagent start 

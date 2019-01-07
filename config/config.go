@@ -26,7 +26,7 @@ const taConfigExportCmd string = "tagent export-config --stdout"
 const aikSecretKeyName string = "aik.secret"
 const bindingKeyFileName string = "bindingkey.json"
 const signingKeyFileName string = "signingkey.json"
-const configFilePath string = "/opt/workloadagent/configuration/wla.properties"
+const configFilePath = "/opt/workloadagent/configuration/workloadagent.properties"
 
 func GetConfigDir() string {
 	return workloadAgentConfigDir
