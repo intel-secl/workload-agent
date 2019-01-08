@@ -101,28 +101,32 @@ directory_layout() {
 if [ "$WORKLOAD_AGENT_LAYOUT" == "linux" ]; then
   export WORKLOAD_AGENT_CONFIGURATION=${WORKLOAD_AGENT_CONFIGURATION:-/etc/workloadagent}
   export TRUST_AGENT_CONFIGURATION=${TRUST_AGENT_CONFIGURATION:-/etc/trustagent}
-  export WORKLOAD_AGENT_REPOSITORY=${WORKLOAD_AGENT_REPOSITORY:-/var/opt/workloadagent}
   export WORKLOAD_AGENT_LOGS=${WORKLOAD_AGENT_LOGS:-/var/log/workloadagent}
 elif [ "$WORKLOAD_AGENT_LAYOUT" == "home" ]; then
   export WORKLOAD_AGENT_CONFIGURATION=${WORKLOAD_AGENT_CONFIGURATION:-$WORKLOAD_AGENT_HOME/configuration}
   export TRUST_AGENT_CONFIGURATION=${TRUST_AGENT_CONFIGURATION:-/opt/trusagent/configuration}
-  export WORKLOAD_AGENT_REPOSITORY=${WORKLOAD_AGENT_REPOSITORY:-$WORKLOAD_AGENT_HOME/repository}
   export WORKLOAD_AGENT_LOGS=${WORKLOAD_AGENT_LOGS:-$WORKLOAD_AGENT_HOME/logs}
 fi
 export WORKLOAD_AGENT_VAR=${WORKLOAD_AGENT_VAR:-$WORKLOAD_AGENT_HOME/var}
 export WORKLOAD_AGENT_BIN=${WORKLOAD_AGENT_BIN:-$WORKLOAD_AGENT_HOME/bin}
-export WORKLOAD_AGENT_BACKUP=${WORKLOAD_AGENT_BACKUP:-$WORKLOAD_AGENT_REPOSITORY/backup}
 export INSTALL_LOG_FILE=$WORKLOAD_AGENT_LOGS/install.log
 }
 
 directory_layout
 
+mkdir -p $(dirname $INSTALL_LOG_FILE)
+if [ $? -ne 0 ]; then
+  echo_failure "Cannot write to log directory: $(dirname $INSTALL_LOG_FILE)"
+  exit 1
+fi
+logfile=$INSTALL_LOG_FILE
+
 # 5. Create application directories (chown will be repeated near end of this script, after setup)
-for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_ENV $WORKLOAD_AGENT_REPOSITORY $WORKLOAD_AGENT_VAR $WORKLOAD_AGENT_LOGS; do
+for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_ENV $WORKLOAD_AGENT_BIN $WORKLOAD_AGENT_VAR $WORKLOAD_AGENT_LOGS; do
   # mkdir -p will return 0 if directory exists or is a symlink to an existing directory or directory and parents can be created
-  mkdir -p $directory
+  mkdir -p $directory 
   if [ $? -ne 0 ]; then
-    echo_failure "Cannot create directory: $directory"
+    echo_failure "Cannot create directory: $directory" 2>>$logfile
     exit 1
   fi
   #chown -R $WORKLOAD_AGENT_USERNAME:$WORKLOAD_AGENT_USERNAME $directory
@@ -131,21 +135,20 @@ done
 
 # 6. Copy workload agent installer to workloadagent bin directory and create a symlink
 cp wlagent $WORKLOAD_AGENT_BIN
-ln -s $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin
+ln -s $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/
 
 # 7. Call workloadagent setup
-wlagent setup 
+wlagent setup | tee $logfile
 
 # 8. Install and setup libvirt
-yum -y install libvirt
+yum -y install libvirt 2>>$logfile
 
-echo_warning "TODO : Need to install hooks to libvrt - writing configuration directory "
 if [ ! -d "/etc/libvirt" ]; then
   echo_warning "libvirt directory not present. Exiting"
   exit 0
 fi
 
-mkdir "/etc/libvirt/hooks"
+mkdir "/etc/libvirt/hooks" 
 
 if [ ! -d "/etc/libvirt/hooks" ];  then
   echo_warning "Not able to create hooks directory. Exiting"
@@ -153,4 +156,4 @@ if [ ! -d "/etc/libvirt/hooks" ];  then
 fi
 
 # 9. Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
-cp qemu /etc/libvirt/hooks
+cp qemu /etc/libvirt/hooks 

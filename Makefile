@@ -11,7 +11,7 @@ installer: wlagent
 	cp dist/linux/install.sh out/wla/install.sh && chmod +x out/wla/install.sh
 	cp libvirt/hook.sh out/wla/qemu
 	cp out/wlagent out/wla/wlagent
-	makeself out/wla out/wla-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 
+	makeself out/wla out/workload-agent-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 
 
 all: installer
 

@@ -124,7 +124,6 @@ func ParseSetupTasks(commandargs ...[]string) []string {
 	if len(commandargs) > 1 {
 		log.Println("Expecting a slice of string as argument.")
 	}
-	fmt.Println(commandargs)
 	return commandargs[0]
 }
 

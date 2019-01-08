@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
@@ -12,6 +13,10 @@ type SigningKey struct {
 }
 
 func (sk SigningKey) Run(c csetup.Context) error {
+	if sk.Validate(c) == nil {
+		fmt.Println("Signing key already created, skipping ...")
+		return nil
+	}
 	log.Println("Creating of signing key.")
 	usage, err := common.NewCertifiedKey("SIGN")
 	if err != nil {

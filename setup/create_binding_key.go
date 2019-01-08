@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
@@ -12,6 +13,10 @@ type BindingKey struct {
 }
 
 func (bk BindingKey) Run(c csetup.Context) error {
+	if bk.Validate(c) == nil {
+		fmt.Println("Binding key already created, skipping ...")
+		return nil
+	}
 	log.Println("Creating of binding key.")
 	usage, err := common.NewCertifiedKey("BIND")
 	if err != nil {
