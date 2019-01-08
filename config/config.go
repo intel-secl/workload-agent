@@ -14,11 +14,11 @@ var WlaConfig struct {
 	MtwilsonAPIURL      string
 	MtwilsonAPIUsername string
 	MtwilsonAPIPassword string
-	MtwilsonTLSSHA256   string
-	WlsUserName         string
-	WlsUserPass         string
-	WlsShaSize          int
-	WlsTlsSha           string
+	//MtwilsonTLSSHA256   string
+	WlsUserName string
+	WlsUserPass string
+	WlsShaSize  int
+	WlsTlsSha   string
 }
 
 const workloadAgentConfigDir string = "WORKLOAD_AGENT_CONFIGURATION"
@@ -26,7 +26,7 @@ const taConfigExportCmd string = "tagent export-config --stdout"
 const aikSecretKeyName string = "aik.secret"
 const bindingKeyFileName string = "bindingkey.json"
 const signingKeyFileName string = "signingkey.json"
-const configFilePath = "/opt/workloadagent/configuration/workloadagent.properties"
+const configFilePath = "/root/workloadagent.env"
 
 func GetConfigDir() string {
 	return workloadAgentConfigDir
@@ -82,8 +82,6 @@ func LoadConfig() {
 			WlaConfig.MtwilsonAPIUsername = value
 		} else if strings.Contains(strings.ToLower(key), "password") {
 			WlaConfig.MtwilsonAPIPassword = value
-		} else if strings.Contains(strings.ToLower(key), "tls") {
-			WlaConfig.MtwilsonTLSSHA256 = value
 		}
 	}
 }

@@ -5,10 +5,13 @@ import (
 	b "encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	common "intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/osutil"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -16,7 +19,6 @@ import (
 	"strings"
 )
 
-const aikCertFile string = "aik.pem"
 const signingKeyCertPath string = "/opt/workloadagent/configuration/signingkeycert.pem"
 const beginCertTag string = "-----BEGIN CERTIFICATE-----"
 const endCertTag string = "-----END CERTIFICATE-----"
@@ -46,13 +48,17 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	var operatingSystem string
 
 	url = config.WlaConfig.MtwilsonAPIURL + "/rpc/certify-host-signing-key"
-	fileName := "/opt/workloadagent/signingkey.json"
-	//config.GetSigningKeyFileName()
-	_, err := os.Stat(fileName)
+	fileName := config.GetSigningKeyFileName()
+	signingkeyFilePath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), fileName, true)
+	if err != nil {
+		log.Printf(err.Error())
+		return err
+	}
+	_, err = os.Stat(signingkeyFilePath)
 	if os.IsNotExist(err) {
 		return errors.New("signingkey file does not exist")
 	}
-	jsonFile, err := os.Open(fileName)
+	jsonFile, err := os.Open(signingkeyFilePath)
 	if err != nil {
 		return errors.New("error opening signingkey file")
 	}
@@ -65,6 +71,12 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	tpmCertifyKeyBytes, _ := b.StdEncoding.DecodeString(strings.TrimSpace(signingkey.KeyAttestation))
 	tpmCertifyKey := b.StdEncoding.EncodeToString(tpmCertifyKeyBytes[2:])
 
+	aikCertFileName, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), "aik.pem", true)
+	if err != nil {
+		log.Printf(err.Error())
+		return err
+	}
+
 	originalNameDigest, _ = b.StdEncoding.DecodeString(strings.TrimSpace(signingkey.KeyName))
 	originalNameDigest = originalNameDigest[1:]
 	for i := 0; i < 34; i++ {
@@ -72,7 +84,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	}
 
 	nameDigest := b.StdEncoding.EncodeToString(originalNameDigest)
-	aik := getAikCert()
+	aik := getAikCert(aikCertFileName)
 	if runtime.GOOS == "Linux" { // also can be specified to FreeBSD
 		operatingSystem = "Linux"
 	} else {
@@ -113,10 +125,10 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	}
 	return nil
 }
-func getAikCertFile() string {
-	aikfile, err := os.Open(aikCertFile)
+func getAikCertFile(aikCertFileName string) string {
+	aikfile, err := os.Open(aikCertFileName)
 	if err != nil {
-
+		fmt.Println(err)
 	}
 	aikCert, _ := ioutil.ReadAll(aikfile)
 	aik := string(aikCert)

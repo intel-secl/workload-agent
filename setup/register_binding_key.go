@@ -9,10 +9,13 @@ import (
 	b "encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	common "intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/osutil"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -20,7 +23,7 @@ import (
 	"strings"
 )
 
-const aikCertName = "aik.pem"
+//const aikCertName = "aik.pem"
 const bindingKeyCertPath string = "/opt/workloadagent/configuration/bindingkey.pem"
 const beginCert string = "-----BEGIN CERTIFICATE-----"
 const endCert string = "-----END CERTIFICATE-----"
@@ -51,18 +54,28 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 
 	url = config.WlaConfig.MtwilsonAPIURL + "/rpc/certify-host-binding-key"
 
-	fileName := "/opt/workloadagent/bindingkey.json"
-	//config.GetBindingKeyFileName()
+	fileName := config.GetBindingKeyFileName()
+	bindingkeyFilePath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), fileName, true)
+	if err != nil {
+		log.Printf(err.Error())
+		return err
+	}
 
-	_, err := os.Stat(fileName)
+	_, err = os.Stat(bindingkeyFilePath)
 	if os.IsNotExist(err) {
 		return errors.New("bindingkey file does not exist")
 	}
-	file, _ := os.Open(fileName)
+	file, _ := os.Open(bindingkeyFilePath)
 	defer file.Close()
 	byteValue, _ := ioutil.ReadAll(file)
 
 	_ = json.Unmarshal(byteValue, &bindingkey)
+
+	aikCertFileName, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), "aik.pem", true)
+	if err != nil {
+		log.Printf(err.Error())
+		return err
+	}
 
 	tpmCertifyKeyBytes, _ := b.StdEncoding.DecodeString(bindingkey.KeyAttestation)
 	tpmCertifyKey := b.StdEncoding.EncodeToString(tpmCertifyKeyBytes[2:])
@@ -86,7 +99,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	} else {
 		tpmVersion = "1.2"
 	}
-	aik := getAikCert()
+	aik := getAikCert(aikCertFileName)
 
 	requestBody = []byte(`{
 		 "public_key_modulus":"` + bindingkey.PublicKey + `",
@@ -118,10 +131,10 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	}
 	return nil
 }
-func getAikCert() string {
-	aikfile, err := os.Open(aikCertName)
+func getAikCert(aikCertFileName string) string {
+	aikfile, err := os.Open(aikCertFileName)
 	if err != nil {
-
+		fmt.Println(err)
 	}
 	aikCert, _ := ioutil.ReadAll(aikfile)
 	aik := string(aikCert)
