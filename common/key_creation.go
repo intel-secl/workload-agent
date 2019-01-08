@@ -3,7 +3,6 @@ package common
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/osutil"
@@ -45,32 +44,32 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 
 //Todo: for now, this will always overwrite the file. Should be a parameter
 // that forces overwrite of file.
-
 func writeCertifiedKeyToDisk(tpmck *tpm.CertifiedKey, filepath string) error {
-
+	log.Println("Writing certified signing or binding key to specified location on disk.")
 	if tpmck == nil {
-		return errors.New("CertifiedKey struct is empty")
+		return errors.New("certifiedKey struct is empty")
 	}
 
+	// Marshal the certified key to json
 	json, err := json.MarshalIndent(tpmck, "", "    ")
 	if err != nil {
 		return err
 	}
 
+	// create a file and write the json value to it and finally close it
 	f, err := os.Create(filepath)
 	if err != nil {
-		return fmt.Errorf("Could not create file Error:" + err.Error())
+		return errors.New("could not create file Error:" + err.Error())
 	}
 	f.WriteString(string(json))
 	f.WriteString("\n")
-
 	defer f.Close()
 
 	return nil
 }
 
 func NewCertifiedKey(certusage string) (*CertifiedKey, error) {
-	log.Print("Returning object of Certified key depending on input parameter.")
+	log.Println("Returning object of CertifiedKey depending on input parameter.")
 	switch strings.ToLower(strings.TrimSpace(certusage)) {
 	case "signing", "sign":
 		return &CertifiedKey{
@@ -82,18 +81,20 @@ func NewCertifiedKey(certusage string) (*CertifiedKey, error) {
 			keyUsage: tpm.Binding,
 		}, nil
 	}
-	return nil, fmt.Errorf("Unknown type of Setup CertifiedKey task - must be Signing or Binding")
+	return nil, errors.New("unknown type of Setup CertifiedKey task - must be Signing or Binding")
 }
 
 // Execute method of BindingKey installs a binding key. It uses the AiKSecret
 // that is obtained from the trust agent, a randomn secret and uses the TPM
 // to generate a keypair that is tied to the TPM
 func KeyGeneration(ck *CertifiedKey, t tpm.Tpm) error {
+	if t == nil || ck == nil {
+		return errors.New("certified key or connection to TPM library failed")
+	}
 
 	// Create and certify the signing or binding key
 	certKey, err := createKey(ck.keyUsage, t)
 	if err != nil {
-		log.Printf(err.Error())
 		return err
 	}
 
@@ -109,12 +110,7 @@ func KeyGeneration(ck *CertifiedKey, t tpm.Tpm) error {
 	// Join configuration path and signing or binding file name
 	filepath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), filename, true)
 	if err != nil {
-		log.Printf(err.Error())
 		return err
-	}
-	log.Printf("Key store file path : %s", filepath)
-	if ck == nil {
-		return fmt.Errorf("Certified key not returned from TPM library")
 	}
 
 	// Writing certified key value to file path
@@ -122,6 +118,8 @@ func KeyGeneration(ck *CertifiedKey, t tpm.Tpm) error {
 	if err != nil {
 		return err
 	}
+
+	log.Printf("Key is stored at file path : %s", filepath)
 	return nil
 }
 

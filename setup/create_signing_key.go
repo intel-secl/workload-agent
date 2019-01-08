@@ -4,6 +4,7 @@ import (
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
+	"log"
 )
 
 type SigningKey struct {
@@ -11,6 +12,7 @@ type SigningKey struct {
 }
 
 func (sk SigningKey) Run(c csetup.Context) error {
+	log.Println("Creating of signing key.")
 	usage, err := common.NewCertifiedKey("SIGN")
 	if err != nil {
 		return err
@@ -23,6 +25,7 @@ func (sk SigningKey) Run(c csetup.Context) error {
 }
 
 func (sk SigningKey) Validate(c csetup.Context) error {
+	log.Println("Validation for signing key.")
 	usage, err := common.NewCertifiedKey("SIGN")
 	if err != nil {
 		return err

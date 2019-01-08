@@ -12,7 +12,7 @@ type BindingKey struct {
 }
 
 func (bk BindingKey) Run(c csetup.Context) error {
-	log.Print("Creating of binding key...")
+	log.Println("Creating of binding key.")
 	usage, err := common.NewCertifiedKey("BIND")
 	if err != nil {
 		return err
@@ -25,6 +25,7 @@ func (bk BindingKey) Run(c csetup.Context) error {
 }
 
 func (bk BindingKey) Validate(c csetup.Context) error {
+	log.Println("Validation for binding key.")
 	usage, err := common.NewCertifiedKey("BIND")
 	if err != nil {
 		return err

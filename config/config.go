@@ -20,14 +20,18 @@ var WlaConfig struct {
 }
 
 const workloadAgentConfigDir string = "WORKLOAD_AGENT_CONFIGURATION"
+const trustAgentConfigDir string = "TRUST_AGENT_CONFIGURATION"
 const taConfigExportCmd string = "tagent export-config --stdout"
 const aikSecretKeyName string = "aik.secret"
 const bindingKeyFileName string = "bindingkey.json"
 const signingKeyFileName string = "signingkey.json"
-const configFilePath = "/root/workloadagent.env"
 
 func GetConfigDir() string {
 	return workloadAgentConfigDir
+}
+
+func GetTrustAgentConfigDir() string {
+	return trustAgentConfigDir
 }
 
 func GetBindingKeyFileName() string {

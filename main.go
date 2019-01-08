@@ -63,7 +63,7 @@ func main() {
 		printVersion()
 
 	case "setup":
-		if nosetup, err := strconv.ParseBool(os.Getenv("WORKLOADAGENT_NOSETUP")); err != nil && nosetup == false {
+		if nosetup, err := strconv.ParseBool(os.Getenv("WORKLOAD_AGENT_NOSETUP")); err != nil && nosetup == false {
 			t, err := tpm.Open()
 			if err != nil {
 				log.Fatal("Error while opening a connection to TPM.")
@@ -88,7 +88,7 @@ func main() {
 				os.Exit(1)
 			}
 		} else {
-			fmt.Println("WORKLOADAGENT_NOSETUP is set, skipping setup")
+			fmt.Println("WORKLOAD_AGENT_NOSETUP is set, skipping setup")
 			os.Exit(1)
 		}
 
