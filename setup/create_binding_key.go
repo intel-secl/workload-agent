@@ -17,6 +17,7 @@ func (bk BindingKey) Run(c csetup.Context) error {
 	if err != nil {
 		return err
 	}
+
 	err = common.KeyGeneration(usage, bk.T)
 	if err != nil {
 		return err
@@ -30,6 +31,11 @@ func (bk BindingKey) Validate(c csetup.Context) error {
 	if err != nil {
 		return err
 	}
-	common.KeyValidation(usage)
+
+	err = common.KeyValidation(usage)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

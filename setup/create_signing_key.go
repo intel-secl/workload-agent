@@ -17,6 +17,7 @@ func (sk SigningKey) Run(c csetup.Context) error {
 	if err != nil {
 		return err
 	}
+
 	err = common.KeyGeneration(usage, sk.T)
 	if err != nil {
 		return err
@@ -30,6 +31,11 @@ func (sk SigningKey) Validate(c csetup.Context) error {
 	if err != nil {
 		return err
 	}
-	common.KeyValidation(usage)
+
+	err = common.KeyValidation(usage)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -99,7 +99,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	} else {
 		tpmVersion = "1.2"
 	}
-	aik := getAikCert(aikCertFileName)
+	aik := getAikCert(aikCertName)
 
 	requestBody = []byte(`{
 		 "public_key_modulus":"` + bindingkey.PublicKey + `",

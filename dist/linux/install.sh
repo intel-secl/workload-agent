@@ -3,20 +3,33 @@
 # Postconditions:
 # * exit with error code 1 only if there was a fatal error:
 #####
-# WORKLOAD_AGENT install script 
-# Outline:
 
 # WARNING:
 # *** do NOT use TABS for indentation, use SPACES
-# *** TABS will cause errors in some linux distributions# TERM_DISPLAY_MODE can be "plain" or "color"
+# *** TABS will cause errors in some linux distributions
+
+# WORKLOAD_AGENT install script 
+# Outline:
+# 1. Check if installer is being run as a root
+# 2. Load the environment file
+# 3. Check if WORKLOAD_AGENT_NOSETUP is set in environment file
+# 4. Load local configurations
+# 5. Create application directories
+# 6. Copy workload agent installer to workloadagent bin directory and create a symlink
+# 7. Call workloadagent setup
+# 8. Install and setup libvirt
+# 9. Copy isecl-hook script to libvirt hooks directory.
+
+WORKLOAD_AGENT_LAYOUT=${WORKLOAD_AGENT_LAYOUT:-home}
+WORKLOAD_AGENT_HOME=/opt/workloadagent
+
+# TERM_DISPLAY_MODE can be "plain" or "color"
 TERM_DISPLAY_MODE=color
 TERM_COLOR_GREEN="\\033[1;32m"
 TERM_COLOR_CYAN="\\033[1;36m"
 TERM_COLOR_RED="\\033[1;31m"
 TERM_COLOR_YELLOW="\\033[1;33m"
 TERM_COLOR_NORMAL="\\033[0;39m"
-
-WORKLOAD_AGENT_LAYOUT=${WORKLOAD_AGENT_LAYOUT:-home}
 
 # Environment:
 # - TERM_DISPLAY_MODE
@@ -61,13 +74,12 @@ echo_info() {
 
 ############################################################################################################
 
-# Product installation is only allowed if we are running as root
+# 1. Product installation is only allowed if we are running as root
 if [ $EUID -ne 0 ];  then
   echo "Workload agent installation has to run as root. Exiting"
   exit 1
 fi
 
-# Deployment phase
 # 2. load installer environment file, if present
 if [ -f ~/workloadagent.env ]; then
   echo "Loading environment variables from $(cd ~ && pwd)/workloadagent.env"
@@ -78,17 +90,17 @@ else
   echo "No environment file"
 fi
 
-# exit workloadagent setup if WORKLOAD_AGENT_NOSETUP is set
+# 3. exit workloadagent setup if WORKLOAD_AGENT_NOSETUP is set
 if [ -n "$WORKLOAD_AGENT_NOSETUP" ]; then
   echo "WORKLOAD_AGENT_NOSETUP value is set. So, skipping the workloadagent setup task."
   exit 0;
 fi
 
-# LOCAL CONFIGURATION
+# 4. Load local configurations
 directory_layout() {
 if [ "$WORKLOAD_AGENT_LAYOUT" == "linux" ]; then
   export WORKLOAD_AGENT_CONFIGURATION=${WORKLOAD_AGENT_CONFIGURATION:-/etc/workloadagent}
-  export WORKLOAD_AGENT_CONFIGURATION=${WORKLOAD_AGENT_CONFIGURATION:-/etc/trustagent}
+  export TRUST_AGENT_CONFIGURATION=${TRUST_AGENT_CONFIGURATION:-/etc/trustagent}
   export WORKLOAD_AGENT_REPOSITORY=${WORKLOAD_AGENT_REPOSITORY:-/var/opt/workloadagent}
   export WORKLOAD_AGENT_LOGS=${WORKLOAD_AGENT_LOGS:-/var/log/workloadagent}
 elif [ "$WORKLOAD_AGENT_LAYOUT" == "home" ]; then
@@ -103,10 +115,9 @@ export WORKLOAD_AGENT_BACKUP=${WORKLOAD_AGENT_BACKUP:-$WORKLOAD_AGENT_REPOSITORY
 export INSTALL_LOG_FILE=$WORKLOAD_AGENT_LOGS/install.log
 }
 
-# 3. define application directory layout
 directory_layout
 
-# 4. create application directories (chown will be repeated near end of this script, after setup)
+# 5. Create application directories (chown will be repeated near end of this script, after setup)
 for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_ENV $WORKLOAD_AGENT_REPOSITORY $WORKLOAD_AGENT_VAR $WORKLOAD_AGENT_LOGS; do
   # mkdir -p will return 0 if directory exists or is a symlink to an existing directory or directory and parents can be created
   mkdir -p $directory
@@ -118,19 +129,22 @@ for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AG
   chmod 700 $directory
 done
 
+# 6. Copy workload agent installer to workloadagent bin directory and create a symlink
 cp wlagent $WORKLOAD_AGENT_BIN
 ln -s $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin
 
-# 5. wlagent setup
+# 7. Call workloadagent setup
 wlagent setup 
 
-sudo yum -y install libvirt
+# 8. Install and setup libvirt
+yum -y install libvirt
 
 echo_warning "TODO : Need to install hooks to libvrt - writing configuration directory "
 if [ ! -d "/etc/libvirt" ]; then
   echo_warning "libvirt directory not present. Exiting"
   exit 0
 fi
+
 mkdir "/etc/libvirt/hooks"
 
 if [ ! -d "/etc/libvirt/hooks" ];  then
@@ -138,13 +152,5 @@ if [ ! -d "/etc/libvirt/hooks" ];  then
   echo 0
 fi
 
-# Call function to insert relevant variable values to the hooks script.
-# Since libvirt calls the binary, certain environment variables need to be
-# populated for the wlagent binary to run. Check the hooks.sh script to
-# determine the parameters that need to be passed in. Basically, we need
-# the input file, the placeholder (such as <AUTOFILL_AT_INSTALL>) and the
-# destination file of the hooks script file
-
-# destination file needs to be called qemu
+# 9. Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
 cp qemu /etc/libvirt/hooks
-#fill_with_variable_value "hook.sh" "<AUTOFILL_AT_INSTALL>" "/etc/libvirt/hooks/qemu"

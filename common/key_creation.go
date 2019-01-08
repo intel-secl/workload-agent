@@ -13,7 +13,7 @@ import (
 
 const secretKeyLength int = 20
 
-// CeritifiedKey is class that represents setup for a Signing or bindingkey
+// CeritifiedKey is class that represents setup for a signing or bindingkey
 type CertifiedKey struct {
 	keyUsage tpm.Usage
 }
@@ -28,7 +28,7 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 	if err != nil {
 		return nil, err
 	}
-	//get the aiksecret. This will return a byte array.
+	// get the aiksecret. This will return a byte array.
 	log.Println("Getting aik secret from trusagent configuration.")
 	aiksecret, err := config.GetAikSecret()
 	if err != nil {
@@ -126,7 +126,7 @@ func KeyGeneration(ck *CertifiedKey, t tpm.Tpm) error {
 // Installed method of the CertifiedKey checks if there is a key already installed.
 // For now, this only checks for the existence of the file and does not check if
 // contents of the file are indeed correct
-func KeyValidation(ck *CertifiedKey) bool {
+func KeyValidation(ck *CertifiedKey) error {
 	// Get the name of signing or binding key files depending on input parameter
 	var filename string
 	switch ck.keyUsage {
@@ -138,8 +138,12 @@ func KeyValidation(ck *CertifiedKey) bool {
 
 	// Join configuration path and signing or binding file name
 	filepath, _ := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), filename, true)
-	if fi, err := os.Stat(filepath); err == nil && fi != nil && fi.Mode().IsRegular() {
-		return true
+	fi, err := os.Stat(filepath)
+	if err != nil {
+		return err
 	}
-	return false
+	if fi == nil && !fi.Mode().IsRegular() {
+		return errors.New("key file path is incorrect")
+	}
+	return nil
 }

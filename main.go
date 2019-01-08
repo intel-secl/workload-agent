@@ -96,6 +96,11 @@ func main() {
 
 	case "stop":
 
+	case "uninstall":
+		// rm -rf /opt/workloadagent/
+		// rm -rf /usr/local/bin/wlagent
+		// rm -rf /etc/libvirt/hooks/qemu
+
 	default:
 		fmt.Printf("Unrecognized option : %s\n", arg)
 		fallthrough
