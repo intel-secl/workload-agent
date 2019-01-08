@@ -1,0 +1,39 @@
+#!/bin/bash
+
+domainxml="-"
+
+logfile="/root/libvirt_hook_eventlog.txt"
+
+
+#echo "=========qemu hook event at $dt ========" >>$logfile
+echo "$dt parameters: $0 $1 $2 $3 $4" >>$logfile
+#echo "--domain.xml:" >>$logfile
+
+
+if [ $2 == "start" ] || [ $2 == "stop" ]; then
+	domainFile="/root/domain.xml"
+	cat $domainxml >> $domainFile
+	instanceUUID=$(xmlstarlet sel -t -v '//domain/uuid' $domainFile)
+	imageUUID=$(xmlstarlet sel -N nova="http://openstack.org/xmlns/libvirt/nova/1.0" -t -v '//nova:root/@uuid' $domainFile)
+	imagePath=$(xmlstarlet sel -t -v '//domain/devices/disk/backingStore/source/@file' $domainFile)
+	instancePath=$(xmlstarlet sel -t -v '//domain/devices/disk/source/@file' $domainFile)
+	diskSize=$(xmlstarlet sel -N nova="http://openstack.org/xmlns/libvirt/nova/1.0" -t -v '//nova:disk' $domainFile)
+	
+	if [ $2 == "start" ]; then
+		echo "VM Start called" >>$logfile
+		wlagent start $instanceUUID $imageUUID $imagePath $instancePath $diskSize >>$logfile
+		echo "$?" >>$logfile
+		if [ $? -ne 0 ]; then
+			echo "Error occured" >>$logfile
+			exit 1
+		fi
+	elif [ $2 == "stop" ] ; then
+		echo "Stop called" >>$logfile
+		wlagent stop >>$logfile
+		if [ $? -ne 0 ]; then
+			exit 1
+		fi
+	fi
+fi
+
+exit 0
