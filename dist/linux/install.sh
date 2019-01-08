@@ -3,6 +3,8 @@
 # Postconditions:
 # * exit with error code 1 only if there was a fatal error:
 #####
+# WORKLOAD_AGENT install script 
+# Outline:
 
 # WARNING:
 # *** do NOT use TABS for indentation, use SPACES
@@ -13,6 +15,8 @@ TERM_COLOR_CYAN="\\033[1;36m"
 TERM_COLOR_RED="\\033[1;31m"
 TERM_COLOR_YELLOW="\\033[1;33m"
 TERM_COLOR_NORMAL="\\033[0;39m"
+
+WORKLOAD_AGENT_LAYOUT=${WORKLOAD_AGENT_LAYOUT:-home}
 
 # Environment:
 # - TERM_DISPLAY_MODE
@@ -112,13 +116,11 @@ for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AG
   chmod 700 $directory
 done
 
+cp wlagent $WORKLOAD_AGENT_BIN
+ln -s $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin
+
 # 5. wlagent setup
 wlagent setup 
-
-# yum_packages="libvirt"
-
-# if [[ -n "$yum_packages" ]]; then
-#   sudo yum -y install $yum_packages
 
 sudo yum -y install libvirt
 

@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
@@ -19,28 +20,25 @@ type CertifiedKey struct {
 }
 
 // tpmCertifiedKeySetup calls the TPM helper library to export a binding or signing keypair
-func createKey(usage tpm.Usage) (tpmck *tpm.CertifiedKey, err error) {
+func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) {
+	log.Println("Creation of signing or binding key.")
 	if usage != tpm.Binding && usage != tpm.Signing {
-		return nil, fmt.Errorf("Function tpmCertifiedKeySetup - incorrect KeyUsage parameter - needs to be signing or binding")
+		return nil, errors.New("incorrect KeyUsage parameter - needs to be signing or binding")
 	}
-	t, err := tpm.Open()
-
-	if t != nil {
-		defer t.Close()
-		secretbytes, err := osutil.GetRandomBytes(secretKeyLength)
-		if err != nil {
-			return nil, err
-		}
-		//get the aiksecret. This will return a byte array.
-		aiksecret, err := config.GetAikSecret()
-		if err != nil {
-			return nil, err
-		}
-		log.Println(aiksecret)
-		tpmck, err = t.CreateCertifiedKey(usage, secretbytes, aiksecret)
-		if err != nil {
-			return nil, err
-		}
+	secretbytes, err := osutil.GetRandomBytes(secretKeyLength)
+	if err != nil {
+		return nil, err
+	}
+	//get the aiksecret. This will return a byte array.
+	log.Println("Getting aik secret from trusagent configuration.")
+	aiksecret, err := config.GetAikSecret()
+	if err != nil {
+		return nil, err
+	}
+	log.Println("Calling CreateCertifiedKey of tpm library to create and certify signing or binding key.")
+	tpmck, err = t.CreateCertifiedKey(usage, secretbytes, aiksecret)
+	if err != nil {
+		return nil, err
 	}
 	return tpmck, nil
 }
@@ -51,10 +49,10 @@ func createKey(usage tpm.Usage) (tpmck *tpm.CertifiedKey, err error) {
 func writeCertifiedKeyToDisk(tpmck *tpm.CertifiedKey, filepath string) error {
 
 	if tpmck == nil {
-		fmt.Errorf("CertifiedKey struct is empty")
+		return errors.New("CertifiedKey struct is empty")
 	}
 
-	json, err := json.MarshalIndent(*tpmck, "", "    ")
+	json, err := json.MarshalIndent(tpmck, "", "    ")
 	if err != nil {
 		return err
 	}
@@ -72,7 +70,7 @@ func writeCertifiedKeyToDisk(tpmck *tpm.CertifiedKey, filepath string) error {
 }
 
 func NewCertifiedKey(certusage string) (*CertifiedKey, error) {
-
+	log.Print("Returning object of Certified key depending on input parameter.")
 	switch strings.ToLower(strings.TrimSpace(certusage)) {
 	case "signing", "sign":
 		return &CertifiedKey{
@@ -90,13 +88,16 @@ func NewCertifiedKey(certusage string) (*CertifiedKey, error) {
 // Execute method of BindingKey installs a binding key. It uses the AiKSecret
 // that is obtained from the trust agent, a randomn secret and uses the TPM
 // to generate a keypair that is tied to the TPM
-func Run(ck *CertifiedKey) error {
+func KeyGeneration(ck *CertifiedKey, t tpm.Tpm) error {
 
-	certKey, err := createKey(ck.keyUsage)
+	// Create and certify the signing or binding key
+	certKey, err := createKey(ck.keyUsage, t)
 	if err != nil {
 		log.Printf(err.Error())
 		return err
 	}
+
+	// Get the name of signing or binding key files depending on input parameter
 	var filename string
 	switch ck.keyUsage {
 	case tpm.Binding:
@@ -104,28 +105,32 @@ func Run(ck *CertifiedKey) error {
 	case tpm.Signing:
 		filename = config.GetSigningKeyFileName()
 	}
+
+	// Join configuration path and signing or binding file name
 	filepath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), filename, true)
 	if err != nil {
 		log.Printf(err.Error())
 		return err
 	}
-	log.Printf("Debug: Key store file path : %s", filepath)
+	log.Printf("Key store file path : %s", filepath)
 	if ck == nil {
 		return fmt.Errorf("Certified key not returned from TPM library")
 	}
+
+	// Writing certified key value to file path
 	err = writeCertifiedKeyToDisk(certKey, filepath)
-
-	fmt.Println(filename)
+	if err != nil {
+		return err
+	}
 	return nil
-
 }
 
 // Installed method of the CertifiedKey checks if there is a key already installed.
 // For now, this only checks for the existence of the file and does not check if
 // contents of the file are indeed correct
-func Validate(ck *CertifiedKey) bool {
+func KeyValidation(ck *CertifiedKey) bool {
+	// Get the name of signing or binding key files depending on input parameter
 	var filename string
-
 	switch ck.keyUsage {
 	case tpm.Binding:
 		filename = config.GetBindingKeyFileName()
@@ -133,6 +138,7 @@ func Validate(ck *CertifiedKey) bool {
 		filename = config.GetSigningKeyFileName()
 	}
 
+	// Join configuration path and signing or binding file name
 	filepath, _ := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), filename, true)
 	if fi, err := os.Stat(filepath); err == nil && fi != nil && fi.Mode().IsRegular() {
 		return true

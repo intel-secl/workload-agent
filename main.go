@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
+	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/setup"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -62,16 +64,25 @@ func main() {
 
 	case "setup":
 		if nosetup, err := strconv.ParseBool(os.Getenv("WORKLOADAGENT_NOSETUP")); err != nil && nosetup == false {
+			t, err := tpm.Open()
+			if err != nil {
+				log.Fatal("Error while opening a connection to TPM.")
+			}
 			setupRunner := &csetup.Runner{
 				Tasks: []csetup.Task{
-					setup.SigningKey{},
-					setup.BindingKey{},
+					setup.SigningKey{
+						T: t,
+					},
+					setup.BindingKey{
+						T: t,
+					},
 					setup.RegisterBindingKey{},
 					setup.RegisterSigningKey{},
 				},
 				AskInput: false,
 			}
-			err := setupRunner.RunTasks(args[1:]...)
+			defer t.Close()
+			err = setupRunner.RunTasks(args[1:]...)
 			if err != nil {
 				fmt.Println("Error running setup: ", err)
 				os.Exit(1)

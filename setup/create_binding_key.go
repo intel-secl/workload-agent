@@ -2,19 +2,25 @@ package setup
 
 import (
 	csetup "intel/isecl/lib/common/setup"
+	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
+	"log"
 )
 
-const secretKeyLength int = 20
-
-type BindingKey struct{}
+type BindingKey struct {
+	T tpm.Tpm
+}
 
 func (bk BindingKey) Run(c csetup.Context) error {
+	log.Print("Creating of binding key...")
 	usage, err := common.NewCertifiedKey("BIND")
 	if err != nil {
 		return err
 	}
-	common.Run(usage)
+	err = common.KeyGeneration(usage, bk.T)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -23,6 +29,6 @@ func (bk BindingKey) Validate(c csetup.Context) error {
 	if err != nil {
 		return err
 	}
-	common.Validate(usage)
+	common.KeyValidation(usage)
 	return nil
 }

@@ -2,17 +2,23 @@ package setup
 
 import (
 	csetup "intel/isecl/lib/common/setup"
+	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
 )
 
-type SigningKey struct{}
+type SigningKey struct {
+	T tpm.Tpm
+}
 
 func (sk SigningKey) Run(c csetup.Context) error {
 	usage, err := common.NewCertifiedKey("SIGN")
 	if err != nil {
 		return err
 	}
-	common.Run(usage)
+	err = common.KeyGeneration(usage, sk.T)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -21,6 +27,6 @@ func (sk SigningKey) Validate(c csetup.Context) error {
 	if err != nil {
 		return err
 	}
-	common.Validate(usage)
+	common.KeyValidation(usage)
 	return nil
 }

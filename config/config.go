@@ -2,9 +2,7 @@ package config
 
 import (
 	"encoding/hex"
-	"io/ioutil"
 	"log"
-	"strings"
 
 	"intel/isecl/wlagent/osutil"
 )
@@ -67,21 +65,23 @@ func GetAikSecret() ([]byte, error) {
 // this file. This process runs under the context of the launching user
 // So will probably need to set ownership of this file appropriately
 func LoadConfig() {
-	fileContents, err := ioutil.ReadFile(configFilePath)
-	if err != nil {
-		log.Fatal("Error reading the config file")
-	}
-	configArray := strings.Split(string(fileContents), "\n")
-	for i := 0; i < len(configArray)-1; i++ {
-		tempConfig := strings.Split(configArray[i], "=")
-		key := tempConfig[0]
-		value := strings.Replace(tempConfig[1], "\"", "", -1)
-		if strings.Contains(strings.ToLower(key), "url") {
-			WlaConfig.MtwilsonAPIURL = value
-		} else if strings.Contains(strings.ToLower(key), "username") {
-			WlaConfig.MtwilsonAPIUsername = value
-		} else if strings.Contains(strings.ToLower(key), "password") {
-			WlaConfig.MtwilsonAPIPassword = value
-		}
-	}
+	// fileContents, err := ioutil.ReadFile(configFilePath)
+	// if err != nil {
+	// 	log.Fatal("Error reading the config file")
+	// }
+	// configArray := strings.Split(string(fileContents), "\n")
+	// for i := 0; i < len(configArray)-1; i++ {
+	// 	tempConfig := strings.Split(configArray[i], "=")
+	// 	key := tempConfig[0]
+	// 	value := strings.Replace(tempConfig[1], "\"", "", -1)
+	// 	if strings.Contains(strings.ToLower(key), "url") {
+	// 		WlaConfig.MtwilsonAPIURL = value
+	// 	} else if strings.Contains(strings.ToLower(key), "username") {
+	// 		WlaConfig.MtwilsonAPIUsername = value
+	// 	} else if strings.Contains(strings.ToLower(key), "password") {
+	// 		WlaConfig.MtwilsonAPIPassword = value
+	// 	} else if strings.Contains(strings.ToLower(key), "tls") {
+	// 		WlaConfig.MtwilsonTLSSHA256 = value
+	// 	}
+	// }
 }
