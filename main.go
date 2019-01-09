@@ -4,6 +4,7 @@ import (
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
+	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/pkg"
 	"intel/isecl/wlagent/setup"
 	"log"
@@ -62,11 +63,23 @@ func main() {
 		printVersion()
 
 	case "setup":
+		// Save configurations that are provided during setup to config yaml file
+		err := common.SaveSetupConfiguration()
+		if err != nil {
+			log.Fatal("Failed to save setup configurations.")
+		}
+
+		// Save log rotation configurations
+		common.LogConfiguration()
+
+		// Check if nosetup environment variable is true, if yes then skip the setup tasks
 		if nosetup, err := strconv.ParseBool(os.Getenv("WORKLOAD_AGENT_NOSETUP")); err != nil && nosetup == false {
 			t, err := tpm.Open()
 			if err != nil {
 				log.Fatal("Error while opening a connection to TPM.")
 			}
+
+			// Run list of setup tasks one by one
 			setupRunner := &csetup.Runner{
 				Tasks: []csetup.Task{
 					setup.SigningKey{

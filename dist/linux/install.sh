@@ -22,6 +22,7 @@
 
 WORKLOAD_AGENT_LAYOUT=${WORKLOAD_AGENT_LAYOUT:-home}
 WORKLOAD_AGENT_HOME=/opt/workloadagent
+DEFAULT_TRUSTAGENT_USERNAME=tagent
 
 # Log rotate configurations
 export LOG_ROTATE_MAX_SIZE=${LOG_ROTATE_MAX_SIZE:-100000}
@@ -101,7 +102,27 @@ if [ -n "$WORKLOAD_AGENT_NOSETUP" ]; then
   exit 0;
 fi
 
-# 4. Load local configurations
+# 4. Determine if we are installing as root or non-root, create groups and users accordingly
+#### Using trustagent user here as trustagent needs permissions to access files from workload agent
+#### for eg signing binding keys. As tagent is a prerequisite for workloadagent, tagent user can be used here
+if [ "$(whoami)" == "root" ]; then
+  # create a trustagent user if there isn't already one created
+  TRUSTAGENT_USERNAME=${TRUSTAGENT_USERNAME:-$DEFAULT_TRUSTAGENT_USERNAME}
+  if ! getent passwd $TRUSTAGENT_USERNAME 2>&1 >/dev/null; then
+    useradd --comment "Mt Wilson Trust Agent" --home $TRUSTAGENT_HOME --system --shell /bin/false $TRUSTAGENT_USERNAME
+    usermod --lock $TRUSTAGENT_USERNAME
+    # note: to assign a shell and allow login you can run "usermod --shell /bin/bash --unlock $TRUSTAGENT_USERNAME"
+  fi
+else
+  # already running as trustagent user
+  TRUSTAGENT_USERNAME=$(whoami)
+  if [ ! -w "$TRUSTAGENT_HOME" ] && [ ! -w $(dirname $TRUSTAGENT_HOME) ]; then
+    TRUSTAGENT_HOME=$(cd ~ && pwd)
+  fi
+  echo_warning "Installing as $TRUSTAGENT_USERNAME into $TRUSTAGENT_HOME"  
+fi
+
+# 5. Load local configurations
 directory_layout() {
 if [ "$WORKLOAD_AGENT_LAYOUT" == "linux" ]; then
   export WORKLOAD_AGENT_CONFIGURATION=${WORKLOAD_AGENT_CONFIGURATION:-/etc/workloadagent}
@@ -112,7 +133,6 @@ elif [ "$WORKLOAD_AGENT_LAYOUT" == "home" ]; then
   export TRUST_AGENT_CONFIGURATION=${TRUST_AGENT_CONFIGURATION:-/opt/trusagent/configuration}
   export WORKLOAD_AGENT_LOGS=${WORKLOAD_AGENT_LOGS:-$WORKLOAD_AGENT_HOME/logs}
 fi
-export WORKLOAD_AGENT_VAR=${WORKLOAD_AGENT_VAR:-$WORKLOAD_AGENT_HOME/var}
 export WORKLOAD_AGENT_BIN=${WORKLOAD_AGENT_BIN:-$WORKLOAD_AGENT_HOME/bin}
 export INSTALL_LOG_FILE=$WORKLOAD_AGENT_LOGS/install.log
 }
@@ -121,30 +141,38 @@ directory_layout
 
 mkdir -p $(dirname $INSTALL_LOG_FILE)
 if [ $? -ne 0 ]; then
-  echo_failure "Cannot write to log directory: $(dirname $INSTALL_LOG_FILE)"
+  echo_failure "Cannot create directory: $(dirname $INSTALL_LOG_FILE)"
   exit 1
 fi
 logfile=$INSTALL_LOG_FILE
 
-# 5. Create application directories (chown will be repeated near end of this script, after setup)
-for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_ENV $WORKLOAD_AGENT_BIN $WORKLOAD_AGENT_VAR $WORKLOAD_AGENT_LOGS; do
+# 6. Create application directories (chown will be repeated near end of this script, after setup)
+for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_BIN $WORKLOAD_AGENT_LOGS; do
   # mkdir -p will return 0 if directory exists or is a symlink to an existing directory or directory and parents can be created
   mkdir -p $directory 
   if [ $? -ne 0 ]; then
     echo_failure "Cannot create directory: $directory" 2>>$logfile
     exit 1
   fi
+  chown -R $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $directory
   chmod 700 $directory
 done
 
-# 6. Copy workload agent installer to workloadagent bin directory and create a symlink
+# 7. Copy workload agent installer to workloadagent bin directory and create a symlink
 cp -f wlagent $WORKLOAD_AGENT_BIN
+chown $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $WORKLOAD_AGENT_BIN/wlagent
 ln -sfT $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/wlagent
 
-# 7. Call workloadagent setup
+# 8. Call workloadagent setup
 wlagent setup | tee $logfile
 
-# 8. Install and setup libvirt
+# Make sure all files created after setup tasks have tagent user ownsership
+for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_BIN $WORKLOAD_AGENT_LOGS; do
+  chown -R $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $directory
+  chmod 700 $directory
+done
+
+# 9. Install and setup libvirt
 yum -y install libvirt cryptsetup 2>>$logfile
 
 if [ ! -d "/etc/libvirt" ]; then
@@ -159,5 +187,5 @@ if [ ! -d "/etc/libvirt/hooks" ];  then
   echo 0
 fi
 
-# 9. Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
+# 10. Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
 cp -f qemu /etc/libvirt/hooks 

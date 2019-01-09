@@ -5,11 +5,8 @@ import (
 	"intel/isecl/wlagent/osutil"
 	"io"
 	"os"
-	"strconv"
-	"time"
 
 	log "github.com/sirupsen/logrus"
-	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -55,7 +52,7 @@ const numberOfInstancesPerImageFileName string = "no_of_instances_per_image"
 const devMapperPath string = "/dev/mapper/"
 const configFilePath = "/root/workloadagent.env"
 
-var LogFilePath = os.Getenv("WORKLOAD_AGENT_LOGS") + "/workloadagent.log"
+var LogFilePath string = os.Getenv("WORKLOAD_AGENT_LOGS") + "/workloadagent.log"
 
 func GetConfigDir() string {
 	return workloadAgentConfigDir
@@ -131,30 +128,4 @@ func init() {
 		yaml.NewDecoder(file).Decode(&Configuration)
 	}
 	LogWriter = os.Stdout
-
-	// Setting up the logger
-	maxSize, err := strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_SIZE"))
-	if err != nil {
-		log.Error(err)
-	}
-	maxBackups, err := strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_BACKUPS"))
-	if err != nil {
-		log.Error(err)
-	}
-	maxAge, err := strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_DAYS"))
-	if err != nil {
-		log.Error(err)
-	}
-
-	lumberjackLogrotate := &lumberjack.Logger{
-		Filename:   LogFilePath,
-		MaxSize:    maxSize,
-		MaxBackups: maxBackups,
-		MaxAge:     maxAge,
-		Compress:   true,
-	}
-
-	log.SetFormatter(&log.TextFormatter{FullTimestamp: true, TimestampFormat: time.RFC1123Z})
-	logMultiWriter := io.MultiWriter(os.Stdout, lumberjackLogrotate)
-	log.SetOutput(logMultiWriter)
 }

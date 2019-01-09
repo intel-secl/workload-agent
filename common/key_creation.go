@@ -120,7 +120,7 @@ func KeyGeneration(ck *CertifiedKey, t tpm.Tpm) error {
 		return err
 	}
 
-	log.Info("Key is stored at file path : %s", filepath)
+	log.Info("Key is stored at file path : ", filepath)
 	return nil
 }
 
