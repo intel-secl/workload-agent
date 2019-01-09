@@ -4,7 +4,7 @@ import (
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
-	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/pkg"
 	"intel/isecl/wlagent/setup"
 	"log"
 	"os"
@@ -50,7 +50,6 @@ func printUsage() {
 
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
-	config.LoadConfig()
 	args := os.Args[1:]
 	if len(args) <= 0 {
 		fmt.Println("Command not found. Usage below")
@@ -95,11 +94,13 @@ func main() {
 	case "start":
 
 	case "stop":
+		pkg.QemuStopIntercept(strings.TrimSpace(args[1]), strings.TrimSpace(args[2]),
+			strings.TrimSpace(args[3]), strings.TrimSpace(args[4]))
 
 	case "uninstall":
-		// rm -rf /opt/workloadagent/
-		// rm -rf /usr/local/bin/wlagent
-		// rm -rf /etc/libvirt/hooks/qemu
+		deleteFile("/usr/local/bin/wlagent")
+		deleteFile("/opt/workloadagent/")
+		deleteFile("/etc/libvirt/hooks/qemu")
 
 	default:
 		fmt.Printf("Unrecognized option : %s\n", arg)
@@ -107,5 +108,14 @@ func main() {
 
 	case "help", "-help", "--help":
 		printUsage()
+	}
+}
+
+func deleteFile(path string) {
+	log.Println("Deleting file: ", path)
+	// delete file
+	var err = os.RemoveAll(path)
+	if err != nil {
+		log.Fatal(err)
 	}
 }

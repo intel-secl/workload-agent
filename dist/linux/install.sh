@@ -23,6 +23,11 @@
 WORKLOAD_AGENT_LAYOUT=${WORKLOAD_AGENT_LAYOUT:-home}
 WORKLOAD_AGENT_HOME=/opt/workloadagent
 
+# Log rotate configurations
+export LOG_ROTATE_MAX_SIZE=${LOG_ROTATE_MAX_SIZE:-100000}
+export LOG_ROTATE_MAX_BACKUPS=${LOG_ROTATE_MAX_BACKUPS:-8}
+export LOG_ROTATE_MAX_DAYS=${LOG_ROTATE_MAX_DAYS:-90}
+
 # TERM_DISPLAY_MODE can be "plain" or "color"
 TERM_DISPLAY_MODE=color
 TERM_COLOR_GREEN="\\033[1;32m"
@@ -129,26 +134,25 @@ for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AG
     echo_failure "Cannot create directory: $directory" 2>>$logfile
     exit 1
   fi
-  #chown -R $WORKLOAD_AGENT_USERNAME:$WORKLOAD_AGENT_USERNAME $directory
   chmod 700 $directory
 done
 
 # 6. Copy workload agent installer to workloadagent bin directory and create a symlink
-cp wlagent $WORKLOAD_AGENT_BIN
-ln -s $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/
+cp -f wlagent $WORKLOAD_AGENT_BIN
+ln -sfT $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/wlagent
 
 # 7. Call workloadagent setup
 wlagent setup | tee $logfile
 
 # 8. Install and setup libvirt
-yum -y install libvirt 2>>$logfile
+yum -y install libvirt cryptsetup 2>>$logfile
 
 if [ ! -d "/etc/libvirt" ]; then
   echo_warning "libvirt directory not present. Exiting"
   exit 0
 fi
 
-mkdir "/etc/libvirt/hooks" 
+mkdir -p "/etc/libvirt/hooks" 
 
 if [ ! -d "/etc/libvirt/hooks" ];  then
   echo_warning "Not able to create hooks directory. Exiting"
@@ -156,4 +160,4 @@ if [ ! -d "/etc/libvirt/hooks" ];  then
 fi
 
 # 9. Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
-cp qemu /etc/libvirt/hooks 
+cp -f qemu /etc/libvirt/hooks 

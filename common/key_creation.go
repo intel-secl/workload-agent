@@ -6,9 +6,10 @@ import (
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/osutil"
-	"log"
 	"os"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const secretKeyLength int = 20
@@ -20,7 +21,7 @@ type CertifiedKey struct {
 
 // tpmCertifiedKeySetup calls the TPM helper library to export a binding or signing keypair
 func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) {
-	log.Println("Creation of signing or binding key.")
+	log.Info("Creation of signing or binding key.")
 	if usage != tpm.Binding && usage != tpm.Signing {
 		return nil, errors.New("incorrect KeyUsage parameter - needs to be signing or binding")
 	}
@@ -29,12 +30,12 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 		return nil, err
 	}
 	// get the aiksecret. This will return a byte array.
-	log.Println("Getting aik secret from trusagent configuration.")
+	log.Debug("Getting aik secret from trusagent configuration.")
 	aiksecret, err := config.GetAikSecret()
 	if err != nil {
 		return nil, err
 	}
-	log.Println("Calling CreateCertifiedKey of tpm library to create and certify signing or binding key.")
+	log.Debug("Calling CreateCertifiedKey of tpm library to create and certify signing or binding key.")
 	tpmck, err = t.CreateCertifiedKey(usage, secretbytes, aiksecret)
 	if err != nil {
 		return nil, err
@@ -45,7 +46,7 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 //Todo: for now, this will always overwrite the file. Should be a parameter
 // that forces overwrite of file.
 func writeCertifiedKeyToDisk(tpmck *tpm.CertifiedKey, filepath string) error {
-	log.Println("Writing certified signing or binding key to specified location on disk.")
+	log.Debug("Writing certified signing or binding key to specified location on disk.")
 	if tpmck == nil {
 		return errors.New("certifiedKey struct is empty")
 	}
@@ -69,7 +70,7 @@ func writeCertifiedKeyToDisk(tpmck *tpm.CertifiedKey, filepath string) error {
 }
 
 func NewCertifiedKey(certusage string) (*CertifiedKey, error) {
-	log.Println("Returning object of CertifiedKey depending on input parameter.")
+	log.Debug("Returning object of CertifiedKey depending on input parameter.")
 	switch strings.ToLower(strings.TrimSpace(certusage)) {
 	case "signing", "sign":
 		return &CertifiedKey{
@@ -119,7 +120,7 @@ func KeyGeneration(ck *CertifiedKey, t tpm.Tpm) error {
 		return err
 	}
 
-	log.Printf("Key is stored at file path : %s", filepath)
+	log.Info("Key is stored at file path : %s", filepath)
 	return nil
 }
 

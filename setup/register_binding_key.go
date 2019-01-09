@@ -15,16 +15,18 @@ import (
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/osutil"
 	"io/ioutil"
-	"log"
+
 	"net/http"
 	"os"
 	"regexp"
 	"runtime"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
-//const aikCertName = "aik.pem"
-const bindingKeyCertPath string = "/opt/workloadagent/configuration/bindingkey.pem"
+const aikCertName string = "/opt/trustagent/configuration/aik.pem"
+const bindingKeyCertPath string = "/opt/workloadagent/configuration/bindingkeycert.pem" //GetTrustAgentConfigDir() +
 const beginCert string = "-----BEGIN CERTIFICATE-----"
 const endCert string = "-----END CERTIFICATE-----"
 
@@ -44,6 +46,12 @@ type BindingKeyCert struct {
 }
 
 func (rb RegisterBindingKey) Run(c csetup.Context) error {
+	e := common.SaveConfiguration(c)
+	if e != nil {
+		log.Error(e.Error())
+		return e
+	}
+
 	var url string
 	var requestBody []byte
 	var bindingkey BindingKeyInfo
@@ -52,12 +60,13 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	var bindingKeyCert BindingKeyCert
 	var operatingSystem string
 
-	url = config.WlaConfig.MtwilsonAPIURL + "/rpc/certify-host-binding-key"
+	url = config.Configuration.Mtwilson.APIURL + "rpc/certify-host-binding-key"
+	fileName := config.GetBindingKeyFileName()
 
 	fileName := config.GetBindingKeyFileName()
 	bindingkeyFilePath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), fileName, true)
 	if err != nil {
-		log.Printf(err.Error())
+		log.Error(err.Error())
 		return err
 	}
 
@@ -114,7 +123,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	httpRequest, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
 	httpRequest.Header.Set("Accept", "application/json")
 	httpRequest.Header.Set("Content-Type", "application/json")
-	httpRequest.SetBasicAuth(config.WlaConfig.MtwilsonAPIUsername, config.WlaConfig.MtwilsonAPIPassword)
+	httpRequest.SetBasicAuth(config.Configuration.Mtwilson.APIUsername, config.Configuration.Mtwilson.APIPassword)
 
 	httpResponse, err := common.SendRequest(httpRequest)
 	if err != nil {

@@ -1,11 +1,11 @@
 package setup
 
 import (
-	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
-	"log"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type SigningKey struct {
@@ -14,10 +14,10 @@ type SigningKey struct {
 
 func (sk SigningKey) Run(c csetup.Context) error {
 	if sk.Validate(c) == nil {
-		fmt.Println("Signing key already created, skipping ...")
+		log.Info("Signing key already created, skipping ...")
 		return nil
 	}
-	log.Println("Creating of signing key.")
+	log.Info("Creating of signing key.")
 	usage, err := common.NewCertifiedKey("SIGN")
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func (sk SigningKey) Run(c csetup.Context) error {
 }
 
 func (sk SigningKey) Validate(c csetup.Context) error {
-	log.Println("Validation for signing key.")
+	log.Info("Validation for signing key.")
 	usage, err := common.NewCertifiedKey("SIGN")
 	if err != nil {
 		return err

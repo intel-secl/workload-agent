@@ -1,11 +1,11 @@
 package setup
 
 import (
-	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
-	"log"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type BindingKey struct {
@@ -14,10 +14,10 @@ type BindingKey struct {
 
 func (bk BindingKey) Run(c csetup.Context) error {
 	if bk.Validate(c) == nil {
-		fmt.Println("Binding key already created, skipping ...")
+		log.Info("Binding key already created, skipping ...")
 		return nil
 	}
-	log.Println("Creating of binding key.")
+	log.Info("Creating of binding key.")
 	usage, err := common.NewCertifiedKey("BIND")
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func (bk BindingKey) Run(c csetup.Context) error {
 }
 
 func (bk BindingKey) Validate(c csetup.Context) error {
-	log.Println("Validation for binding key.")
+	log.Info("Validation for binding key.")
 	usage, err := common.NewCertifiedKey("BIND")
 	if err != nil {
 		return err
