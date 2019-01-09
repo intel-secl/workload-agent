@@ -16,6 +16,7 @@ var Configuration struct {
 		APIURL      string
 		APIUsername string
 		APIPassword string
+		TLSSha256   string
 	}
 	Wls struct {
 		UserName string
@@ -42,6 +43,10 @@ const MTWILSON_API_USERNAME = "MTWILSON_API_USERNAME"
 // the mtwilson API password and is used to connect to mtwilson
 const MTWILSON_API_PASSWORD = "MTWILSON_API_PASSWORD"
 
+// MTWILSON_TLS_SHA256 is a string environment variable for specifying
+// the mtwilson TLS sha256 and is used to connect to mtwilson
+const MTWILSON_TLS_SHA256 = "MTWILSON_TLS_SHA256"
+
 const workloadAgentConfigDir string = "WORKLOAD_AGENT_CONFIGURATION"
 const trustAgentConfigDir string = "TRUST_AGENT_CONFIGURATION"
 const taConfigExportCmd string = "tagent export-config --stdout"
@@ -50,7 +55,7 @@ const bindingKeyFileName string = "binding_key.json"
 const signingKeyFileName string = "signing_key.json"
 const numberOfInstancesPerImageFileName string = "no_of_instances_per_image"
 const devMapperPath string = "/dev/mapper/"
-const configFilePath = "/root/workloadagent.env"
+const configFilePath = "workloadagent.env"
 
 var LogFilePath string = os.Getenv("WORKLOAD_AGENT_LOGS") + "/workloadagent.log"
 

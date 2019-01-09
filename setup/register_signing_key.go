@@ -20,7 +20,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const signingKeyCertPath string = "/opt/workloadagent/configuration/signingkeycert.pem"
 const beginCertTag string = "-----BEGIN CERTIFICATE-----"
 const endCertTag string = "-----END CERTIFICATE-----"
 
@@ -39,12 +38,6 @@ type SigningKeyCert struct {
 }
 
 func (rs RegisterSigningKey) Run(c csetup.Context) error {
-	e := common.SaveConfiguration(c)
-	if e != nil {
-		log.Error(e.Error())
-		return e
-	}
-
 	var url string
 	var requestBody []byte
 	var signingkey SigningKeyInfo
@@ -53,17 +46,37 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	var signingKeyCert SigningKeyCert
 	var operatingSystem string
 
-	url = config.Configuration.Mtwilson.APIURL + "rpc/certify-host-signing-key"
+	if rs.Validate(c) == nil {
+		log.Info("Signing key already registered. Skipping this setup task.")
+		return nil
+	}
+
+	// save configuration from config.yml
+	e := common.SaveConfiguration(c)
+	if e != nil {
+		log.Error(e.Error())
+		return e
+	}
+
+	log.Info("Registering signing key with host verification service.")
+
+	url = config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-signing-key"
+
+	// join configuration path and signing key file name
 	fileName := config.GetSigningKeyFileName()
 	signingkeyFilePath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), fileName, true)
 	if err != nil {
 		log.Error(err.Error())
 		return err
 	}
+
+	// check if signing key file exists
 	_, err = os.Stat(signingkeyFilePath)
 	if os.IsNotExist(err) {
 		return errors.New("signingkey file does not exist")
 	}
+
+	// read contents of signing key file and store in SigningKeyInfo struct
 	jsonFile, err := os.Open(signingkeyFilePath)
 	if err != nil {
 		return errors.New("error opening signingkey file")
@@ -74,34 +87,42 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 
 	_ = json.Unmarshal(byteValue, &signingkey)
 
+	// remove first two bytes from KeyAttestation. These are extra bytes being written.
 	tpmCertifyKeyBytes, _ := b.StdEncoding.DecodeString(strings.TrimSpace(signingkey.KeyAttestation))
 	tpmCertifyKey := b.StdEncoding.EncodeToString(tpmCertifyKeyBytes[2:])
 
-	aikCertFileName, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), "aik.pem", true)
-	if err != nil {
-		log.Printf(err.Error())
-		return err
-	}
-
+	// remove first byte from the value written to KeyName. This is extra byte written.
 	originalNameDigest, _ = b.StdEncoding.DecodeString(strings.TrimSpace(signingkey.KeyName))
 	originalNameDigest = originalNameDigest[1:]
+
+	//append 0 added as padding
 	for i := 0; i < 34; i++ {
 		originalNameDigest = append(originalNameDigest, 0)
 	}
 
 	nameDigest := b.StdEncoding.EncodeToString(originalNameDigest)
+
+	//get trustagent aik cert location
+	aikCertFileName, _ := osutil.MakeFilePathFromEnvVariable(config.GetTrustAgentConfigDir(), "aik.pem", true)
+
+	//getAikCert removes the begin / end certificate tags and newline characters
 	aik := getAikCert(aikCertFileName)
-	if runtime.GOOS == "Linux" { // also can be specified to FreeBSD
+
+	// set operating system
+	if runtime.GOOS == "linux" {
 		operatingSystem = "Linux"
 	} else {
 		operatingSystem = "Windows"
 	}
+
+	//set tpm version
 	if signingkey.Version == 2 {
 		tpmVersion = "2.0"
 	} else {
 		tpmVersion = "1.2"
 	}
 
+	//construct request body
 	requestBody = []byte(`{
 		 "public_key_modulus":"` + signingkey.PublicKey + `",
 	 	 "tpm_certify_key":"` + tpmCertifyKey + `",
@@ -121,9 +142,23 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	if err != nil {
 		return errors.New("error in signing key registration")
 	}
+
 	_ = json.Unmarshal([]byte(httpResponse), &signingKeyCert)
 
+	if len(strings.TrimSpace(signingKeyCert.SigningKeyCertificate)) <= 0 {
+		return errors.New("error in signing key certificate creation.")
+	}
+
+	//construct the certificate by adding begin and end certificate tags
 	aikPem := beginCertTag + "\n" + signingKeyCert.SigningKeyCertificate + "\n" + endCertTag + "\n"
+
+	//write the signing key certificate to file
+	signingKeyCertPath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), "signingkeycert.pem", true)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+
 	file, _ := os.Create(signingKeyCertPath)
 	_, err = file.Write([]byte(aikPem))
 	if err != nil {
@@ -131,6 +166,8 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	}
 	return nil
 }
+
+//getAikCertFile method removes begin and end certificate tag and newline character.
 func getAikCertFile(aikCertFileName string) string {
 	aikfile, err := os.Open(aikCertFileName)
 	if err != nil {
@@ -149,8 +186,12 @@ func getAikCertFile(aikCertFileName string) string {
 // Validate checks whether or not the Register Signing Key task was completed successfully
 func (rs RegisterSigningKey) Validate(c csetup.Context) error {
 
-	/*	if SigningKeyCert.SigningKeyCertificate == "" {
-			return errors.New("Register Signing key: SigningKeyCertificate is not set")
-		}
-	*/return nil
+	log.Info("Validation for registering signing key.")
+
+	signingKeyCertPath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), "signingkeycert.pem", true)
+	_, err = os.Stat(signingKeyCertPath)
+	if os.IsNotExist(err) {
+		return errors.New("Signing key certificate file does not exist")
+	}
+	return nil
 }
