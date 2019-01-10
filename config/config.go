@@ -5,8 +5,13 @@ import (
 	"intel/isecl/wlagent/osutil"
 	"io"
 	"os"
+	"strconv"
+	"time"
+
+	csetup "intel/isecl/lib/common/setup"
 
 	log "github.com/sirupsen/logrus"
+	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -143,4 +148,51 @@ func init() {
 		yaml.NewDecoder(file).Decode(&Configuration)
 	}
 	LogWriter = os.Stdout
+}
+
+// SaveConfiguration is used to save configurations that are provided in environment during setup tasks
+// This is called when setup tasks are called
+func SaveConfiguration(c csetup.Context) error {
+	var err error
+	Configuration.Mtwilson.APIURL, err = c.GetConfigString(MTWILSON_API_URL, "Mtwilson URL")
+	if err != nil {
+		return err
+	}
+	Configuration.Mtwilson.APIUsername, err = c.GetConfigString(MTWILSON_API_USERNAME, "Mtwilson Username")
+	if err != nil {
+		return err
+	}
+	Configuration.Mtwilson.APIPassword, err = c.GetConfigString(MTWILSON_API_PASSWORD, "Mtwilson Password")
+	if err != nil {
+		return err
+	}
+	Configuration.Mtwilson.TLSSha256, err = c.GetConfigString(MTWILSON_TLS_SHA256, "Mtwilson TLSSha256")
+	if err != nil {
+		return err
+	}
+	return Save()
+}
+
+// SaveSetupConfiguration is used to save configurations that are provided during setup
+// for example logger rotate configurations
+func SaveSetupConfiguration() error {
+	Configuration.LogRotate.MaxBackups, _ = strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_BACKUPS"))
+	Configuration.LogRotate.MaxRotateSize, _ = strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_SIZE"))
+	Configuration.LogRotate.MaxDays, _ = strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_DAYS"))
+	return Save()
+}
+
+// LogConfiguration is used to setup log rotation configurations
+func LogConfiguration() {
+	lumberjackLogrotate := &lumberjack.Logger{
+		Filename:   LogFilePath,
+		MaxSize:    Configuration.LogRotate.MaxRotateSize,
+		MaxBackups: Configuration.LogRotate.MaxBackups,
+		MaxAge:     Configuration.LogRotate.MaxDays,
+		Compress:   true,
+	}
+
+	log.SetFormatter(&log.TextFormatter{FullTimestamp: true, TimestampFormat: time.RFC1123Z})
+	logMultiWriter := io.MultiWriter(os.Stdout, lumberjackLogrotate)
+	log.SetOutput(logMultiWriter)
 }

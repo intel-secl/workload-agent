@@ -4,7 +4,7 @@ import (
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
-	"intel/isecl/wlagent/common"
+	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/pkg"
 	"intel/isecl/wlagent/setup"
 	"log"
@@ -64,13 +64,13 @@ func main() {
 
 	case "setup":
 		// Save configurations that are provided during setup to config yaml file
-		err := common.SaveSetupConfiguration()
+		err := config.SaveSetupConfiguration()
 		if err != nil {
 			log.Fatal("Failed to save setup configurations.")
 		}
 
 		// Save log rotation configurations
-		common.LogConfiguration()
+		config.LogConfiguration()
 
 		// Check if nosetup environment variable is true, if yes then skip the setup tasks
 		if nosetup, err := strconv.ParseBool(os.Getenv("WORKLOAD_AGENT_NOSETUP")); err != nil && nosetup == false {
@@ -114,6 +114,8 @@ func main() {
 		deleteFile("/usr/local/bin/wlagent")
 		deleteFile("/opt/workloadagent/")
 		deleteFile("/etc/libvirt/hooks/qemu")
+		deleteFile("/etc/workloadagent/")
+		deleteFile("/var/log/workloadagent/")
 
 	default:
 		fmt.Printf("Unrecognized option : %s\n", arg)

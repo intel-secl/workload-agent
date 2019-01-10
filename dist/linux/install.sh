@@ -10,15 +10,18 @@
 
 # WORKLOAD_AGENT install script 
 # Outline:
-# 1. Check if installer is being run as a root
+# 1. Check if installer is running as a root
 # 2. Load the environment file
 # 3. Check if WORKLOAD_AGENT_NOSETUP is set in environment file
-# 4. Load local configurations
-# 5. Create application directories
-# 6. Copy workload agent installer to workloadagent bin directory and create a symlink
-# 7. Call workloadagent setup
-# 8. Install and setup libvirt
-# 9. Copy isecl-hook script to libvirt hooks directory.
+# 4. Check if trustagent is intalled
+# 5. Load tagent username to a variable
+# 6. Load local configurations
+# 7. Create application directories
+# 8. Copy workload agent installer to workloadagent bin directory and create a symlink
+# 9. Call workloadagent setup
+# 10. Install and setup libvirt
+# 11. Copy isecl-hook script to libvirt hooks directory
+# 12. Restart the libvirt service after copying qemu hook
 
 DEFAULT_TRUSTAGENT_USERNAME=tagent
 
@@ -100,17 +103,19 @@ if [ -n "$WORKLOAD_AGENT_NOSETUP" ]; then
   exit 0;
 fi
 
-# 4. Determine if we are installing as root or non-root, create groups and users accordingly
+# 4. Check if trustagent is intalled; if not output error
+isrunning=$(tagent status)
+if [ ! "$isrunning" == "Trust agent is running" ]; then
+  echo_warning "Trustagent is not installed. Exiting"
+  echo 0
+fi
+
+# 5. Use tagent user
 #### Using trustagent user here as trustagent needs permissions to access files from workload agent
 #### for eg signing binding keys. As tagent is a prerequisite for workloadagent, tagent user can be used here
 if [ "$(whoami)" == "root" ]; then
   # create a trustagent user if there isn't already one created
   TRUSTAGENT_USERNAME=${TRUSTAGENT_USERNAME:-$DEFAULT_TRUSTAGENT_USERNAME}
-  if ! getent passwd $TRUSTAGENT_USERNAME 2>&1 >/dev/null; then
-    useradd --comment "Mt Wilson Trust Agent" --home $TRUSTAGENT_HOME --system --shell /bin/false $TRUSTAGENT_USERNAME
-    usermod --lock $TRUSTAGENT_USERNAME
-    # note: to assign a shell and allow login you can run "usermod --shell /bin/bash --unlock $TRUSTAGENT_USERNAME"
-  fi
 else
   # already running as trustagent user
   TRUSTAGENT_USERNAME=$(whoami)
@@ -120,7 +125,7 @@ else
   echo_warning "Installing as $TRUSTAGENT_USERNAME into $TRUSTAGENT_HOME"  
 fi
 
-# 5. Load local configurations
+# 6. Load local configurations
 directory_layout() {
 export WORKLOAD_AGENT_HOME=/opt/workloadagent
 export WORKLOAD_AGENT_CONFIGURATION=${WORKLOAD_AGENT_CONFIGURATION:-/etc/workloadagent}
@@ -138,7 +143,7 @@ if [ $? -ne 0 ]; then
 fi
 logfile=$INSTALL_LOG_FILE
 
-# 6. Create application directories (chown will be repeated near end of this script, after setup)
+# 7. Create application directories (chown will be repeated near end of this script, after setup)
 for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_BIN $WORKLOAD_AGENT_LOGS; do
   # mkdir -p will return 0 if directory exists or is a symlink to an existing directory or directory and parents can be created
   mkdir -p $directory 
@@ -150,12 +155,12 @@ for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AG
   chmod 700 $directory
 done
 
-# 7. Copy workload agent installer to workloadagent bin directory and create a symlink
+# 8. Copy workload agent installer to workloadagent bin directory and create a symlink
 cp -f wlagent $WORKLOAD_AGENT_BIN
 chown $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $WORKLOAD_AGENT_BIN/wlagent
 ln -sfT $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/wlagent
 
-# 8. Call workloadagent setup
+# 9. Call workloadagent setup
 wlagent setup | tee $logfile
 
 # Make sure all files created after setup tasks have tagent user ownsership
@@ -164,20 +169,35 @@ for directory in $WORKLOAD_AGENT_HOME $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AG
   chmod 700 $directory
 done
 
-# 9. Install and setup libvirt
-yum -y install libvirt cryptsetup 2>>$logfile
-
+# 10. Check if yum packages are already installed; if not install them
+yum_packages=(libvirt cryptsetup)
+for i in ${yum_packages[*]}
+do
+  isinstalled=$(rpm -q $i)
+  if [ "$isinstalled" == "package $i is not installed" ]; then
+    yum -y install $i 2>>$logfile
+  fi
+done
 if [ ! -d "/etc/libvirt" ]; then
   echo_warning "libvirt directory not present. Exiting"
   exit 0
 fi
 
 mkdir -p "/etc/libvirt/hooks" 
-
 if [ ! -d "/etc/libvirt/hooks" ];  then
   echo_warning "Not able to create hooks directory. Exiting"
   echo 0
 fi
 
-# 10. Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
+# 11. Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
 cp -f qemu /etc/libvirt/hooks 
+
+# 12. Restart the libvirt service after copying qemu hook and check if it's running
+systemctl restart libvirtd
+isactive=$(systemctl is-active libvirtd)
+if [ ! "$isactive" == "active" ]; then
+  echo_warning "libvirtd system service is not active. Exiting"
+  echo 0
+fi
+
+echo_success "Installation completed."

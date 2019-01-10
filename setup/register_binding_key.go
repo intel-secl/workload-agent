@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
-	common "intel/isecl/wlagent/common"
+	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/osutil"
 	"io/ioutil"
@@ -58,7 +58,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	}
 
 	// save configuration from config.yml
-	e := common.SaveConfiguration(c)
+	e := config.SaveConfiguration(c)
 	if e != nil {
 		log.Error(e.Error())
 		return e
