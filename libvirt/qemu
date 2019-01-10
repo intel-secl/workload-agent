@@ -23,7 +23,7 @@ if [ $2 == "start" ] || [ $2 == "stop" ]; then
 		echo "VM Start called" >>$logfile
 		wlagent start $instanceUUID $imageUUID $imagePath $instancePath $diskSize >>$logfile
 		echo "$?" >>$logfile
-		if [ $? -ne 0 ]; then
+		if [ "$?" -ne 0 ]; then
 			echo "Error occured" >>$logfile
 			exit 1
 		fi

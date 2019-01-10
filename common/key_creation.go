@@ -8,13 +8,12 @@ import (
 	"intel/isecl/wlagent/osutil"
 	"os"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
+	"encoding/base64"
 )
 
 const secretKeyLength int = 20
 
-// CeritifiedKey is class that represents setup for a signing or bindingkey
+// CertifiedKey is class that represents setup for a signing or bindingkey
 type CertifiedKey struct {
 	keyUsage tpm.Usage
 }
@@ -40,6 +39,9 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 	if err != nil {
 		return nil, err
 	}
+	config.WlaConfig.WlsBindingKeySecret = base64.StdEncoding.EncodeToString(secretbytes)
+	log.Println("The binding key secret is:", base64.StdEncoding.EncodeToString(secretbytes))
+	log.Println("The binding key secret from the config var is:", config.WlaConfig.WlsBindingKeySecret)
 	return tpmck, nil
 }
 

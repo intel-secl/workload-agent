@@ -15,25 +15,17 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// Configuration is the global configuration struct that is marshalled/unmarshaled to a persisted yaml file
-var Configuration struct {
-	Mtwilson struct {
-		APIURL      string
-		APIUsername string
-		APIPassword string
-		TLSSha256   string
-	}
-	Wls struct {
-		UserName string
-		UserPass string
-		ShaSize  int
-		TlsSha   string
-	}
-	LogRotate struct {
-		MaxRotateSize int // maximum megabytes before log is rotated
-		MaxDays       int // maximum number of old log files to keep
-		MaxBackups    int // maximum number of days to retain log files
-	}
+// WlaConfig is to be used for storing configuration of workloadagent
+var WlaConfig struct {
+	MtwilsonAPIURL      string
+	MtwilsonAPIUsername string
+	MtwilsonAPIPassword string
+	MtwilsonTLSSHA256   string
+	WlsAPIUsername string
+	WlsAPIPassword string
+	WlsTLSSha   string
+	WlsAPIURL string
+	WlsBindingKeySecret string
 }
 
 // MTWILSON_API_URL is a string environment variable for specifying the
@@ -58,13 +50,12 @@ const taConfigExportCmd string = "tagent export-config --stdout"
 const aikSecretKeyName string = "aik.secret"
 const bindingKeyFileName string = "bindingkey.json"
 const signingKeyFileName string = "signingkey.json"
-const bindingKeyPemFileName string = "bindingkey.pem"
-const signingKeyPemFileName string = "signingkey.pem"
-const numberOfInstancesPerImageFileName string = "no_of_instances_per_image"
-const devMapperPath string = "/dev/mapper/"
-const configFilePath = "workloadagent.env"
+const configFilePath = "/root/workloadagent.env"
+const devMapperLocation = "/dev/mapper/"
 
-var LogFilePath string = os.Getenv("WORKLOAD_AGENT_LOGS") + "/workloadagent.log"
+func GetDevMapperLocation() string {
+	return devMapperLocation
+}
 
 func GetConfigDir() string {
 	return workloadAgentConfigDir
@@ -172,24 +163,26 @@ func SaveConfiguration(c csetup.Context) error {
 	}
 	return Save()
 }
-
-// SaveSetupConfiguration is used to save configurations that are provided during setup
-// for example logger rotate configurations
-func SaveSetupConfiguration() error {
-	Configuration.LogRotate.MaxBackups, _ = strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_BACKUPS"))
-	Configuration.LogRotate.MaxRotateSize, _ = strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_SIZE"))
-	Configuration.LogRotate.MaxDays, _ = strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_DAYS"))
-	return Save()
-}
-
-// LogConfiguration is used to setup log rotation configurations
-func LogConfiguration() {
-	lumberjackLogrotate := &lumberjack.Logger{
-		Filename:   LogFilePath,
-		MaxSize:    Configuration.LogRotate.MaxRotateSize,
-		MaxBackups: Configuration.LogRotate.MaxBackups,
-		MaxAge:     Configuration.LogRotate.MaxDays,
-		Compress:   true,
+	configArray := strings.Split(string(fileContents), "\n")
+	for i := 0; i < len(configArray)-1; i++ {
+		tempConfig := strings.Split(configArray[i], "=")
+		key := tempConfig[0]
+		value := strings.Replace(tempConfig[1], "\"", "", -1)
+		if strings.Contains(strings.ToLower(key), "mtwilson_api_url") {
+			WlaConfig.MtwilsonAPIURL = value
+		} else if strings.Contains(strings.ToLower(key), "mtwilson_api_username") {
+			WlaConfig.MtwilsonAPIUsername = value
+		} else if strings.Contains(strings.ToLower(key), "mtwilson_api_password") {
+			WlaConfig.MtwilsonAPIPassword = value
+		} else if strings.Contains(strings.ToLower(key), "wls_api_username") {
+			WlaConfig.WlsAPIUsername = value
+		} else if strings.Contains(strings.ToLower(key), "wls_api_password") {
+			WlaConfig.WlsAPIPassword = value
+		} else if strings.Contains(strings.ToLower(key), "wls_tls_sha256") {
+			WlaConfig.WlsTLSSha = value
+		} else if strings.Contains(strings.ToLower(key), "wls_api_url") {
+			WlaConfig.WlsAPIURL = value
+		}
 	}
 
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true, TimestampFormat: time.RFC1123Z})

@@ -1,7 +1,7 @@
 package wlavm
 
 import (
-	"log"
+	//"log"
 	"os"
 	"strings"
 	"intel/isecl/wlagent/wlsclient"
@@ -9,114 +9,120 @@ import (
 	"intel/isecl/lib/verifier"
 	pinfo "intel/isecl/lib/platform-info"
 	"intel/isecl/lib/tpm"
-	"intel/isecl/wlagent/wlaconfig"
+	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/osutil"
 	"os/exec"
 	"encoding/base64"
 	"io/ioutil"
 	"encoding/json"
 	"strconv"
+	"fmt"
 )
 
-const (
-	// move this wlaconfig as properties
-	mountLocation = "/mnt/crypto/"
-	devMapperLocation = "/dev/mapper/"
-)
+const mountLocation = "/mnt/crypto/"
 
 // Start method is used perform the VM confidentiality check before lunching the VM
 func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string) int {
 	// validate input parameters
 	if len(strings.TrimSpace(instancePath)) <= 0 {
-		log.Println("instance path not given")
+		fmt.Println("instance path not given")
 		return 1
 	}
 
 	if len(strings.TrimSpace(instanceUUID)) <= 0 {
-		log.Println("instance UUID not given")
+		fmt.Println("instance UUID not given")
 		return 1
 	}
 
 	if len(strings.TrimSpace(imagePath)) <= 0 {
-		log.Println("image path not given")
+		fmt.Println("image path not given")
 		return 1
 	}
 
 	if len(strings.TrimSpace(imageUUID)) <= 0 {
-		log.Println("image UUID not given")
+		fmt.Println("image UUID not given")
 		return 1
 	}
 
 	if len(strings.TrimSpace(diskSize)) <= 0 {
-		log.Println("sparse file size not given")
+		fmt.Println("sparse file size not given")
 		return 1
 	}
 
 	//check if image exists in the given location
 	_, err := os.Stat(imagePath)
 	if os.IsNotExist(err) {
-		log.Println("image does not exist in location ", imagePath)
+		fmt.Println("image does not exist in location ", imagePath)
 		return 1
 	}
 
 	//check if image is encrypted
 	fileOutput, err := exec.Command("file", imagePath).Output()
 	if err != nil {
-		log.Println("Error while checking if the image is encrypted")
+		fmt.Println("Error while checking if the image is encrypted")
 		return 1
 	}
 	
 	outputFormat := strings.Split(string(fileOutput), ":")
-    imageFormat := outputFormat[len(outputFormat)-1]
+	imageFormat := outputFormat[len(outputFormat)-1]
 	
-	if imageFormat != "data" {
-		log.Println("The image is not encrypted")
+	fmt.Println("ImageFormateValue: ", imageFormat)
+	
+	if strings.TrimSpace(imageFormat) != "data" {
+		fmt.Println("The image is not encrypted")
 		return 0
 	}
 
 
 	//check if the key is cached by filtercriteria imageUUID
 	var keyID string
-	var flavorKeyInfo wlsclient.FlavorKeyInfo
+	var flavorKeyInfo wlsclient.FlavorKey
 	var keyPath string
 
 	// get host hardware UUID
 	hardwareUUID,err := pinfo.HardwareUUID()
 	if err != nil {
-		log.Println("Unable to get the host hardware UUID")
+		fmt.Println("Unable to get the host hardware UUID")
 		return 1
 	}
-	log.Println("The host hardware UUID is :", hardwareUUID)
+	fmt.Println("The host hardware UUID is :", hardwareUUID)
 	//get flavor-key from workload service
 	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID, keyID)
 	if err != nil {
-		log.Println("Error while retrieving the image flavor and key")
+		fmt.Println("Error while retrieving the image flavor and key")
 		return 1
 	}
 
 	// if key not cached, cache the key
 
-	if flavorKeyInfo.Flavor.Image.Meta.ID == "" {
-		log.Println("Flavor does not exist for the image ", imageUUID)
+	if flavorKeyInfo.ImageFlavor.Image.Meta.ID == "" {
+		fmt.Println("Flavor does not exist for the image ", imageUUID)
 		return 0
 	}
 
-	if (flavorKeyInfo.Flavor.Image.Encryption.EncryptionRequired) {
+	if (flavorKeyInfo.Image.Encryption.EncryptionRequired) {
 		// unwrap key
-		unWrappedKey, err := unwrapKey(flavorKeyInfo.Key)
-		if err != nil {
-			log.Println("Error while unwrapping the key")
+		fmt.Println("Unwrapping the key...")
+		unWrappedKey, unWrapErr := unwrapKey(flavorKeyInfo.Key)
+		if unWrapErr != nil {
+			fmt.Println("Error while unwrapping the key")
 			return 1
 		}
 
+		fmt.Println("Key unwrapping Done")
 		// write the key to a temp file on disk
-		keyPath = wlaconfig.GetConfigDir() + "key"
-		_ = ioutil.WriteFile(keyPath, unWrappedKey, 0600)
+		keyPath = config.GetConfigDir() + "/key"
+		err = ioutil.WriteFile(keyPath, unWrappedKey, 0600)
+		if err != nil {
+			fmt.Println("Error while writting the unwrapped key on disk")
+			return 1
+		}
 		
 		// create image volume
-		deviceMapperLocation := devMapperLocation + imageUUID
+		deviceMapperLocation := config.GetDevMapperLocation() + imageUUID
 		err = vml.CreateVolume(imagePath, deviceMapperLocation, keyPath, diskSize)
 		if err != nil {
-			log.Println("Error while creating image dm-crypt volume")
+			fmt.Println("Error while creating image dm-crypt volume")
 			return 1
 		}
 
@@ -124,10 +130,10 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string) in
 		imageMountLocation := mountLocation + "imageUUID"
 		_, err = os.Stat(imageMountLocation)
 		if os.IsNotExist(err) {
-			log.Println("Mounting the image")
+			fmt.Println("Mounting the image")
 			mountErr := vml.Mount(deviceMapperLocation, imageMountLocation)
 			if mountErr != nil {
-				log.Println("Error while mounting the image")
+				fmt.Println("Error while mounting the image")
 				return 1
 			}
 		}
@@ -135,22 +141,22 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string) in
 		//decrypt the image
 		err = vml.Decrypt(imagePath, deviceMapperLocation, keyPath)
 		if err != nil {
-			log.Println("Error while decrypting the image")
+			fmt.Println("Error while decrypting the image")
 			return 1
 		}
 
 		// create symlink between the image and the dm-crypt volume
 		err = os.Symlink(imagePath, deviceMapperLocation)
 		if err != nil {
-			log.Println("Error while creating symbolic link")
+			fmt.Println("Error while creating symbolic link")
 			return 1
 		}
 
 		// create instance volume
-		instanceDeviceMapperLocation := devMapperLocation + instanceUUID		
+		instanceDeviceMapperLocation := config.GetDevMapperLocation() + instanceUUID		
 		err = vml.CreateVolume(instancePath, instanceDeviceMapperLocation, keyPath, diskSize)
 		if err != nil {
-			log.Println("Error while creating instance dm-crypt volume")
+			fmt.Println("Error while creating instance dm-crypt volume")
 			return 1
 		}
 	}
@@ -158,28 +164,28 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string) in
 	//create VM manifest
 	manifest, err := vml.CreateVMManifest(instanceUUID, hardwareUUID, imageUUID, true) 
 	if err != nil {
-		log.Println("Error while creating VM manifest")
+		fmt.Println("Error while creating VM manifest")
 		return 1
 	}
 
 	//create VM report
-	vmTrustReport, err := verifier.Verify(&manifest, flavorKeyInfo.Flavor)
+	vmTrustReport, err := verifier.Verify(&manifest, flavorKeyInfo.ImageFlavor)
 	if err != nil {
-		log.Println("Error while creating VM manifest")
+		fmt.Println("Error while creating VM manifest")
 		return 1
 	}
 
 	//post VM report on to workload service
-	err = wlsclient.PostVMReport(vmTrustReport.(verifier.VMTrustReport))
+	err = wlsclient.PostVMReport(vmTrustReport.(*verifier.VMTrustReport))
 	if err!= nil {
-		log.Println("Error while posting the VM trust report on to workload service")
+		fmt.Println("Error while posting the VM trust report on to workload service")
 		return 1
 	}
 
 	//associate instance UUID with the image UUID
 	err = imageInstanceAssociation(imageUUID, imagePath)
 	if err != nil {
-		log.Println("Error while ")
+		fmt.Println("Error while associating the image with the instance")
 		return 1
 	}
 
@@ -196,27 +202,39 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	var err error
 	t, err := tpm.Open()
 
+	if err != nil {
+			fmt.Println("Error while opening the TPM")
+			fmt.Println("Err: ", err)
+			return key, err
+		} 
+
 	if t != nil {
 		defer t.Close()
 		
-		bindingKeyFile := wlaconfig.GetConfigDir() + wlaconfig.GetBindingKeyFileName()
+		bindingKeyFile := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), config.GetBindingKeyFileName(), false)
+		fmt.Println("Bindkey file name:", bindingKeyFile)
 		fileContents, fileErr := ioutil.ReadFile(bindingKeyFile)
 		if fileErr != nil {
-			log.Println("Error while reading the binding key certificate")
-			return key, err
+			fmt.Println("Error while reading the binding key certificate")
+			return key, fileErr
 		}
+		fmt.Println("Binding key file read")
 		jsonErr := json.Unmarshal([]byte(fileContents), &certifiedKey)
 		if jsonErr != nil {
-			log.Println("Error while unmarshalling the binding key file contents to TPM CertifiedKey object")
-			return key, err
+			fmt.Println("Error while unmarshalling the binding key file contents to TPM CertifiedKey object")
+			return key, jsonErr
 		}
 
-		keyAuth,_ := base64.StdEncoding.DecodeString(wlaconfig.WlaConfig.WlsBindingKeySecret)
+		fmt.Println("Binding key deserialized")
+		keyAuth,_ := base64.StdEncoding.DecodeString(config.WlaConfig.WlsBindingKeySecret)
+		fmt.Println("Binding key secret value: ", keyAuth)
+		fmt.Println("Value from config: ", config.WlaConfig.WlsBindingKeySecret)
 		key, unbindErr := t.Unbind(&certifiedKey, keyAuth, tpmWrappedKey)
 		if unbindErr != nil {
-			log.Println("Error while unbinding the tpm wrapped key")
-			return key, err
+			fmt.Println("Error while unbinding the tpm wrapped key")
+			return key, unbindErr
 		}
+		fmt.Println("Unbind successful")
 	}
 	return key, nil
 }
@@ -228,7 +246,7 @@ func imageInstanceAssociation(imageUUID, imagePath string) error {
 	// read the contents of the file
 	output, err := exec.Command("cat", fileName).Output()
 	if err != nil {
-		log.Println("Error while reading the contents of the file")
+		fmt.Println("Error while reading the contents of the file")
 		return err
 	}
 
@@ -243,7 +261,7 @@ func imageInstanceAssociation(imageUUID, imagePath string) error {
 			replaceString := strconv.Itoa(i+1) + " s/count:" + strconv.Itoa(currentCount) + "/count:" + strconv.Itoa(currentCount+1) + "/"
 			_, sedErr := exec.Command("sed", "-i", replaceString, fileName).Output()
 			if sedErr != nil {
-				log.Println("Error while replacing the count of the instance for an image")
+				fmt.Println("Error while replacing the count of the instance for an image")
 				return err
 			}
 			imageUUIDFound = true
@@ -257,13 +275,13 @@ func imageInstanceAssociation(imageUUID, imagePath string) error {
 
 		f, err := os.OpenFile(fileName, os.O_APPEND, 0600)
 		if err != nil {
-			log.Println("Error while opening image-instance information")
+			fmt.Println("Error while opening image-instance information")
 			return err
 		}
 
 		defer f.Close()
 		if _, err = f.WriteString(data); err != nil {
-			log.Println("Error while writing image-instance information")
+			fmt.Println("Error while writing image-instance information")
 			return err
 		}
 	}

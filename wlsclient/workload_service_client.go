@@ -4,23 +4,25 @@ import (
 	"encoding/json"
 	"errors"
 	f "intel/isecl/lib/flavor"
-	"intel/isecl/wlagent/wlaconfig"
+	"intel/isecl/wlagent/config"
 	"intel/isecl/lib/verifier"
+	"intel/isecl/wlagent/common"
 	"log"
 	"net/http"
 	"bytes"
 	"strings"
+	"fmt"
 )
 
-//FlavorKeyInfo is a representation of flavor-key information
-type FlavorKeyInfo struct {
-	Flavor    f.ImageFlavor `json:"flavor"`
-	Key       []byte `json:"key"`
+//FlavorKey is a representation of flavor-key information
+type FlavorKey struct {
+	f.ImageFlavor
+	Key []byte `json:"key"`
 }
 
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
-func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKeyInfo, error){
-	requestURL := wlaconfig.WlaConfig.WlsURL + "images/" + imageUUID +"/flavor-key?hardware_uuid=" + hardwareUUID
+func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error){
+	requestURL := config.WlaConfig.WlsAPIURL + "images/" + imageUUID +"/flavor-key?hardware_uuid=" + hardwareUUID
 
 	if len(strings.TrimSpace(keyID)) >0 {
 		requestURL = requestURL + "&&keyId=" + keyID
@@ -30,43 +32,50 @@ func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKeyInfo, er
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Println("RequestURL: ", requestURL)
 	httpRequest.Header.Set("Accept", "application/json")
 	httpRequest.Header.Set("Content-Type", "application/json")
-	//httpRequest.Header.Set("Authorization", "Basic "+token)
-	var flavorKeyInfo FlavorKeyInfo
+	httpRequest.SetBasicAuth(config.WlaConfig.WlsAPIUsername, config.WlaConfig.WlsAPIPassword)
 
-	httpResponse, err := SendRequest(httpRequest)
+	var flavorKeyInfo FlavorKey
+
+	httpResponse, err := common.SendRequest(httpRequest)
 	if err != nil {
 		return flavorKeyInfo, errors.New("error while getting http response")
 	}
 
 	//deserialize the response to UserInfo response
-	err = json.Unmarshal([]byte(httpResponse), &flavorKeyInfo)
+	err = json.Unmarshal(httpResponse, &flavorKeyInfo)
 	if err != nil {
 		return flavorKeyInfo, errors.New("error while unmarshalling the http response to the type flavor-key")
 	}
+
+	fmt.Println("response from API: ", string(httpResponse))
+
 	return flavorKeyInfo, nil
 
 }
 
 //PostVMReport method is used to upload the VM trust report to workload service
-func PostVMReport(vmTrustReport verifier.VMTrustReport) error {
+func PostVMReport(vmTrustReport *verifier.VMTrustReport) error {
 	var err error
-	var url string
-	var requestBody bytes.Buffer
+	var requestURL string
 
 	//Add client here
-	url = wlaconfig.WlaConfig.WlsURL + "/reports"
+	requestURL = config.WlaConfig.WlsAPIURL + "reports"
 
 	//build request body using username and password from config
-	requestBody.WriteString(``)
+	report, _ := json.Marshal(vmTrustReport)
 	
+	fmt.Println("RequestURL: ", requestURL)
 	// set POST request Accept and Content-Type headers
-	httpRequest, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(requestBody.String())))
+	httpRequest, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(report))
 	httpRequest.Header.Set("Accept", "application/json")
 	httpRequest.Header.Set("Content-Type", "application/json")
+	httpRequest.SetBasicAuth(config.WlaConfig.WlsAPIUsername, config.WlaConfig.WlsAPIPassword)
 
-	_, err = SendRequest(httpRequest)
+	_, err = common.SendRequest(httpRequest)
 	if err != nil {
 		return err
 	}
