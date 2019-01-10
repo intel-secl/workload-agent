@@ -51,8 +51,10 @@ const workloadAgentConfigDir string = "WORKLOAD_AGENT_CONFIGURATION"
 const trustAgentConfigDir string = "TRUST_AGENT_CONFIGURATION"
 const taConfigExportCmd string = "tagent export-config --stdout"
 const aikSecretKeyName string = "aik.secret"
-const bindingKeyFileName string = "binding_key.json"
-const signingKeyFileName string = "signing_key.json"
+const bindingKeyFileName string = "bindingkey.json"
+const signingKeyFileName string = "signingkey.json"
+const bindingKeyPemFileName string = "bindingkey.pem"
+const signingKeyPemFileName string = "signingkey.pem"
 const numberOfInstancesPerImageFileName string = "no_of_instances_per_image"
 const devMapperPath string = "/dev/mapper/"
 const configFilePath = "workloadagent.env"
@@ -81,6 +83,14 @@ func GetBindingKeyFileName() string {
 
 func GetSigningKeyFileName() string {
 	return signingKeyFileName
+}
+
+func GetBindingKeyPemFileName() string {
+	return bindingKeyPemFileName
+}
+
+func GetSigningKeyPemFileName() string {
+	return signingKeyPemFileName
 }
 
 // This function returns the AIK Secret as a byte array running the tagent export config command

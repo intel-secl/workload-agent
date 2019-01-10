@@ -20,8 +20,6 @@
 # 8. Install and setup libvirt
 # 9. Copy isecl-hook script to libvirt hooks directory.
 
-WORKLOAD_AGENT_LAYOUT=${WORKLOAD_AGENT_LAYOUT:-home}
-WORKLOAD_AGENT_HOME=/opt/workloadagent
 DEFAULT_TRUSTAGENT_USERNAME=tagent
 
 # Log rotate configurations
@@ -124,21 +122,13 @@ fi
 
 # 5. Load local configurations
 directory_layout() {
-if [ "$WORKLOAD_AGENT_LAYOUT" == "linux" ]; then
-  export WORKLOAD_AGENT_CONFIGURATION=${WORKLOAD_AGENT_CONFIGURATION:-/etc/workloadagent}
-  export TRUST_AGENT_CONFIGURATION=${TRUST_AGENT_CONFIGURATION:-/etc/trustagent}
-  export WORKLOAD_AGENT_LOGS=${WORKLOAD_AGENT_LOGS:-/var/log/workloadagent}
-elif [ "$WORKLOAD_AGENT_LAYOUT" == "home" ]; then
-  export WORKLOAD_AGENT_CONFIGURATION=${WORKLOAD_AGENT_CONFIGURATION:-$WORKLOAD_AGENT_HOME/configuration}
-  export TRUST_AGENT_CONFIGURATION=${TRUST_AGENT_CONFIGURATION:-/opt/trustagent/configuration}
-  export WORKLOAD_AGENT_LOGS=${WORKLOAD_AGENT_LOGS:-$WORKLOAD_AGENT_HOME/logs}
-fi
-
-export WORKLOAD_AGENT_VAR=${WORKLOAD_AGENT_VAR:-$WORKLOAD_AGENT_HOME/var}
+export WORKLOAD_AGENT_HOME=/opt/workloadagent
+export WORKLOAD_AGENT_CONFIGURATION=${WORKLOAD_AGENT_CONFIGURATION:-/etc/workloadagent}
+export TRUST_AGENT_CONFIGURATION=${TRUST_AGENT_CONFIGURATION:-/opt/trustagent/configuration}
+export WORKLOAD_AGENT_LOGS=${WORKLOAD_AGENT_LOGS:-/var/log/workloadagent}
 export WORKLOAD_AGENT_BIN=${WORKLOAD_AGENT_BIN:-$WORKLOAD_AGENT_HOME/bin}
 export INSTALL_LOG_FILE=$WORKLOAD_AGENT_LOGS/install.log
 }
-
 directory_layout
 
 mkdir -p $(dirname $INSTALL_LOG_FILE)

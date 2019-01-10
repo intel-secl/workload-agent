@@ -153,7 +153,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	aikPem := beginCert + "\n" + bindingKeyCert.BindingKeyCertificate + "\n" + endCert + "\n"
 
 	//write the binding key certificate to file
-	bindingKeyCertPath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), "bindingkeycert.pem", true)
+	bindingKeyCertPath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), config.GetBindingKeyPemFileName(), true)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -188,7 +188,7 @@ func (rb RegisterBindingKey) Validate(c csetup.Context) error {
 
 	log.Info("Validation for registering binding key.")
 
-	bindingKeyCertFilePath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), "bindingkeycert.pem", true)
+	bindingKeyCertFilePath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), config.GetBindingKeyPemFileName(), true)
 	_, err = os.Stat(bindingKeyCertFilePath)
 	if os.IsNotExist(err) {
 		return errors.New("Binding key certificate file does not exist")

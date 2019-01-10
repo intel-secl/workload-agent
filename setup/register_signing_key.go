@@ -153,7 +153,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	aikPem := beginCertTag + "\n" + signingKeyCert.SigningKeyCertificate + "\n" + endCertTag + "\n"
 
 	//write the signing key certificate to file
-	signingKeyCertPath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), "signingkeycert.pem", true)
+	signingKeyCertPath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), config.GetSigningKeyPemFileName(), true)
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -188,7 +188,7 @@ func (rs RegisterSigningKey) Validate(c csetup.Context) error {
 
 	log.Info("Validation for registering signing key.")
 
-	signingKeyCertPath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), "signingkeycert.pem", true)
+	signingKeyCertPath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), config.GetSigningKeyPemFileName(), true)
 	_, err = os.Stat(signingKeyCertPath)
 	if os.IsNotExist(err) {
 		return errors.New("Signing key certificate file does not exist")
