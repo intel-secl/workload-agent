@@ -100,14 +100,14 @@ fi
 # 3. exit workloadagent setup if WORKLOAD_AGENT_NOSETUP is set
 if [ -n "$WORKLOAD_AGENT_NOSETUP" ]; then
   echo "WORKLOAD_AGENT_NOSETUP value is set. So, skipping the workloadagent setup task."
-  exit 0;
+  exit 0
 fi
 
 # 4. Check if trustagent is intalled; if not output error
-isrunning=$(tagent status)
+isrunning=$(tagent status > /dev/null 2>&1)
 if [ ! "$isrunning" == "Trust agent is running" ]; then
-  echo_warning "Trustagent is not installed. Exiting"
-  echo 0
+  echo_failure "Trustagent is not installed. Exiting"
+  exit 1
 fi
 
 # 5. Use tagent user
