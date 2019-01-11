@@ -154,19 +154,19 @@ func init() {
 // This is called when setup tasks are called
 func SaveConfiguration(c csetup.Context) error {
 	var err error
-	Configuration.Mtwilson.APIURL, err = c.GetConfigString(MTWILSON_API_URL, "Mtwilson URL")
+	Configuration.Mtwilson.APIURL, err = c.GetenvString(MTWILSON_API_URL, "Mtwilson URL")
 	if err != nil {
 		return err
 	}
-	Configuration.Mtwilson.APIUsername, err = c.GetConfigString(MTWILSON_API_USERNAME, "Mtwilson Username")
+	Configuration.Mtwilson.APIUsername, err = c.GetenvString(MTWILSON_API_USERNAME, "Mtwilson Username")
 	if err != nil {
 		return err
 	}
-	Configuration.Mtwilson.APIPassword, err = c.GetConfigString(MTWILSON_API_PASSWORD, "Mtwilson Password")
+	Configuration.Mtwilson.APIPassword, err = c.GetenvString(MTWILSON_API_PASSWORD, "Mtwilson Password")
 	if err != nil {
 		return err
 	}
-	Configuration.Mtwilson.TLSSha256, err = c.GetConfigString(MTWILSON_TLS_SHA256, "Mtwilson TLSSha256")
+	Configuration.Mtwilson.TLSSha256, err = c.GetenvString(MTWILSON_TLS_SHA256, "Mtwilson TLSSha256")
 	if err != nil {
 		return err
 	}

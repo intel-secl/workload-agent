@@ -104,11 +104,12 @@ if [ -n "$WORKLOAD_AGENT_NOSETUP" ]; then
 fi
 
 # 4. Check if trustagent is intalled; if not output error
-isrunning=$(tagent status > /dev/null 2>&1)
-if [ ! "$isrunning" == "Trust agent is running" ]; then
-  echo_failure "Trustagent is not installed. Exiting"
-  exit 1
-fi
+hash tagent 2>/dev/null || 
+{
+  echo_failure >&2 "Trust agent is not installed. Exiting."; 
+  exit 1; 
+}
+
 
 # 5. Use tagent user
 #### Using trustagent user here as trustagent needs permissions to access files from workload agent
