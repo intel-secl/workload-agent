@@ -12,6 +12,8 @@ stages:
 
 test:
   stage: test
+  tags:
+    - go
   script:
     - start12 > /dev/null &
     - start20 > /dev/null &
@@ -23,6 +25,8 @@ test:
     - go test -cover
   
 compile:
+  tags:
+    - go
   stage: build
   script:
     - cd src
