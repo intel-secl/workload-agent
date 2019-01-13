@@ -234,6 +234,7 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string) in
 		err = imageInstanceCountAssociation(imageUUID, imagePath)
 		if err != nil {
 			fmt.Println("Error while updating the image-instance count file")
+			fmt.Println("Error: ", err)
 			return 1
 		}
 	}
@@ -287,9 +288,21 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 func imageInstanceCountAssociation(imageUUID, imagePath string) error {
 
 	imageUUIDFound := false
-	imageInstanceCountAssociationFileName := "/etc/workloadagent/" + config.ImageInstanceCountAssociationFileName()
+	imageInstanceCountAssociationFilePath := "/etc/workloadagent/" + config.ImageInstanceCountAssociationFileName()
+	
+	// creating the image-instance file if not preset
+	_, err := os.Stat(imageInstanceCountAssociationFilePath)
+	if os.IsNotExist(err) {
+		fmt.Println("Image-instance count file doesnot exists. Creating the file")
+		_, touchErr := exec.Command("touch", imageInstanceCountAssociationFilePath).Output()
+		if touchErr != nil {
+			fmt.Println("Error while trying to create the image-instance count association file")
+			return touchErr
+		}
+	}
+	
 	// read the contents of the file
-	output, err := exec.Command("cat", imageInstanceCountAssociationFileName).Output()
+	output, err := exec.Command("cat", imageInstanceCountAssociationFilePath).Output()
 	if err != nil {
 		fmt.Println("Error while reading the contents of the file")
 		return err
@@ -304,7 +317,7 @@ func imageInstanceCountAssociation(imageUUID, imagePath string) error {
 			splitCountSection := strings.Split(countSection, ":")
 			currentCount, _ := strconv.Atoi(splitCountSection[len(splitCountSection)-1])
 			replaceString := strconv.Itoa(i+1) + " s/count:" + strconv.Itoa(currentCount) + "/count:" + strconv.Itoa(currentCount+1) + "/"
-			_, sedErr := exec.Command("sed", "-i", replaceString, imageInstanceCountAssociationFileName).Output()
+			_, sedErr := exec.Command("sed", "-i", replaceString, imageInstanceCountAssociationFilePath).Output()
 			if sedErr != nil {
 				fmt.Println("Error while replacing the count of the instance for an image")
 				return err
@@ -318,7 +331,7 @@ func imageInstanceCountAssociation(imageUUID, imagePath string) error {
 	if !imageUUIDFound {
 		data := imageUUID + "\t" + imagePath + "\t" + "count:" + strconv.Itoa(1) + "\n"
 
-		f, err := os.OpenFile(imageInstanceCountAssociationFileName, os.O_APPEND, 0600)
+		f, err := os.OpenFile(imageInstanceCountAssociationFilePath, os.O_WRONLY|os.O_APPEND, 0600)
 		if err != nil {
 			fmt.Println("Error while opening image-instance information")
 			return err

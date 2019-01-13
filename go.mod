@@ -14,9 +14,9 @@ require (
 
 replace intel/isecl/lib/tpm => gitlab.devtools.intel.com/sst/isecl/lib/tpm v0.0.0-20190110061413-50a5c0acb880
 
-replace intel/isecl/lib/vml => gitlab.devtools.intel.com/sst/isecl/lib/volume-management v1.0/develop
+replace intel/isecl/lib/vml => gitlab.devtools.intel.com/sst/isecl/lib/volume-management v0.0.0-20190113075051-785605883a21
 
-replace intel/isecl/lib/common => gitlab.devtools.intel.com/sst/isecl/lib/common v0.0.0-20190102215830-f9c9e2da84e8
+replace intel/isecl/lib/common => gitlab.devtools.intel.com/sst/isecl/lib/common v0.0.0-20190111193312-8cce5c9d03f3
 
 replace intel/isecl/lib/flavor => gitlab.devtools.intel.com/sst/isecl/lib/flavor v0.0.0-20181206181952-1ec1e81fed41
 
