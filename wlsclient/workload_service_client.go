@@ -6,7 +6,6 @@ import (
 	f "intel/isecl/lib/flavor"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/lib/verifier"
-	"intel/isecl/wlagent/common"
 	"log"
 	"net/http"
 	"bytes"
@@ -21,10 +20,10 @@ type FlavorKey struct {
 }
 
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
-func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error){
-	requestURL := config.WlaConfig.WlsAPIURL + "images/" + imageUUID +"/flavor-key?hardware_uuid=" + hardwareUUID
+func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error) {
+	requestURL := config.Configuration.Wls.APIURL + "images/" + imageUUID +"/flavor-key?hardware_uuid=" + hardwareUUID
 
-	if len(strings.TrimSpace(keyID)) >0 {
+	if len(strings.TrimSpace(keyID)) > 0 {
 		requestURL = requestURL + "&&keyId=" + keyID
 	}
 
@@ -36,11 +35,11 @@ func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error)
 	fmt.Println("RequestURL: ", requestURL)
 	httpRequest.Header.Set("Accept", "application/json")
 	httpRequest.Header.Set("Content-Type", "application/json")
-	httpRequest.SetBasicAuth(config.WlaConfig.WlsAPIUsername, config.WlaConfig.WlsAPIPassword)
+	//httpRequest.SetBasicAuth(config.WlaConfig.WlsAPIUsername, config.WlaConfig.WlsAPIPassword)
 
 	var flavorKeyInfo FlavorKey
 
-	httpResponse, err := common.SendRequest(httpRequest)
+	httpResponse, err := SendRequest(httpRequest, true)
 	if err != nil {
 		return flavorKeyInfo, errors.New("error while getting http response")
 	}
@@ -63,7 +62,7 @@ func PostVMReport(vmTrustReport *verifier.VMTrustReport) error {
 	var requestURL string
 
 	//Add client here
-	requestURL = config.WlaConfig.WlsAPIURL + "reports"
+	requestURL = config.Configuration.Wls.APIURL + "reports"
 
 	//build request body using username and password from config
 	report, _ := json.Marshal(vmTrustReport)
@@ -73,9 +72,9 @@ func PostVMReport(vmTrustReport *verifier.VMTrustReport) error {
 	httpRequest, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(report))
 	httpRequest.Header.Set("Accept", "application/json")
 	httpRequest.Header.Set("Content-Type", "application/json")
-	httpRequest.SetBasicAuth(config.WlaConfig.WlsAPIUsername, config.WlaConfig.WlsAPIPassword)
+	//httpRequest.SetBasicAuth(config.WlaConfig.WlsAPIUsername, config.WlaConfig.WlsAPIPassword)
 
-	_, err = common.SendRequest(httpRequest)
+	_, err = SendRequest(httpRequest, true)
 	if err != nil {
 		return err
 	}

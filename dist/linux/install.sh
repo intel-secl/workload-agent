@@ -167,18 +167,20 @@ wlagent setup | tee $logfile
 # 8. Install and setup libvirt
 #yum -y install libvirt 2>>$logfile
 
-# if [ ! -d "/etc/libvirt" ]; then
-#   echo_warning "libvirt directory not present. Exiting"
-#   exit 0
-# fi
+# 9. Install and setup libvirt
+#yum -y install libvirt cryptsetup 2>>$logfile
 
-# mkdir "/etc/libvirt/hooks"
+#if [ ! -d "/etc/libvirt" ]; then
+#  echo_warning "libvirt directory not present. Exiting"
+#  exit 0
+#fi
 
-# if [ ! -d "/etc/libvirt/hooks" ];  then
-#   echo_warning "Not able to create hooks directory. Exiting"
-#   echo 0
-# fi
+#mkdir -p "/etc/libvirt/hooks" 
 
-# 9. Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
-#cp qemu /etc/libvirt/hooks 
+#if [ ! -d "/etc/libvirt/hooks" ];  then
+#  echo_warning "Not able to create hooks directory. Exiting"
+#  echo 0
+#fi
 
+# 10. Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
+#cp -f qemu /etc/libvirt/hooks 

@@ -93,7 +93,7 @@ func isInstanceVolumeEncrypted(vmUUID string) bool {
 
 func isLastInstanceAssociatedWithImage(imageUUID string) bool {
 	// Join the file name and config file path
-	var fileName = config.GetNumberOfInstancesPerImageFileName()
+	var fileName = config.ImageInstanceCountAssociationFileName()
 	file, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), fileName, true)
 	if err != nil {
 		log.Debug(err)

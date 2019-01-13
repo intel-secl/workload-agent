@@ -146,7 +146,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	_ = json.Unmarshal([]byte(httpResponse), &signingKeyCert)
 
 	if len(strings.TrimSpace(signingKeyCert.SigningKeyCertificate)) <= 0 {
-		return errors.New("error in signing key certificate creation.")
+		return errors.New("error in signing key certificate registration.")
 	}
 
 	//construct the certificate by adding begin and end certificate tags

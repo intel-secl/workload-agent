@@ -17,7 +17,7 @@ func (bk BindingKey) Run(c csetup.Context) error {
 		log.Info("Binding key already created, skipping ...")
 		return nil
 	}
-	log.Info("Creating of binding key.")
+	log.Info("Creating binding key.")
 	usage, err := common.NewCertifiedKey("BIND")
 	if err != nil {
 		return err

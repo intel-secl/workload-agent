@@ -39,9 +39,12 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 	if err != nil {
 		return nil, err
 	}
-	config.WlaConfig.WlsBindingKeySecret = base64.StdEncoding.EncodeToString(secretbytes)
+	
+	config.Configuration.BindingKeySecret  = base64.StdEncoding.EncodeToString(secretbytes)
+	config.Save()
+
 	log.Println("The binding key secret is:", base64.StdEncoding.EncodeToString(secretbytes))
-	log.Println("The binding key secret from the config var is:", config.WlaConfig.WlsBindingKeySecret)
+	log.Println("The binding key secret from the config var is:", config.Configuration.BindingKeySecret)
 	return tpmck, nil
 }
 

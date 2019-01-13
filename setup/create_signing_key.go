@@ -17,7 +17,7 @@ func (sk SigningKey) Run(c csetup.Context) error {
 		log.Info("Signing key already created, skipping ...")
 		return nil
 	}
-	log.Info("Creating of signing key.")
+	log.Info("Creating signing key.")
 	usage, err := common.NewCertifiedKey("SIGN")
 	if err != nil {
 		return err

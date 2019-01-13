@@ -15,17 +15,26 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// WlaConfig is to be used for storing configuration of workloadagent
-var WlaConfig struct {
-	MtwilsonAPIURL      string
-	MtwilsonAPIUsername string
-	MtwilsonAPIPassword string
-	MtwilsonTLSSHA256   string
-	WlsAPIUsername string
-	WlsAPIPassword string
-	WlsTLSSha   string
-	WlsAPIURL string
-	WlsBindingKeySecret string
+// Configuration is the global configuration struct that is marshalled/unmarshaled to a persisted yaml file
+var Configuration struct {
+	BindingKeySecret string
+	Mtwilson struct {
+		APIURL      string
+		APIUsername string
+		APIPassword string
+		TLSSha256   string
+}
+	Wls struct {
+		APIURL string
+		APIUsername string
+		APIPassword string
+		TlsSha256   string
+	}
+	LogRotate struct {
+		MaxRotateSize int // maximum megabytes before log is rotated
+		MaxDays       int // maximum number of old log files to keep
+		MaxBackups    int // maximum number of days to retain log files
+	}
 }
 
 // MTWILSON_API_URL is a string environment variable for specifying the
@@ -44,18 +53,23 @@ const MTWILSON_API_PASSWORD = "MTWILSON_API_PASSWORD"
 // the mtwilson TLS sha256 and is used to connect to mtwilson
 const MTWILSON_TLS_SHA256 = "MTWILSON_TLS_SHA256"
 
+//WLS vars
+const WLS_API_URL = "WLS_API_URL"
+const WLS_API_USERNAME = "WLS_API_USERNAME"
+const WLS_API_PASSWORD = "WLS_API_PASSWORD"
+
 const workloadAgentConfigDir string = "WORKLOAD_AGENT_CONFIGURATION"
 const trustAgentConfigDir string = "TRUST_AGENT_CONFIGURATION"
 const taConfigExportCmd string = "tagent export-config --stdout"
 const aikSecretKeyName string = "aik.secret"
 const bindingKeyFileName string = "bindingkey.json"
 const signingKeyFileName string = "signingkey.json"
-const configFilePath = "/root/workloadagent.env"
-const devMapperLocation = "/dev/mapper/"
-
-func GetDevMapperLocation() string {
-	return devMapperLocation
-}
+const bindingKeyPemFileName string = "bindingkey.pem"
+const signingKeyPemFileName string = "signingkey.pem"
+const imageInstanceCountAssociationFileName string = "image_instance_association"
+const devMapperPath string = "/dev/mapper/"
+const configFilePath = "workloadagent.env"
+const devMapperDirPath = "/dev/mapper/"
 
 func GetConfigDir() string {
 	return workloadAgentConfigDir
@@ -65,12 +79,12 @@ func GetTrustAgentConfigDir() string {
 	return trustAgentConfigDir
 }
 
-func GetNumberOfInstancesPerImageFileName() string {
-	return numberOfInstancesPerImageFileName
+func ImageInstanceCountAssociationFileName() string {
+	return imageInstanceCountAssociationFileName
 }
 
 func GetDevMapperDir() string {
-	return devMapperPath
+	return devMapperDirPath
 }
 
 func GetBindingKeyFileName() string {
@@ -109,23 +123,19 @@ func GetAikSecret() ([]byte, error) {
 }
 
 var LogWriter io.Writer
-var configYamlFile = os.Getenv(workloadAgentConfigDir) + "/config.yml"
 
 // Save the configuration struct into configuration directory
 func Save() error {
-	file, err := os.OpenFile(configYamlFile, os.O_RDWR, 0)
+	file, err := os.OpenFile("/etc/workloadagent/config.yml", os.O_RDWR, 0)
 	if err != nil {
 		// we have an error
 		if os.IsNotExist(err) {
 			// error is that the config doesnt yet exist, create it
-			file, err = os.Create(configYamlFile)
+			file, err = os.Create("/etc/workloadagent/config.yml")
 			if err != nil {
 				return err
 			}
-		} else {
-			// someother I/O related error
-			return err
-		}
+		} 
 	}
 	defer file.Close()
 	return yaml.NewEncoder(file).Encode(Configuration)
@@ -133,7 +143,7 @@ func Save() error {
 
 func init() {
 	// load from config
-	file, err := os.Open(configYamlFile)
+	file, err := os.Open("/etc/workloadagent/config.yml")
 	if err == nil {
 		defer file.Close()
 		yaml.NewDecoder(file).Decode(&Configuration)
