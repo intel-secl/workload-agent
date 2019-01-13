@@ -2,7 +2,7 @@
 
 domainxml="-"
 
-logfile="/var/log/workloagent/libvirt_hook_eventlog.log"
+logfile="/var/log/workloadagent/libvirt_hook_eventlog.log"
 
 
 #echo "=========qemu hook event at $dt ========" >>$logfile
@@ -12,7 +12,7 @@ echo "$dt parameters: $0 $1 $2 $3 $4" >>$logfile
 
 if [ $2 == "start" ] || [ $2 == "stop" ]; then
 	domainFile="/tmp/domain.xml"
-	cat $domainxml >> $domainFile
+	cat $domainxml > $domainFile
 	instanceUUID=$(xmlstarlet sel -t -v '//domain/uuid' $domainFile)
 	imageUUID=$(xmlstarlet sel -N nova="http://openstack.org/xmlns/libvirt/nova/1.0" -t -v '//nova:root/@uuid' $domainFile)
 	imagePath=$(xmlstarlet sel -t -v '//domain/devices/disk/backingStore/source/@file' $domainFile)
