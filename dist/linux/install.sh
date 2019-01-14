@@ -167,8 +167,19 @@ wlagent setup | tee $logfile
 # 8. Install and setup libvirt
 #yum -y install libvirt 2>>$logfile
 
-# 9. Install and setup libvirt
-#yum -y install libvirt cryptsetup 2>>$logfile
+# 10. Check if yum packages are already installed; if not install them
+yum_packages=(xmlstarlet libvirt cryptsetup)
+for i in ${yum_packages[*]}
+do
+  isinstalled=$(rpm -q $i)
+  if [ "$isinstalled" == "package $i is not installed" ]; then
+    yum -y install $i 2>>$logfile
+  fi
+done
+if [ ! -d "/etc/libvirt" ]; then
+  echo_warning "libvirt directory not present. Exiting"
+  exit 0
+fi
 
 #if [ ! -d "/etc/libvirt" ]; then
 #  echo_warning "libvirt directory not present. Exiting"
