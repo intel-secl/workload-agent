@@ -184,10 +184,10 @@ func SaveConfiguration(c csetup.Context) error {
 	if err != nil {
 		return err
 	}
-	Configuration.Wls.TlsSha256, err = c.GetenvString(WLS_TLS_SHA256, "Workload Service TLS SHA256")
-	if err != nil {
-		return err
-	}
+	// Configuration.Wls.TlsSha256, err = c.GetenvString(WLS_TLS_SHA256, "Workload Service TLS SHA256")
+	// if err != nil {
+	// 	return err
+	// }
 	return Save()
 }
 	configArray := strings.Split(string(fileContents), "\n")
