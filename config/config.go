@@ -57,6 +57,7 @@ const MTWILSON_TLS_SHA256 = "MTWILSON_TLS_SHA256"
 const WLS_API_URL = "WLS_API_URL"
 const WLS_API_USERNAME = "WLS_API_USERNAME"
 const WLS_API_PASSWORD = "WLS_API_PASSWORD"
+const WLS_TLS_SHA256 = "WLS_TLS_SHA256"
 
 const workloadAgentConfigDir string = "WORKLOAD_AGENT_CONFIGURATION"
 const trustAgentConfigDir string = "TRUST_AGENT_CONFIGURATION"
@@ -167,7 +168,23 @@ func SaveConfiguration(c csetup.Context) error {
 	if err != nil {
 		return err
 	}
-	Configuration.Mtwilson.TLSSha256, err = c.GetenvString(MTWILSON_TLS_SHA256, "Mtwilson TLSSha256")
+	Configuration.Mtwilson.TLSSha256, err = c.GetenvString(MTWILSON_TLS_SHA256, "Mtwilson TLS SHA256")
+	if err != nil {
+		return err
+	}
+	Configuration.Wls.APIURL, err = c.GetenvString(WLS_API_URL, "Workload Service URL")
+	if err != nil {
+		return err
+	}
+	Configuration.Wls.APIUsername, err = c.GetenvString(WLS_API_USERNAME, "Workload Service API Username")
+	if err != nil {
+		return err
+	}
+	Configuration.Wls.APIPassword, err = c.GetenvString(WLS_API_PASSWORD, "Workload Service API Password")
+	if err != nil {
+		return err
+	}
+	Configuration.Wls.TlsSha256, err = c.GetenvString(WLS_TLS_SHA256, "Workload Service TLS SHA256")
 	if err != nil {
 		return err
 	}
