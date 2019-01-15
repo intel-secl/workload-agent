@@ -8,9 +8,9 @@ import (
 	"intel/isecl/wlagent/wlsclient"
 	"os"
 	"strings"
-
-	//"intel/isecl/lib/verifier"
-	"intel/isecl/lib/common/exec"
+	"intel/isecl/wlagent/wlsclient"
+	"intel/isecl/lib/vml"
+	"intel/isecl/lib/verifier"
 	pinfo "intel/isecl/lib/platform-info"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
@@ -248,6 +248,48 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 			return 1
 		}
 	}
+	//create VM manifest
+	fmt.Println("Creating VM Manifest")
+	manifest, err := vml.CreateVMManifest(instanceUUID, hardwareUUID, imageUUID, true)
+	if err != nil {
+		fmt.Println("Error while creating VM manifest")
+		fmt.Println("Error: ", err)
+		return 1
+	}
+
+	manifestOutput, _ := json.Marshal(manifest)
+	fmt.Println("Manifest :", string(manifestOutput))
+	//flavor, _ := json.Marshal(flavorKeyInfo.ImageFlavor)
+
+	//create VM report
+	fmt.Println("Creating VM report")
+	vmTrustReport, err := verifier.Verify(&manifest, &flavorKeyInfo.ImageFlavor)
+	if err != nil {
+		fmt.Println("Error while creating VM report")
+		fmt.Println("Error: ", err)
+		return 1
+	}
+
+	//post VM report on to workload service
+	fmt.Println("Posting VM report on WLS")
+	report, _ := json.Marshal(vmTrustReport.(*verifier.VMTrustReport))
+	fmt.Println("Report: ", string(report))
+	err = wlsclient.PostVMReport(vmTrustReport.(*verifier.VMTrustReport))
+	if err!= nil {
+		fmt.Println("Error while posting the VM trust report on to workload service")
+		fmt.Println("Error: ", err)
+		return 1
+	}
+
+	//associate instance UUID with the image UUID
+	fmt.Println("Creating image-instance count association")
+	err = imageInstanceCountAssociation(imageUUID, imagePath)
+	if err != nil {
+		fmt.Println("Error while associating the image with the instance")
+		fmt.Println("Error: ", err)
+		return 1
+	}
+
 	return 0
 }
 
