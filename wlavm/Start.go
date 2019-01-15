@@ -257,10 +257,6 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 		return 1
 	}
 
-	manifestOutput, _ := json.Marshal(manifest)
-	fmt.Println("Manifest :", string(manifestOutput))
-	//flavor, _ := json.Marshal(flavorKeyInfo.ImageFlavor)
-
 	//create VM report
 	fmt.Println("Creating VM report")
 	vmTrustReport, err := verifier.Verify(&manifest, &flavorKeyInfo.ImageFlavor)
