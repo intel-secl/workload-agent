@@ -3,6 +3,11 @@ package osutil
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"crypto/rand"
+	"crypto/sha1"
+	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -93,4 +98,71 @@ func GetValueFromEnvBody(content, keyName string) (value string, err error) {
 		return rs[1], nil
 	}
 	return "", fmt.Errorf("Could not find Value for %s", keyName)
+}
+
+// GetHexRandomString return a random string of 'length'
+func GetHexRandomString(length int) (string, error) {
+
+	bytes, err := GetRandomBytes(length)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(bytes), nil
+}
+
+// GetRandomBytes retrieves a byte array of 'length'
+func GetRandomBytes(length int) ([]byte, error) {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return nil, err
+	}
+	return bytes, nil
+}
+
+// GetHash returns a byte array to the hash of the data.
+// alg indicates the hashing algorithm. Currently, the only supported hashing algorithms
+// are SHA1, SHA256, SHA384 and SHA512
+func GetHashData(data []byte, alg crypto.Hash) ([]byte, error) {
+
+	if data == nil {
+		return nil, fmt.Errorf("Error - data pointer is nil")
+	}
+
+	switch alg {
+	case crypto.SHA1:
+		s := sha1.Sum(data)
+		return s[:], nil
+	case crypto.SHA256:
+		s := sha256.Sum256(data)
+		return s[:], nil
+	case crypto.SHA384:
+		//SHA384 is implemented in the sha512 package
+		s := sha512.Sum384(data)
+		return s[:], nil
+	case crypto.SHA512:
+		s := sha512.Sum512(data)
+		return s[:], nil
+	}
+
+	return nil, fmt.Errorf("Error - Unsupported hashing function %d requested. Only SHA1, SHA256, SHA384 and SHA512 supported", alg)
+}
+
+// ParseSetupTasks takes space seperated list of tasks along with any additional flags.
+// Not used for now...
+// TODO : to be implemented.
+func ParseSetupTasks(commandargs ...[]string) []string {
+	//TODO: This function for now takes a space seperated list of
+	// setup arguments. We should parse this to check for the presence of --force
+	//flags. This should be a common utility that is able to parse a list of
+	// tasks as well as an associated flags
+	if len(commandargs) > 1 {
+		log.Println("Expecting a slice of string as argument.")
+	}
+	return commandargs[0]
+}
+
+// RunTasks - function to be implemented as part of the Common Installer module
+func RunTasks(commandargs []string) {
+
 }

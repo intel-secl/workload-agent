@@ -36,8 +36,14 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 	if err != nil {
 		return nil, err
 	}
+	
+	switch (usage){
+	case tpm.Binding:
+		config.Configuration.BindingKeySecret  = base64.StdEncoding.EncodeToString(secretbytes)
+	case tpm.Signing:
+		config.Configuration.SigningKeySecret  = base64.StdEncoding.EncodeToString(secretbytes)
+	}
 
-	config.Configuration.BindingKeySecret = base64.StdEncoding.EncodeToString(secretbytes)
 	config.Save()
 
 	log.Println("The binding key secret is:", base64.StdEncoding.EncodeToString(secretbytes))

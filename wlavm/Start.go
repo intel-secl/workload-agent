@@ -4,8 +4,7 @@ package wlavm
 
 import (
 	//"log"
-	"intel/isecl/lib/vml"
-	"intel/isecl/wlagent/wlsclient"
+	"crypto"
 	"os"
 	"strings"
 	"intel/isecl/wlagent/wlsclient"
@@ -14,8 +13,7 @@ import (
 	pinfo "intel/isecl/lib/platform-info"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
-	"intel/isecl/wlagent/consts"
-
+	"intel/isecl/wlagent/osutil"
 	//"intel/isecl/lib/flavor"
 	"encoding/base64"
 	"encoding/json"
@@ -25,6 +23,13 @@ import (
 )
 
 const mountPath = "/mnt/crypto/"
+
+type SignedVMTrustReport struct {
+	jsonVMTrustReport 	string 			`json:"vm_trust_report"` //json formatted VMtrust report. 
+	alg				string 			`json:"hash_alg"`
+	cert			string			`json:"cert"` //pem formatted certificate
+	signature 		[]byte			`json:"signature"`
+}
 
 // Start method is used perform the VM confidentiality check before lunching the VM
 func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, filewatcher *filewatch.Watcher) int {
@@ -259,6 +264,7 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 
 	//create VM report
 	fmt.Println("Creating VM report")
+	
 	vmTrustReport, err := verifier.Verify(&manifest, &flavorKeyInfo.ImageFlavor)
 	if err != nil {
 		fmt.Println("Error while creating VM report")
@@ -266,9 +272,18 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 		return 1
 	}
 
+	// compute the hash and sign
+	signedVMTrustReport, err := signVMTrustReport(vmTrustReport.(*verifier.VMTrustReport))
+	if err != nil {
+		fmt.Println("Error while trying to sign VMTrust report using TPM")
+		fmt.Println("Error :", err)
+		return 1
+	}
+	
 	//post VM report on to workload service
 	fmt.Println("Posting VM report on WLS")
-	report, _ := json.Marshal(vmTrustReport.(*verifier.VMTrustReport))
+	report, _ := json.Marshal(*signedVMTrustReport)
+
 	fmt.Println("Report: ", string(report))
 	err = wlsclient.PostVMReport(vmTrustReport.(*verifier.VMTrustReport))
 	if err!= nil {
@@ -288,6 +303,81 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 
 	return 0
 }
+
+func signVMTrustReport(report *verifier.VMTrustReport) (*SignedVMTrustReport, error){
+
+	
+	var signedreport SignedVMTrustReport
+
+	jsonVMTrustReport, err := json.Marshal(*report)
+	if err != nil {
+		return nil, fmt.Errorf("Error : could not marshal VMTrustReport - %s", err)
+	}
+	
+	signedreport.jsonVMTrustReport = string(jsonVMTrustReport)
+	signedreport.alg = config.GetHashingAlgorithmName()
+	
+	signedreport.cert, err = config.GetSigningCertFromFile()
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := createSignatureWithTPM([]byte(signedreport.jsonVMTrustReport), config.GetHashingAlgorithm())
+	if err != nil {
+		return nil, err
+	}
+	signedreport.signature = signature
+	return &signedreport, nil
+
+}
+
+
+func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
+	
+	var signingKey tpm.CertifiedKey
+
+	// Get the Signing Key that is stored on disk
+	signingKeyJson, err := config.GetSigningKeyFromFile()
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(signingKeyJson, &signingKey)
+	if  err != nil {
+		return nil, err
+	}
+
+	// Get the secret associated when the SigningKey was created. 
+	keyAuth, err := base64.StdEncoding.DecodeString(config.Configuration.SigningKeySecret)
+	if err != nil{
+		return nil, fmt.Errorf("Error - Could not retrieve Secret Associated with SigningKey")
+	}
+
+    // Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
+	t, err := tpm.Open()
+	if err != nil {
+		return nil, fmt.Errorf("Error while attempting to create signature - could not open TPM")
+	}
+	defer t.Close()
+
+	if t.Version() == tpm.V12 {
+		// tpm 1.2 only supports SHA1, so override the algorithm that we get here
+		alg = crypto.SHA1
+	}
+
+	h, err := osutil.GetHashData(data, alg)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err  := 	t.Sign(&signingKey, keyAuth, alg, h)
+	if err != nil {
+		return nil, err
+	}
+
+	return signature, nil
+}
+
 
 func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 
