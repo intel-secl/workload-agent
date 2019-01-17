@@ -378,6 +378,78 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	return signature, nil
 }
 
+	
+	var signedreport SignedVMTrustReport
+
+	jsonVMTrustReport, err := json.Marshal(*report)
+	if err != nil {
+		return nil, fmt.Errorf("Error : could not marshal VMTrustReport - %s", err)
+	}
+	
+	signedreport.jsonVMTrustReport = string(jsonVMTrustReport)
+	signedreport.alg = config.GetHashingAlgorithmName()
+	
+	signedreport.cert, err = config.GetSigningCertFromFile()
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := createSignatureWithTPM([]byte(signedreport.jsonVMTrustReport), config.GetHashingAlgorithm())
+	if err != nil {
+		return nil, err
+	}
+	signedreport.signature = signature
+	return &signedreport, nil
+
+}
+
+
+func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
+	
+	var signingKey tpm.CertifiedKey
+
+	// Get the Signing Key that is stored on disk
+	signingKeyJson, err := config.GetSigningKeyFromFile()
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(signingKeyJson, &signingKey)
+	if  err != nil {
+		return nil, err
+	}
+
+	// Get the secret associated when the SigningKey was created. 
+	keyAuth, err := base64.StdEncoding.DecodeString(config.Configuration.SigningKeySecret)
+	if err != nil{
+		return nil, fmt.Errorf("Error - Could not retrieve Secret Associated with SigningKey")
+	}
+
+    // Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
+	t, err := tpm.Open()
+	if err != nil {
+		return nil, fmt.Errorf("Error while attempting to create signature - could not open TPM")
+	}
+	defer t.Close()
+
+	if t.Version() == tpm.V12 {
+		// tpm 1.2 only supports SHA1, so override the algorithm that we get here
+		alg = crypto.SHA1
+	}
+
+	h, err := osutil.GetHashData(data, alg)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err  := 	t.Sign(&signingKey, keyAuth, alg, h)
+	if err != nil {
+		return nil, err
+	}
+
+	return signature, nil
+}
+
 
 func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 

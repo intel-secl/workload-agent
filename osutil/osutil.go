@@ -145,7 +145,7 @@ func GetHashData(data []byte, alg crypto.Hash) ([]byte, error) {
 		return s[:], nil
 	}
 
-	return nil, fmt.Errorf("Error - Unsupported hashing function %d requested. Only SHA1, SHA256, SHA384 and SHA512 supported", alg)
+	return nil, fmt.Errorf("Error - Unsupported hashing function %d requested. Only SHA1, SHA256, SHA384 and SHA512 supported")
 }
 
 // ParseSetupTasks takes space seperated list of tasks along with any additional flags.
