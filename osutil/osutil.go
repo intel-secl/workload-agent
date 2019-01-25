@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -74,19 +73,24 @@ func MakeFilePathFromEnvVariable(dirEnvVar, filename string, createDir bool) (st
 
 }
 
-// GetMapValueFromConfigFileContent return the value of a key from a config/environment
+// GetValueFromEnvBody return the value of a key from a config/environment
 // file content. We are passing the contents of a file here and not the filename
 // The type of file is a env file where the format is line seperated 'key=value'
 // Todo : vcheeram : Move this to a common library. Keeping as exported for now
 // Todo: vcheeram: this needs to be converted to some sort of io.reader instead
-//  passing the string.
-func GetMapValueFromConfigFileContent(fileContent, keyName string) (value string, err error) {
-	if strings.TrimSpace(fileContent) == "" || strings.TrimSpace(keyName) == "" {
-		return "", errors.New("FileContent and KeyName cannot be empty")
+// passing the string.
+//
+// Unit test this with extra whitespace
+func GetValueFromEnvBody(content, keyName string) (value string, err error) {
+	if strings.TrimSpace(content) == "" || strings.TrimSpace(keyName) == "" {
+		return "", errors.New("content and keyName cannot be empty")
 	}
 	//the config file should have the keyname as part of the beginning of line
-	r := regexp.MustCompile(`(?im)^` + keyName + `\s*=\s*(.*)`)
-	rs := r.FindStringSubmatch(fileContent)
+	r, err := regexp.Compile(`(?im)^` + keyName + `\s*=\s*(.*)`)
+	if err != nil {
+		return
+	}
+	rs := r.FindStringSubmatch(content)
 	if rs != nil {
 		return rs[1], nil
 	}
@@ -94,6 +98,8 @@ func GetMapValueFromConfigFileContent(fileContent, keyName string) (value string
 }
 
 // GetHexRandomString return a random string of 'length'
+//
+// Move this to common lib
 func GetHexRandomString(length int) (string, error) {
 
 	bytes, err := GetRandomBytes(length)
@@ -105,29 +111,12 @@ func GetHexRandomString(length int) (string, error) {
 }
 
 // GetRandomBytes retrieves a byte array of 'length'
+//
+// Move this to common lib
 func GetRandomBytes(length int) ([]byte, error) {
 	bytes := make([]byte, length)
 	if _, err := rand.Read(bytes); err != nil {
 		return nil, err
 	}
 	return bytes, nil
-}
-
-// ParseSetupTasks takes space seperated list of tasks along with any additional flags.
-// Not used for now...
-// TODO : to be implemented.
-func ParseSetupTasks(commandargs ...[]string) []string {
-	//TODO: This function for now takes a space seperated list of
-	// setup arguments. We should parse this to check for the presence of --force
-	//flags. This should be a common utility that is able to parse a list of
-	// tasks as well as an associated flags
-	if len(commandargs) > 1 {
-		log.Println("Expecting a slice of string as argument.")
-	}
-	return commandargs[0]
-}
-
-// RunTasks - function to be implemented as part of the Common Installer module
-func RunTasks(commandargs []string) {
-
 }

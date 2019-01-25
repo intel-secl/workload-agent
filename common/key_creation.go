@@ -1,14 +1,15 @@
 package common
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/osutil"
 	"os"
-	"strings"
-	"encoding/base64"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const secretKeyLength int = 20
@@ -39,8 +40,8 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 	if err != nil {
 		return nil, err
 	}
-	
-	config.Configuration.BindingKeySecret  = base64.StdEncoding.EncodeToString(secretbytes)
+
+	config.Configuration.BindingKeySecret = base64.StdEncoding.EncodeToString(secretbytes)
 	config.Save()
 
 	log.Println("The binding key secret is:", base64.StdEncoding.EncodeToString(secretbytes))
@@ -74,39 +75,24 @@ func writeCertifiedKeyToDisk(tpmck *tpm.CertifiedKey, filepath string) error {
 	return nil
 }
 
-func NewCertifiedKey(certusage string) (*CertifiedKey, error) {
-	log.Debug("Returning object of CertifiedKey depending on input parameter.")
-	switch strings.ToLower(strings.TrimSpace(certusage)) {
-	case "signing", "sign":
-		return &CertifiedKey{
-			keyUsage: tpm.Signing,
-		}, nil
-
-	case "binding", "bind":
-		return &CertifiedKey{
-			keyUsage: tpm.Binding,
-		}, nil
-	}
-	return nil, errors.New("unknown type of Setup CertifiedKey task - must be Signing or Binding")
-}
-
-// Execute method of BindingKey installs a binding key. It uses the AiKSecret
+// GenerateKey creates a TPM binding or signing key
+// It uses the AiKSecret that is saved in the Workload Agent configuration
 // that is obtained from the trust agent, a randomn secret and uses the TPM
 // to generate a keypair that is tied to the TPM
-func KeyGeneration(ck *CertifiedKey, t tpm.Tpm) error {
-	if t == nil || ck == nil {
+func GenerateKey(usage tpm.Usage, t tpm.Tpm) error {
+	if t == nil || (usage != tpm.Binding && usage != tpm.Signing) {
 		return errors.New("certified key or connection to TPM library failed")
 	}
 
 	// Create and certify the signing or binding key
-	certKey, err := createKey(ck.keyUsage, t)
+	certKey, err := createKey(usage, t)
 	if err != nil {
 		return err
 	}
 
 	// Get the name of signing or binding key files depending on input parameter
 	var filename string
-	switch ck.keyUsage {
+	switch usage {
 	case tpm.Binding:
 		filename = config.GetBindingKeyFileName()
 	case tpm.Signing:
@@ -129,13 +115,15 @@ func KeyGeneration(ck *CertifiedKey, t tpm.Tpm) error {
 	return nil
 }
 
+// ValidateKey validates if a key of type binding or signing is actually configured in
+// the Workload Agent
 // Installed method of the CertifiedKey checks if there is a key already installed.
 // For now, this only checks for the existence of the file and does not check if
 // contents of the file are indeed correct
-func KeyValidation(ck *CertifiedKey) error {
+func ValidateKey(usage tpm.Usage) error {
 	// Get the name of signing or binding key files depending on input parameter
 	var filename string
-	switch ck.keyUsage {
+	switch usage {
 	case tpm.Binding:
 		filename = config.GetBindingKeyFileName()
 	case tpm.Signing:

@@ -18,14 +18,14 @@ import (
 // Configuration is the global configuration struct that is marshalled/unmarshaled to a persisted yaml file
 var Configuration struct {
 	BindingKeySecret string
-	Mtwilson struct {
+	Mtwilson         struct {
 		APIURL      string
 		APIUsername string
 		APIPassword string
 		TLSSha256   string
-}
+	}
 	Wls struct {
-		APIURL string
+		APIURL      string
 		APIUsername string
 		APIPassword string
 		TlsSha256   string
@@ -107,6 +107,7 @@ func GetSigningKeyPemFileName() string {
 // This function returns the AIK Secret as a byte array running the tagent export config command
 func GetAikSecret() ([]byte, error) {
 	log.Info("Getting AIK secret from trustagent configuration.")
+	// Change to `tagent config aik.secret`
 	tagentConfig, stderr, err := osutil.RunCommandWithTimeout(taConfigExportCmd, 2)
 	if err != nil {
 		log.Info("Error: GetAikSecret: Command Failed. Details follow")
@@ -116,7 +117,7 @@ func GetAikSecret() ([]byte, error) {
 		return nil, err
 	}
 
-	secret, err := osutil.GetMapValueFromConfigFileContent(tagentConfig, aikSecretKeyName)
+	secret, err := osutil.GetValueFromEnvBody(tagentConfig, aikSecretKeyName)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +137,7 @@ func Save() error {
 			if err != nil {
 				return err
 			}
-		} 
+		}
 	}
 	defer file.Close()
 	return yaml.NewEncoder(file).Encode(Configuration)
@@ -190,26 +191,26 @@ func SaveConfiguration(c csetup.Context) error {
 	// }
 	return Save()
 }
-	configArray := strings.Split(string(fileContents), "\n")
-	for i := 0; i < len(configArray)-1; i++ {
-		tempConfig := strings.Split(configArray[i], "=")
-		key := tempConfig[0]
-		value := strings.Replace(tempConfig[1], "\"", "", -1)
-		if strings.Contains(strings.ToLower(key), "mtwilson_api_url") {
-			WlaConfig.MtwilsonAPIURL = value
-		} else if strings.Contains(strings.ToLower(key), "mtwilson_api_username") {
-			WlaConfig.MtwilsonAPIUsername = value
-		} else if strings.Contains(strings.ToLower(key), "mtwilson_api_password") {
-			WlaConfig.MtwilsonAPIPassword = value
-		} else if strings.Contains(strings.ToLower(key), "wls_api_username") {
-			WlaConfig.WlsAPIUsername = value
-		} else if strings.Contains(strings.ToLower(key), "wls_api_password") {
-			WlaConfig.WlsAPIPassword = value
-		} else if strings.Contains(strings.ToLower(key), "wls_tls_sha256") {
-			WlaConfig.WlsTLSSha = value
-		} else if strings.Contains(strings.ToLower(key), "wls_api_url") {
-			WlaConfig.WlsAPIURL = value
-		}
+
+// SaveSetupConfiguration is used to save configurations that are provided during setup
+// for example logger rotate configurations
+func SaveSetupConfiguration() error {
+	// Don't need rotation anymore
+	Configuration.LogRotate.MaxBackups, _ = strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_BACKUPS"))
+	Configuration.LogRotate.MaxRotateSize, _ = strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_SIZE"))
+	Configuration.LogRotate.MaxDays, _ = strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_DAYS"))
+	return Save()
+}
+
+// LogConfiguration is used to setup log rotation configurations
+func LogConfiguration() {
+	// Remove log rotation, only use Logrus package.
+	lumberjackLogrotate := &lumberjack.Logger{
+		Filename:   LogFilePath,
+		MaxSize:    Configuration.LogRotate.MaxRotateSize,
+		MaxBackups: Configuration.LogRotate.MaxBackups,
+		MaxAge:     Configuration.LogRotate.MaxDays,
+		Compress:   true,
 	}
 
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true, TimestampFormat: time.RFC1123Z})

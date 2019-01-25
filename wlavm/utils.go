@@ -25,14 +25,14 @@ func IsImageEncrypted(filePath string) (bool, error) {
 	if strings.TrimSpace(imageFormat) != "data" {
 		fmt.Println("image is not encrypted")
 		return false, nil
-	} 
+	}
 	fmt.Println("image is encrypted")
 	return true, nil
 }
 
-// CheckMountPathExistsAndMountVolume method is used to check if te mount path exists, 
+// CheckMountPathExistsAndMountVolume method is used to check if te mount path exists,
 // if it does not exists, the method creates the mount path and mounts the device mapper.
-func CheckMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) error{	
+func CheckMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) error {
 	fmt.Println("Mounting the device mapper: ", deviceMapperPath)
 	_, err := os.Stat(mountPath)
 	if os.IsNotExist(err) {
@@ -54,7 +54,7 @@ func CheckMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) erro
 }
 
 // Cleanup method is used to cleanup the image and instance sparsefile, mount path directory and the dm-crypt volumes
-func Cleanup() error{
+func Cleanup() error {
 	// var args []string
 	// var err error
 	// // clean up image volume and device mapper mount point
@@ -74,6 +74,7 @@ func Cleanup() error{
 }
 
 // Execute command is used to execute a linux command line command and return the output of the command with an error if it exists.
+// Deprecated, use Common functionality in lib common
 func ExecuteCommand(cmd string, args []string) (string, error) {
 	out, err := exec.Command(cmd, args...).Output()
 	return string(out), err

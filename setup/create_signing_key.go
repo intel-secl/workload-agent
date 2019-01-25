@@ -18,12 +18,8 @@ func (sk SigningKey) Run(c csetup.Context) error {
 		return nil
 	}
 	log.Info("Creating signing key.")
-	usage, err := common.NewCertifiedKey("SIGN")
-	if err != nil {
-		return err
-	}
 
-	err = common.KeyGeneration(usage, sk.T)
+	err := common.GenerateKey(tpm.Signing, sk.T)
 	if err != nil {
 		return err
 	}
@@ -32,12 +28,8 @@ func (sk SigningKey) Run(c csetup.Context) error {
 
 func (sk SigningKey) Validate(c csetup.Context) error {
 	log.Info("Validation for signing key.")
-	usage, err := common.NewCertifiedKey("SIGN")
-	if err != nil {
-		return err
-	}
 
-	err = common.KeyValidation(usage)
+	err := common.ValidateKey(tpm.Signing)
 	if err != nil {
 		return err
 	}

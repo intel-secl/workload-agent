@@ -1,15 +1,15 @@
 module intel/isecl/wlagent
 
 require (
+	github.com/sirupsen/logrus v1.3.0
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
+	gopkg.in/yaml.v2 v2.2.2
 	intel/isecl/lib/common v0.0.0
 	intel/isecl/lib/flavor v0.0.0
 	intel/isecl/lib/platform-info v0.0.0
 	intel/isecl/lib/tpm v0.0.0
 	intel/isecl/lib/verifier v0.0.0
 	intel/isecl/lib/vml v0.0.0
-	intel/isecl/lib/common v0.0.0
-	gopkg.in/yaml.v2 v2.2.2
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
 
 replace intel/isecl/lib/tpm => gitlab.devtools.intel.com/sst/isecl/lib/tpm v0.0.0-20190110061413-50a5c0acb880

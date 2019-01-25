@@ -74,6 +74,7 @@ func main() {
 
 		// Check if nosetup environment variable is true, if yes then skip the setup tasks
 		if nosetup, err := strconv.ParseBool(os.Getenv("WORKLOAD_AGENT_NOSETUP")); err != nil && nosetup == false {
+			// Workaround for tpm2-abrmd bug in RHEL 7.5
 			t, err := tpm.Open()
 			if err != nil {
 				log.Fatal("Error while opening a connection to TPM.")
@@ -105,12 +106,29 @@ func main() {
 		}
 
 	case "start":
-
+		if len(args[1:]) < 5 {
+			fmt.Println("Invalid number of parameters")
+		}
+		// log to logrus
+		// fmt.Println("VM start called in main method")
+		// fmt.Println("image path: ", args[3])
+		// fmt.Println("image UUID: ", args[2])
+		// fmt.Println("instance path: ", args[4])
+		// fmt.Println("instance UUID: ", args[1])
+		// fmt.Println("disksize: ", args[5])
+		returnCode := wlavm.Start(args[1], args[2], args[3], args[4], args[5])
+		if returnCode == 1 {
+			os.Exit(1)
+		} else {
+			os.Exit(0)
+		}
+		fmt.Println("Return code from VM start :", returnCode)
 	case "stop":
 		pkg.QemuStopIntercept(strings.TrimSpace(args[1]), strings.TrimSpace(args[2]),
 			strings.TrimSpace(args[3]), strings.TrimSpace(args[4]))
 
 	case "uninstall":
+		// use constants from config
 		deleteFile("/usr/local/bin/wlagent")
 		deleteFile("/opt/workloadagent/")
 		deleteFile("/etc/libvirt/hooks/qemu")

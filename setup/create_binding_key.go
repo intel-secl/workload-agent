@@ -18,12 +18,8 @@ func (bk BindingKey) Run(c csetup.Context) error {
 		return nil
 	}
 	log.Info("Creating binding key.")
-	usage, err := common.NewCertifiedKey("BIND")
-	if err != nil {
-		return err
-	}
 
-	err = common.KeyGeneration(usage, bk.T)
+	err := common.GenerateKey(tpm.Binding, bk.T)
 	if err != nil {
 		return err
 	}
@@ -32,12 +28,8 @@ func (bk BindingKey) Run(c csetup.Context) error {
 
 func (bk BindingKey) Validate(c csetup.Context) error {
 	log.Info("Validation for binding key.")
-	usage, err := common.NewCertifiedKey("BIND")
-	if err != nil {
-		return err
-	}
 
-	err = common.KeyValidation(usage)
+	err := common.ValidateKey(tpm.Binding)
 	if err != nil {
 		return err
 	}
