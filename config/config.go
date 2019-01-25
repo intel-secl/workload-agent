@@ -125,10 +125,11 @@ func GetAikSecret() ([]byte, error) {
 	// Change to `tagent config aik.secret`
 	tagentConfig, stderr, err := osutil.RunCommandWithTimeout(taConfigExportCmd, 2)
 	if err != nil {
-		log.Info("Error: GetAikSecret: Command Failed. Details follow")
-		log.Infof("Issued Command: \n%s\n", taConfigExportCmd)
-		log.Infof("StdOut:\n%s\n", tagentConfig)
-		log.Infof("StdError:\n%s\n", stderr)
+		log.WithFields(log.Fields{
+			"Issued Command:": taConfigExportCmd,
+			"StdOut:":         tagentConfig,
+			"StdError:":       stderr,
+		}).Error("GetAikSecret: Command Failed. Details follow")
 		return nil, err
 	}
 

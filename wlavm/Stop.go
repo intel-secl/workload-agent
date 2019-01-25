@@ -129,7 +129,7 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 			}
 		}
 		if strings.Contains(words[0], imageUUID) && count[1] == "1" {
-			log.Info("Deleting image entry %s as this was last instance to use the image.", imageUUID)
+			log.Infof("Deleting image entry %s as this was last instance to use the image.", imageUUID)
 			lines[i] = lines[len(lines)-1]
 			if err != nil {
 				panic(err)
