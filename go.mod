@@ -1,9 +1,7 @@
 module intel/isecl/wlagent
 
 require (
-	github.com/fsnotify/fsnotify v1.4.7
 	github.com/sirupsen/logrus v1.3.0
-	github.com/stretchr/testify v1.2.2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.2.2
 	intel/isecl/lib/common v0.0.0

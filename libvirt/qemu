@@ -10,7 +10,7 @@ echo "$dt parameters: $0 $1 $2 $3 $4" >>$logfile
 #echo "--domain.xml:" >>$logfile
 
 
-if [ $2 == "start" ] || [ $2 == "stop" ]; then
+if [ $2 == "start" ] || [ $2 == "stopped" ]; then
 	domainFile="/tmp/domain.xml"
 	cat $domainxml > $domainFile
 	instanceUUID=$(xmlstarlet sel -t -v '//domain/uuid' $domainFile)
@@ -26,10 +26,11 @@ if [ $2 == "start" ] || [ $2 == "stop" ]; then
 					echo "Error occured" >>$logfile
 					exit 1
 			fi
-	elif [ $2 == "stop" ] ; then
-			echo "Stop called" >>$logfile
-			wlagent stop-vm >>$logfile
+	elif [ $2 == "stopped" ] ; then
+			echo "VM Stop called" >>$logfile
+			wlagent stop $instanceUUID $imageUUID $instancePath $imagePath >>$logfile
 			if [ $? -ne 0 ]; then
+					echo "Error occured" >>$logfile
 					exit 1
 			fi
 	fi

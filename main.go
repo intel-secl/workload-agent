@@ -5,11 +5,9 @@ import (
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
-	wlrpc "intel/isecl/wlagent/rpc"
 	"intel/isecl/wlagent/setup"
-	"io/ioutil"
-	"net"
-	"net/rpc"
+	"intel/isecl/wlagent/wlavm"
+	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -110,6 +108,7 @@ func main() {
 			fmt.Println("WORKLOAD_AGENT_NOSETUP is set, skipping setup")
 			os.Exit(1)
 		}
+
 	case "start":
 		start()
 	case "stop":
@@ -146,20 +145,22 @@ func main() {
 			os.Exit(0)
 		}
 		fmt.Println("Return code from VM start :", returnCode)
-	case "stop-vm":
-		conn, err := net.Dial("unix", config.RPCSocketFilePath)
-		if err != nil {
-			log.Fatal("stop-vm: failed to dial wlagent.sock, is wlagent running?")
+	case "stop":
+		config.LogConfiguration()
+		if len(args[1:]) < 3 {
+			fmt.Println("Invalid number of parameters")
 		}
-		client := rpc.NewClient(conn)
-		var returnCode int
-		var args = wlrpc.StopVMArgs{
-			InstanceUUID: args[1],
-			ImageUUID:    args[2],
-			ImagePath:    args[3],
-			InstancePath: args[4],
+		fmt.Println("VM stop called in main method")
+		fmt.Println("image UUID: ", args[2])
+		fmt.Println("instance path: ", args[3])
+		fmt.Println("instance UUID: ", args[1])
+		returnCode := wlavm.Stop(strings.TrimSpace(args[1]), strings.TrimSpace(args[2]),
+			strings.TrimSpace(args[3]))
+		if returnCode == 1 {
+			os.Exit(1)
+		} else {
+			os.Exit(0)
 		}
-		client.Call("VirtualMachine.Stop", &args, &returnCode)
 
 	case "uninstall":
 		// use constants from config

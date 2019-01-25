@@ -68,9 +68,9 @@ const signingKeyFileName string = "signingkey.json"
 const bindingKeyPemFileName string = "bindingkey.pem"
 const signingKeyPemFileName string = "signingkey.pem"
 const imageInstanceCountAssociationFileName string = "image_instance_association"
-const devMapperPath string = "/dev/mapper/"
 const configFilePath = "workloadagent.env"
-const devMapperDirPath = "/dev/mapper/"
+const devMapperDir = "/dev/mapper/"
+const mountDir = "/mnt/crypto/"
 
 // RPCSocketFile points to the location of wlagent.sock for RPC communication over a unix domain socket
 const RPCSocketFilePath = "/var/run/workload-agent/wlagent.sock"
@@ -96,7 +96,11 @@ func ImageInstanceCountAssociationFileName() string {
 }
 
 func GetDevMapperDir() string {
-	return devMapperDirPath
+	return devMapperDir
+}
+
+func GetMountDir() string {
+	return mountDir
 }
 
 func GetBindingKeyFileName() string {
