@@ -5,13 +5,19 @@ import (
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
-	"intel/isecl/wlagent/pkg"
+	wlrpc "intel/isecl/wlagent/rpc"
 	"intel/isecl/wlagent/setup"
-	"log"
+	"io/ioutil"
+	"net"
+	"net/rpc"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -39,7 +45,7 @@ func printUsage() {
 	fmt.Printf("===============\n\n")
 	fmt.Printf("usage : %s <command> [<args>]\n\n", os.Args[0])
 	fmt.Printf("Following are the list of commands\n")
-	fmt.Printf("\tsetup|vmstart|vmstop|--help|--version\n\n")
+	fmt.Printf("\tsetup|start-vm|stop-vm|--help|--version\n\n")
 	fmt.Printf("setup command is used to run setup tasks\n")
 	fmt.Printf("\tusage : %s setup [<tasklist>]\n", os.Args[0])
 	fmt.Printf("\t\t<tasklist>-space seperated list of tasks\n")
@@ -104,8 +110,12 @@ func main() {
 			fmt.Println("WORKLOAD_AGENT_NOSETUP is set, skipping setup")
 			os.Exit(1)
 		}
-
 	case "start":
+		return
+	case "stop":
+		return
+
+	case "start-vm":
 		if len(args[1:]) < 5 {
 			fmt.Println("Invalid number of parameters")
 		}
@@ -116,16 +126,40 @@ func main() {
 		// fmt.Println("instance path: ", args[4])
 		// fmt.Println("instance UUID: ", args[1])
 		// fmt.Println("disksize: ", args[5])
-		returnCode := wlavm.Start(args[1], args[2], args[3], args[4], args[5])
+		conn, err := net.Dial("unix", config.RPCSocketFilePath)
+		if err != nil {
+			log.Fatal("start-vm: failed to dial wlagent.sock, is wlagent running?")
+		}
+		client := rpc.NewClient(conn)
+		var returnCode int
+		var args = wlrpc.StartVMArgs{
+			InstanceUUID: args[1],
+			ImageUUID:    args[2],
+			ImagePath:    args[3],
+			InstancePath: args[4],
+			DiskSize:     args[5],
+		}
+		client.Call("VirtualMachine.Start", &args, &returnCode)
 		if returnCode == 1 {
 			os.Exit(1)
 		} else {
 			os.Exit(0)
 		}
 		fmt.Println("Return code from VM start :", returnCode)
-	case "stop":
-		pkg.QemuStopIntercept(strings.TrimSpace(args[1]), strings.TrimSpace(args[2]),
-			strings.TrimSpace(args[3]), strings.TrimSpace(args[4]))
+	case "stop-vm":
+		conn, err := net.Dial("unix", config.RPCSocketFilePath)
+		if err != nil {
+			log.Fatal("stop-vm: failed to dial wlagent.sock, is wlagent running?")
+		}
+		client := rpc.NewClient(conn)
+		var returnCode int
+		var args = wlrpc.StopVMArgs{
+			InstanceUUID: args[1],
+			ImageUUID:    args[2],
+			ImagePath:    args[3],
+			InstancePath: args[4],
+		}
+		client.Call("VirtualMachine.Stop", &args, &returnCode)
 
 	case "uninstall":
 		// use constants from config
@@ -150,5 +184,81 @@ func deleteFile(path string) {
 	var err = os.RemoveAll(path)
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+type state bool
+
+const (
+	Stopped state = false
+	Running state = true
+)
+
+func readPidFile() (int, error) {
+	pidData, err := ioutil.ReadFile(config.PIDFilePath)
+	if err != nil {
+		log.WithError(err).Debug("Failed to read wlagent.pid")
+		return 0, err
+	}
+	pid, err := strconv.Atoi(string(pidData))
+	if err != nil {
+		log.WithError(err).WithField("pid", pidData).Debug("Failed to convert pid data string to int")
+		return 0, err
+	}
+	return pid, nil
+}
+
+func status() state {
+	pid, err := readPidFile()
+	if err != nil {
+		// failure reading pid file
+		os.Remove(config.PIDFilePath)
+		return Stopped
+	}
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return Stopped
+	}
+	if err := p.Signal(syscall.Signal(0)); err != nil {
+		return Stopped
+	}
+	return Running
+}
+
+func start() {
+	if status() == Stopped {
+		// exec wlagentd
+		cmd := exec.Command(config.DaemonFilePath)
+		err := cmd.Start()
+		if err != nil {
+			log.WithError(err).Fatal("Failed to start wlagentd")
+		}
+		file, err := os.Create(config.PIDFilePath)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to create wlagentd pid file")
+		}
+		file.WriteString(strconv.Itoa(cmd.Process.Pid))
+		cmd.Process.Release()
+	} else {
+		fmt.Println("Workload Agent is already running")
+	}
+}
+
+func stop() {
+	if status() == Running {
+		pid, err := readPidFile()
+		if err != nil {
+			log.WithError(err).Error("Could not read PID file")
+			fmt.Println("Failed to stop Workload Agent")
+			return
+		}
+		if err := syscall.Kill(pid, syscall.SIGQUIT); err != nil {
+			log.WithError(err).Error("Failed to kill server with signal SIGQUIT")
+			fmt.Println("Failed to stop Workload Agent")
+			return
+		}
+		fmt.Println("Workloa Agent stopped")
+	} else {
+		fmt.Println("Workload Agent is already stopped")
 	}
 }

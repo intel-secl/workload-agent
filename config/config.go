@@ -72,6 +72,17 @@ const devMapperPath string = "/dev/mapper/"
 const configFilePath = "workloadagent.env"
 const devMapperDirPath = "/dev/mapper/"
 
+// RPCSocketFile points to the location of wlagent.sock for RPC communication over a unix domain socket
+const RPCSocketFilePath = "/var/run/workload-agent/wlagent.sock"
+
+// PIDFile points to the location of wlagent.pid, containing the last known pid of the workload agent daemon
+const PIDFilePath = "/var/run/workload-agent/wlagent.pid"
+
+// DaemonFilePath points to the location of the workload agent daemon binary
+const DaemonFilePath = "/opt/workload-agent/bin/wlagentd"
+
+var LogFilePath string = os.Getenv("WORKLOAD_AGENT_LOGS") + "/workloadagent.log"
+
 func GetConfigDir() string {
 	return workloadAgentConfigDir
 }

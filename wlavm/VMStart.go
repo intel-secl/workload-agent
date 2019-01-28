@@ -358,4 +358,3 @@ func cacheKeyInMemory(imageUUID, keyID string, key []byte) error {
 	// method not implemented yet
 	return nil
 }
-
