@@ -253,7 +253,7 @@ func stop() {
 			return
 		}
 		if err := syscall.Kill(pid, syscall.SIGQUIT); err != nil {
-			log.WithError(err).Error("Failed to kill server with signal SIGQUIT")
+			log.WithError(err).Error("Failed to kill Workload Agent with signal SIGQUIT")
 			fmt.Println("Failed to stop Workload Agent")
 			return
 		}

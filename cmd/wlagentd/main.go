@@ -21,7 +21,7 @@ func main() {
 		for {
 			fileWatcher.Watch()
 		}
-	}
+	}()
 	go func() {
 		for {
 			// block and loop, daemon doesnt need to run on go routine
