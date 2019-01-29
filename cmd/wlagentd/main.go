@@ -17,7 +17,11 @@ func main() {
 	// stop signaler
 	stop := make(chan bool)
 	defer fileWatcher.Close()
-	go fileWatcher.Watch()
+	go func() {
+		for {
+			fileWatcher.Watch()
+		}
+	}
 	go func() {
 		for {
 			// block and loop, daemon doesnt need to run on go routine

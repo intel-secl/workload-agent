@@ -111,9 +111,9 @@ func main() {
 			os.Exit(1)
 		}
 	case "start":
-		return
+		start()
 	case "stop":
-		return
+		stop()
 
 	case "start-vm":
 		if len(args[1:]) < 5 {
