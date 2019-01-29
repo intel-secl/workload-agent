@@ -124,23 +124,17 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 			cnt, _ := strconv.Atoi(count[1])
 			replaceLine := strings.Replace(string(line), "count:"+count[1], "count:"+strconv.Itoa(cnt-1), 1)
 			lines[i] = replaceLine
-			if err != nil {
-				panic(err)
-			}
 		}
 		if strings.Contains(words[0], imageUUID) && count[1] == "1" {
 			log.Infof("Deleting image entry %s as this was last instance to use the image.", imageUUID)
 			lines[i] = lines[len(lines)-1]
-			if err != nil {
-				panic(err)
-			}
 
 			// After modifying contents, store it back to the file
 			log.Info("Outputting modified text back to file.")
 			outputToFile := strings.Join(lines[:len(lines)-1], "\n")
 			err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(outputToFile), 0644)
 			if err != nil {
-				log.Fatalln(err)
+				log.Error(err)
 			}
 			return true, imagePath
 		}
@@ -148,7 +142,7 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 	outputToFile := strings.Join(lines, "\n")
 	err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(outputToFile), 0644)
 	if err != nil {
-		log.Fatalln(err)
+		log.Error(err)
 	}
 	return false, imagePath
 }
