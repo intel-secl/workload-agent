@@ -15,7 +15,7 @@ import (
 func SendRequest(req *http.Request, insecureConnection bool) ([]byte, error) {
 	var certificateDigest [32]byte
 
-	cert, err := hex.DecodeString(config.Configuration.Wls.TlsSha256)
+	cert, err := hex.DecodeString(config.Configuration.Wls.TLSSha256)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,13 +25,13 @@ func SendRequest(req *http.Request, insecureConnection bool) ([]byte, error) {
 
 	if insecureConnection {
 		tlsConfig = tls.Config{
-		InsecureSkipVerify:    true,
-		//VerifyPeerCertificate: t.VerifyCertBySha256(certificateDigest),
+			InsecureSkipVerify: true,
+			//VerifyPeerCertificate: t.VerifyCertBySha256(certificateDigest),
 		}
 	} else {
 		tlsConfig = tls.Config{
-		InsecureSkipVerify:    true,
-		VerifyPeerCertificate: t.VerifyCertBySha256(certificateDigest),
+			InsecureSkipVerify:    true,
+			VerifyPeerCertificate: t.VerifyCertBySha256(certificateDigest),
 		}
 	}
 

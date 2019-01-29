@@ -5,7 +5,6 @@ package wlavm
 import (
 	//"log"
 	"intel/isecl/lib/vml"
-	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/wlsclient"
 	"os"
 	"strings"
@@ -22,8 +21,6 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"strconv"
-
-	"github.com/fsnotify/fsnotify"
 )
 
 const mountPath = "/mnt/crypto/"
@@ -127,7 +124,7 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 
 		// create image dm-crypt volume
 		fmt.Println("Creating a dm-crypt volume for the image")
-		imageDeviceMapperPath := config.GetDevMapperDir() + imageUUID
+		imageDeviceMapperPath := config.DevMapperDirPath + imageUUID
 		sparseFilePath := imagePath + "_sparseFile"
 		size, _ := strconv.Atoi(diskSize)
 		err = vml.CreateVolume(sparseFilePath, imageDeviceMapperPath, key, size)
@@ -187,7 +184,7 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 			return 1
 		}
 		// create instance volume
-		instanceDeviceMapperPath := config.GetDevMapperDir() + instanceUUID
+		instanceDeviceMapperPath := config.DevMapperDirPath + instanceUUID
 		instanceSparseFilePath := strings.Replace(instancePath, "disk", instanceUUID+"_sparse", -1)
 
 		fmt.Println("Creating dm-crypt volume for the instance: ", instanceUUID)
@@ -263,7 +260,7 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 
 	defer t.Close()
 
-	bindingKeyFilePath := "/etc/workloadagent/bindingkey.json"
+	bindingKeyFilePath := config.ConfigDirPath + config.BindingKeyFileName
 	fmt.Println("Bindkey file name:", bindingKeyFilePath)
 	bindingKeyCert, fileErr := ioutil.ReadFile(bindingKeyFilePath)
 	if fileErr != nil {
@@ -295,7 +292,7 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 func imageInstanceCountAssociation(imageUUID, imagePath string) error {
 
 	imageUUIDFound := false
-	imageInstanceCountAssociationFilePath := "/etc/workloadagent/" + config.ImageInstanceCountAssociationFileName()
+	imageInstanceCountAssociationFilePath := config.ConfigDirPath + config.ImageInstanceCountAssociationFileName
 
 	// creating the image-instance file if not preset
 	_, err := os.Stat(imageInstanceCountAssociationFilePath)

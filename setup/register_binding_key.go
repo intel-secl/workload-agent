@@ -68,15 +68,10 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	url = config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-binding-key"
 
 	// join configuration path and binding key file name
-	fileName := config.GetBindingKeyFileName()
-	bindingkeyFilePath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), fileName, true)
-	if err != nil {
-		log.Error(err.Error())
-		return err
-	}
+	bindingkeyFilePath := config.ConfigDirPath + config.BindingKeyFileName
 
 	// check if binding key file exists
-	_, err = os.Stat(bindingkeyFilePath)
+	_, err := os.Stat(bindingkeyFilePath)
 	if os.IsNotExist(err) {
 		return errors.New("bindingkey file does not exist")
 	}
@@ -104,7 +99,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	nameDigest := b.StdEncoding.EncodeToString(originalNameDigest)
 
 	//get trustagent aik cert location
-	aikCertName, _ := osutil.MakeFilePathFromEnvVariable(config.GetTrustAgentConfigDir(), "aik.pem", true)
+	aikCertName, _ := osutil.MakeFilePathFromEnvVariable(config.TrustAgentConfigDirEnv, "aik.pem", true)
 
 	// set operating system
 	if runtime.GOOS == "linux" {
@@ -157,11 +152,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	aikPem := beginCert + "\n" + bindingKeyCert.BindingKeyCertificate + "\n" + endCert + "\n"
 
 	//write the binding key certificate to file
-	bindingKeyCertPath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), config.GetBindingKeyPemFileName(), true)
-	if err != nil {
-		log.Error(err.Error())
-		return err
-	}
+	bindingKeyCertPath := config.ConfigDirPath + config.BindingKeyPemFileName
 
 	file, _ = os.Create(bindingKeyCertPath)
 	_, err = file.Write([]byte(aikPem))
@@ -189,11 +180,9 @@ func getAikCert(aikCertName string) string {
 
 // Validate checks whether or not the register binding key task was completed successfully
 func (rb RegisterBindingKey) Validate(c csetup.Context) error {
-
 	log.Info("Validation for registering binding key.")
-
-	bindingKeyCertFilePath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), config.GetBindingKeyPemFileName(), true)
-	_, err = os.Stat(bindingKeyCertFilePath)
+	bindingKeyCertFilePath := config.ConfigDirPath + config.BindingKeyPemFileName
+	_, err := os.Stat(bindingKeyCertFilePath)
 	if os.IsNotExist(err) {
 		return errors.New("Binding key certificate file does not exist")
 	}

@@ -63,15 +63,10 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	url = config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-signing-key"
 
 	// join configuration path and signing key file name
-	fileName := config.GetSigningKeyFileName()
-	signingkeyFilePath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), fileName, true)
-	if err != nil {
-		log.Error(err.Error())
-		return err
-	}
+	signingkeyFilePath := config.ConfigDirPath + config.SigningKeyFileName
 
 	// check if signing key file exists
-	_, err = os.Stat(signingkeyFilePath)
+	_, err := os.Stat(signingkeyFilePath)
 	if os.IsNotExist(err) {
 		return errors.New("signingkey file does not exist")
 	}
@@ -103,7 +98,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	nameDigest := b.StdEncoding.EncodeToString(originalNameDigest)
 
 	//get trustagent aik cert location
-	aikCertFileName, _ := osutil.MakeFilePathFromEnvVariable(config.GetTrustAgentConfigDir(), "aik.pem", true)
+	aikCertFileName, _ := osutil.MakeFilePathFromEnvVariable(config.TrustAgentConfigDirEnv, "aik.pem", true)
 
 	//getAikCert removes the begin / end certificate tags and newline characters
 	aik := getAikCert(aikCertFileName)
@@ -153,11 +148,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	aikPem := beginCertTag + "\n" + signingKeyCert.SigningKeyCertificate + "\n" + endCertTag + "\n"
 
 	//write the signing key certificate to file
-	signingKeyCertPath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), config.GetSigningKeyPemFileName(), true)
-	if err != nil {
-		log.Error(err.Error())
-		return err
-	}
+	signingKeyCertPath := config.ConfigDirPath + config.SigningKeyPemFileName
 
 	file, _ := os.Create(signingKeyCertPath)
 	_, err = file.Write([]byte(aikPem))
@@ -185,11 +176,9 @@ func getAikCertFile(aikCertFileName string) string {
 
 // Validate checks whether or not the Register Signing Key task was completed successfully
 func (rs RegisterSigningKey) Validate(c csetup.Context) error {
-
 	log.Info("Validation for registering signing key.")
-
-	signingKeyCertPath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), config.GetSigningKeyPemFileName(), true)
-	_, err = os.Stat(signingKeyCertPath)
+	signingKeyCertPath := config.ConfigDirPath + config.SigningKeyPemFileName
+	_, err := os.Stat(signingKeyCertPath)
 	if os.IsNotExist(err) {
 		return errors.New("Signing key certificate file does not exist")
 	}

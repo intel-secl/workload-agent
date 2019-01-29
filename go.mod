@@ -2,7 +2,6 @@ module intel/isecl/wlagent
 
 require (
 	github.com/sirupsen/logrus v1.3.0
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.2.2
 	intel/isecl/lib/common v0.0.0
 	intel/isecl/lib/flavor v0.0.0

@@ -14,11 +14,6 @@ import (
 
 const secretKeyLength int = 20
 
-// CertifiedKey is class that represents setup for a signing or bindingkey
-type CertifiedKey struct {
-	keyUsage tpm.Usage
-}
-
 // tpmCertifiedKeySetup calls the TPM helper library to export a binding or signing keypair
 func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) {
 	log.Info("Creation of signing or binding key.")
@@ -94,16 +89,13 @@ func GenerateKey(usage tpm.Usage, t tpm.Tpm) error {
 	var filename string
 	switch usage {
 	case tpm.Binding:
-		filename = config.GetBindingKeyFileName()
+		filename = config.BindingKeyFileName
 	case tpm.Signing:
-		filename = config.GetSigningKeyFileName()
+		filename = config.SigningKeyFileName
 	}
 
 	// Join configuration path and signing or binding file name
-	filepath, err := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), filename, true)
-	if err != nil {
-		return err
-	}
+	filepath := config.ConfigDirPath + filename
 
 	// Writing certified key value to file path
 	err = writeCertifiedKeyToDisk(certKey, filepath)
@@ -125,13 +117,13 @@ func ValidateKey(usage tpm.Usage) error {
 	var filename string
 	switch usage {
 	case tpm.Binding:
-		filename = config.GetBindingKeyFileName()
+		filename = config.BindingKeyFileName
 	case tpm.Signing:
-		filename = config.GetSigningKeyFileName()
+		filename = config.SigningKeyFileName
 	}
 
 	// Join configuration path and signing or binding file name
-	filepath, _ := osutil.MakeFilePathFromEnvVariable(config.GetConfigDir(), filename, true)
+	filepath := config.ConfigDirPath + filename
 	fi, err := os.Stat(filepath)
 	if err != nil {
 		return err

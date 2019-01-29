@@ -2,16 +2,17 @@ package config
 
 import (
 	"encoding/hex"
+	"fmt"
 	"intel/isecl/wlagent/osutil"
 	"io"
 	"os"
-	"strconv"
+	"os/exec"
+	"strings"
 	"time"
 
 	csetup "intel/isecl/lib/common/setup"
 
 	log "github.com/sirupsen/logrus"
-	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -28,128 +29,61 @@ var Configuration struct {
 		APIURL      string
 		APIUsername string
 		APIPassword string
-		TlsSha256   string
-	}
-	LogRotate struct {
-		MaxRotateSize int // maximum megabytes before log is rotated
-		MaxDays       int // maximum number of old log files to keep
-		MaxBackups    int // maximum number of days to retain log files
+		TLSSha256   string
 	}
 }
 
-// MTWILSON_API_URL is a string environment variable for specifying the
-// mtwilson API URL and is used to  connect to mtwilson
-const MTWILSON_API_URL = "MTWILSON_API_URL"
+// Define constants to be accessed in other packages
+const (
+	MTWILSON_API_URL                      = "MTWILSON_API_URL"
+	MTWILSON_API_USERNAME                 = "MTWILSON_API_USERNAME"
+	MTWILSON_API_PASSWORD                 = "MTWILSON_API_PASSWORD"
+	MTWILSON_TLS_SHA256                   = "MTWILSON_TLS_SHA256"
+	WLS_API_URL                           = "WLS_API_URL"
+	WLS_API_USERNAME                      = "WLS_API_USERNAME"
+	WLS_API_PASSWORD                      = "WLS_API_PASSWORD"
+	WLS_TLS_SHA256                        = "WLS_TLS_SHA256"
+	aikSecretKeyName                      = "aik.secret"
+	TrustAgentConfigDirEnv                = "TRUST_AGENT_CONFIGURATION"
+	taConfigAikSecretCmd                  = "tagent config aik.secret"
+	BindingKeyFileName                    = "bindingkey.json"
+	SigningKeyFileName                    = "signingkey.json"
+	BindingKeyPemFileName                 = "bindingkey.pem"
+	SigningKeyPemFileName                 = "signingkey.pem"
+	ImageInstanceCountAssociationFileName = "image_instance_association"
+	EnvFileName                           = "workloadagent.env"
+	DevMapperDirPath                      = "/dev/mapper/"
+	LogDirPath                            = "/var/log/workloadagent/"
+	LogFileName                           = "workloadagent.log"
+	ConfigFilePath                        = "/etc/workloadagent/config.yml"
+	ConfigDirPath                         = "/etc/workloadagent/"
+	OptDirPath                            = "/opt/workloadagent/"
+	LibvirtHookFilePath                   = "/etc/libvirt/hooks/qemu"
+)
 
-// MTWILSON_API_USERNAME is a string environment variable for specifying the
-// mtwilson API URL and is used to connect to mtwilson
-const MTWILSON_API_USERNAME = "MTWILSON_API_USERNAME"
-
-// MTWILSON_API_PASSWORD is a string environment variable for specifying
-// the mtwilson API password and is used to connect to mtwilson
-const MTWILSON_API_PASSWORD = "MTWILSON_API_PASSWORD"
-
-// MTWILSON_TLS_SHA256 is a string environment variable for specifying
-// the mtwilson TLS sha256 and is used to connect to mtwilson
-const MTWILSON_TLS_SHA256 = "MTWILSON_TLS_SHA256"
-
-//WLS vars
-const WLS_API_URL = "WLS_API_URL"
-const WLS_API_USERNAME = "WLS_API_USERNAME"
-const WLS_API_PASSWORD = "WLS_API_PASSWORD"
-const WLS_TLS_SHA256 = "WLS_TLS_SHA256"
-
-const workloadAgentConfigDir string = "WORKLOAD_AGENT_CONFIGURATION"
-const trustAgentConfigDir string = "TRUST_AGENT_CONFIGURATION"
-const taConfigExportCmd string = "tagent export-config --stdout"
-const aikSecretKeyName string = "aik.secret"
-const bindingKeyFileName string = "bindingkey.json"
-const signingKeyFileName string = "signingkey.json"
-const bindingKeyPemFileName string = "bindingkey.pem"
-const signingKeyPemFileName string = "signingkey.pem"
-const imageInstanceCountAssociationFileName string = "image_instance_association"
-const configFilePath = "workloadagent.env"
-const devMapperDir = "/dev/mapper/"
-const mountDir = "/mnt/crypto/"
-
-// RPCSocketFile points to the location of wlagent.sock for RPC communication over a unix domain socket
-const RPCSocketFilePath = "/var/run/workload-agent/wlagent.sock"
-
-// PIDFile points to the location of wlagent.pid, containing the last known pid of the workload agent daemon
-const PIDFilePath = "/var/run/workload-agent/wlagent.pid"
-
-// DaemonFilePath points to the location of the workload agent daemon binary
-const DaemonFilePath = "/opt/workload-agent/bin/wlagentd"
-
-var LogFilePath string = os.Getenv("WORKLOAD_AGENT_LOGS") + "/workloadagent.log"
-
-func GetConfigDir() string {
-	return workloadAgentConfigDir
-}
-
-func GetTrustAgentConfigDir() string {
-	return trustAgentConfigDir
-}
-
-func ImageInstanceCountAssociationFileName() string {
-	return imageInstanceCountAssociationFileName
-}
-
-func GetDevMapperDir() string {
-	return devMapperDir
-}
-
-func GetMountDir() string {
-	return mountDir
-}
-
-func GetBindingKeyFileName() string {
-	return bindingKeyFileName
-}
-
-func GetSigningKeyFileName() string {
-	return signingKeyFileName
-}
-
-func GetBindingKeyPemFileName() string {
-	return bindingKeyPemFileName
-}
-
-func GetSigningKeyPemFileName() string {
-	return signingKeyPemFileName
-}
-
-// This function returns the AIK Secret as a byte array running the tagent export config command
+// GetAikSecret returns the AIK Secret as a byte array running the tagent config command
 func GetAikSecret() ([]byte, error) {
 	log.Info("Getting AIK secret from trustagent configuration.")
-	// Change to `tagent config aik.secret`
-	tagentConfig, stderr, err := osutil.RunCommandWithTimeout(taConfigExportCmd, 2)
+	aikSecret, stderr, err := osutil.RunCommandWithTimeout(taConfigAikSecretCmd, 2)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"Issued Command:": taConfigExportCmd,
-			"StdOut:":         tagentConfig,
+			"Issued Command:": taConfigAikSecretCmd,
+			"StdOut:":         aikSecret,
 			"StdError:":       stderr,
 		}).Error("GetAikSecret: Command Failed. Details follow")
 		return nil, err
 	}
-
-	secret, err := osutil.GetValueFromEnvBody(tagentConfig, aikSecretKeyName)
-	if err != nil {
-		return nil, err
-	}
-	return hex.DecodeString(secret)
+	return hex.DecodeString(strings.TrimSpace(aikSecret))
 }
-
-var LogWriter io.Writer
 
 // Save the configuration struct into configuration directory
 func Save() error {
-	file, err := os.OpenFile("/etc/workloadagent/config.yml", os.O_RDWR, 0)
+	file, err := os.OpenFile(ConfigFilePath, os.O_RDWR, 0)
 	if err != nil {
 		// we have an error
 		if os.IsNotExist(err) {
 			// error is that the config doesnt yet exist, create it
-			file, err = os.Create("/etc/workloadagent/config.yml")
+			file, err = os.Create(ConfigFilePath)
 			if err != nil {
 				return err
 			}
@@ -159,9 +93,11 @@ func Save() error {
 	return yaml.NewEncoder(file).Encode(Configuration)
 }
 
+var LogWriter io.Writer
+
 func init() {
 	// load from config
-	file, err := os.Open("/etc/workloadagent/config.yml")
+	file, err := os.Open(ConfigFilePath)
 	if err == nil {
 		defer file.Close()
 		yaml.NewDecoder(file).Decode(&Configuration)
@@ -201,35 +137,32 @@ func SaveConfiguration(c csetup.Context) error {
 	if err != nil {
 		return err
 	}
-	// Configuration.Wls.TlsSha256, err = c.GetenvString(WLS_TLS_SHA256, "Workload Service TLS SHA256")
+	// Configuration.Wls.TLSSha256, err = c.GetenvString(WLS_TLS_SHA256, "Workload Service TLS SHA256")
 	// if err != nil {
 	// 	return err
 	// }
 	return Save()
 }
 
-// SaveSetupConfiguration is used to save configurations that are provided during setup
-// for example logger rotate configurations
-func SaveSetupConfiguration() error {
-	// Don't need rotation anymore
-	Configuration.LogRotate.MaxBackups, _ = strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_BACKUPS"))
-	Configuration.LogRotate.MaxRotateSize, _ = strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_SIZE"))
-	Configuration.LogRotate.MaxDays, _ = strconv.Atoi(os.Getenv("LOG_ROTATE_MAX_DAYS"))
-	return Save()
-}
-
 // LogConfiguration is used to setup log rotation configurations
 func LogConfiguration() {
-	// Remove log rotation, only use Logrus package.
-	lumberjackLogrotate := &lumberjack.Logger{
-		Filename:   LogFilePath,
-		MaxSize:    Configuration.LogRotate.MaxRotateSize,
-		MaxBackups: Configuration.LogRotate.MaxBackups,
-		MaxAge:     Configuration.LogRotate.MaxDays,
-		Compress:   true,
+	// creating the log file if not preset
+	LogFilePath := LogDirPath + LogFileName
+	_, err := os.Stat(LogFilePath)
+	if os.IsNotExist(err) {
+		fmt.Println("Log file does not exist. Creating the file.")
+		_, touchErr := exec.Command("touch", LogFilePath).Output()
+		if touchErr != nil {
+			fmt.Println("Error while creating the log file.", touchErr)
+			return
+		}
 	}
-
+	logFile, err := os.OpenFile(LogFilePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		fmt.Printf("unable to write file on filehook %v\n", err)
+		return
+	}
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true, TimestampFormat: time.RFC1123Z})
-	logMultiWriter := io.MultiWriter(os.Stdout, lumberjackLogrotate)
+	logMultiWriter := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(logMultiWriter)
 }

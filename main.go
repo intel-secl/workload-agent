@@ -67,12 +67,6 @@ func main() {
 		printVersion()
 
 	case "setup":
-		// Save configurations that are provided during setup to config yaml file
-		err := config.SaveSetupConfiguration()
-		if err != nil {
-			log.Fatal("Failed to save setup configurations.")
-		}
-
 		// Save log rotation configurations
 		config.LogConfiguration()
 
@@ -118,27 +112,13 @@ func main() {
 		if len(args[1:]) < 5 {
 			fmt.Println("Invalid number of parameters")
 		}
-		// log to logrus
-		// fmt.Println("VM start called in main method")
-		// fmt.Println("image path: ", args[3])
-		// fmt.Println("image UUID: ", args[2])
-		// fmt.Println("instance path: ", args[4])
-		// fmt.Println("instance UUID: ", args[1])
-		// fmt.Println("disksize: ", args[5])
-		conn, err := net.Dial("unix", config.RPCSocketFilePath)
-		if err != nil {
-			log.Fatal("start-vm: failed to dial wlagent.sock, is wlagent running?")
-		}
-		client := rpc.NewClient(conn)
-		var returnCode int
-		var args = wlrpc.StartVMArgs{
-			InstanceUUID: args[1],
-			ImageUUID:    args[2],
-			ImagePath:    args[3],
-			InstancePath: args[4],
-			DiskSize:     args[5],
-		}
-		client.Call("VirtualMachine.Start", &args, &returnCode)
+		log.Info("VM start called in main method")
+		log.Info("image path: ", args[3])
+		log.Info("image UUID: ", args[2])
+		log.Info("instance path: ", args[4])
+		log.Info("instance UUID: ", args[1])
+		log.Info("disksize: ", args[5])
+		returnCode := wlavm.Start(args[1], args[2], args[3], args[4], args[5])
 		if returnCode == 1 {
 			os.Exit(1)
 		} else {
@@ -163,12 +143,11 @@ func main() {
 		}
 
 	case "uninstall":
-		// use constants from config
 		deleteFile("/usr/local/bin/wlagent")
-		deleteFile("/opt/workloadagent/")
-		deleteFile("/etc/libvirt/hooks/qemu")
-		deleteFile("/etc/workloadagent/")
-		deleteFile("/var/log/workloadagent/")
+		deleteFile(config.OptDirPath)
+		deleteFile(config.LibvirtHookFilePath)
+		deleteFile(config.ConfigDirPath)
+		deleteFile(config.LogDirPath)
 
 	default:
 		fmt.Printf("Unrecognized option : %s\n", arg)
@@ -180,7 +159,7 @@ func main() {
 }
 
 func deleteFile(path string) {
-	log.Println("Deleting file: ", path)
+	log.Info("Deleting file: ", path)
 	// delete file
 	var err = os.RemoveAll(path)
 	if err != nil {
