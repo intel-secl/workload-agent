@@ -42,6 +42,13 @@ func (w *Watcher) HandleEvent(file string, handler func(event fsnotify.Event)) e
 	return nil
 }
 
+// UnhandleEvent unregisters event handler
+func (w *Watcher) UnhandleEvent(file string) {
+	w.mtx.Lock()
+	delete(w.handlers, file)
+	w.mtx.Unlock()
+}
+
 // Watch will begin watching of file system events in a blocking loop
 // Any registered event handlers will be executed
 func (w *Watcher) Watch() {
@@ -51,9 +58,11 @@ func (w *Watcher) Watch() {
 			if !ok {
 				return
 			}
+			w.mtx.Lock()
 			if h, exists := w.handlers[event.Name]; exists {
 				h(event)
 			}
+			w.mtx.Unlock()
 		case err, ok := <-w.Errors:
 			if !ok {
 				return

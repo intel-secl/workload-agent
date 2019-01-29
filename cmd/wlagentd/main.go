@@ -3,26 +3,37 @@ package main
 import (
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/filewatch"
-	"intel/isecl/wlagent/rpc"
+	wlrpc "intel/isecl/wlagent/rpc"
 	"log"
+	"net"
+	"net/rpc"
 )
 
-var FileWatcher *filewatch.Watcher
-
 func main() {
-	FileWatcher, err := filewatch.NewWatcher()
+	fileWatcher, err := filewatch.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
 	}
 	// stop signaler
 	stop := make(chan bool)
-	defer FileWatcher.Close()
-	go FileWatcher.Watch()
+	defer fileWatcher.Close()
+	go fileWatcher.Watch()
 	go func() {
 		for {
 			// block and loop, daemon doesnt need to run on go routine
-			err := rpc.ListenAndAccept("unix", config.RPCSocketFilePath)
-			log.Println(err)
+			l, err := net.Listen("unix", config.RPCSocketFilePath)
+			if err != nil {
+				return
+			}
+			r := rpc.NewServer()
+			vm := &wlrpc.VirtualMachine{
+				Watcher: fileWatcher,
+			}
+			err = r.Register(vm)
+			if err != nil {
+				return
+			}
+			r.Accept(l)
 		}
 	}()
 	// block until stop channel receives
