@@ -22,7 +22,8 @@ test:
     - provision12 1234 5678
     - provision20 1234 5678
     - provision20_legacy 1234 5678
-    - go test ./... -coverpkg=./...
+    - go test ./... -coverpkg=./... -coverprofile cover.out
+    - go tool cover -func cover.out
   
 compile:
   tags:
