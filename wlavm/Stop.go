@@ -7,6 +7,7 @@ import (
 	"intel/isecl/wlagent/config"
 	"io/ioutil"
 	"strconv"
+	"sync"
 
 	"os"
 	"os/exec"
@@ -93,6 +94,8 @@ func isInstanceVolumeEncrypted(vmUUID string) bool {
 	return true
 }
 
+var fileMutex sync.Mutex
+
 func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 	var imagePath = ""
 	imageInstanceAssociationFile := "/etc/workloadagent/" + config.ImageInstanceCountAssociationFileName()
@@ -131,19 +134,30 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 
 			// After modifying contents, store it back to the file
 			log.Info("Outputting modified text back to file.")
+
+			// Add mutex lock so that at one time only one process can write to a file
+			fileMutex.Lock()
+
 			outputToFile := strings.Join(lines[:len(lines)-1], "\n")
 			err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(outputToFile), 0644)
 			if err != nil {
 				log.Error(err)
 			}
+
+			// Release the mutext lock
+			defer fileMutex.Unlock()
 			return true, imagePath
 		}
 	}
+	// Add mutex lock so that at one time only one process can write to a file
+	fileMutex.Lock()
 	outputToFile := strings.Join(lines, "\n")
 	err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(outputToFile), 0644)
 	if err != nil {
 		log.Error(err)
 	}
+	// Release the mutext lock
+	defer fileMutex.Unlock()
 	return false, imagePath
 }
 
