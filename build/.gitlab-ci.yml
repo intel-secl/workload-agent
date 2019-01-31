@@ -22,7 +22,7 @@ test:
     - provision12 1234 5678
     - provision20 1234 5678
     - provision20_legacy 1234 5678
-    - go test ./... -cover
+    - go test ./... -coverpkg=./...
   
 compile:
   tags:
