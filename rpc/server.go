@@ -31,7 +31,7 @@ type VirtualMachine struct {
 // Start forwards the RPC request to wlavm.Start
 func (vm *VirtualMachine) Start(args *StartVMArgs, reply *int) error {
 	// pass in vm.Watcher to get the instance to the File System Watcher
-	*reply = wlavm.Start(args.InstanceUUID, args.ImageUUID, args.ImagePath, args.InstancePath, args.DiskSize)
+	*reply = wlavm.Start(args.InstanceUUID, args.ImageUUID, args.ImagePath, args.InstancePath, args.DiskSize, vm.Watcher)
 	return nil
 }
 

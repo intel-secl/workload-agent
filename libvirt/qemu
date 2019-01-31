@@ -21,14 +21,14 @@ if [ $2 == "start" ] || [ $2 == "stop" ]; then
 
 	if [ $2 == "start" ]; then
 			echo "VM Start called" >>$logfile
-			wlagent start $instanceUUID $imageUUID $imagePath $instancePath $diskSize >>$logfile
+			wlagent start-vm $instanceUUID $imageUUID $imagePath $instancePath $diskSize >>$logfile
 			if [ $? -ne 0 ]; then
 					echo "Error occured" >>$logfile
 					exit 1
 			fi
 	elif [ $2 == "stop" ] ; then
 			echo "Stop called" >>$logfile
-			wlagent stop >>$logfile
+			wlagent stop-vm >>$logfile
 			if [ $? -ne 0 ]; then
 					exit 1
 			fi
