@@ -10,6 +10,7 @@ import (
 	"intel/isecl/wlagent/wlsclient"
 	"intel/isecl/lib/vml"
 	"intel/isecl/lib/verifier"
+	"intel/isecl/lib/common/pkg/crypt"
 	pinfo "intel/isecl/lib/platform-info"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
@@ -23,13 +24,6 @@ import (
 )
 
 const mountPath = "/mnt/crypto/"
-
-type SignedVMTrustReport struct {
-	jsonVMTrustReport 	string 			`json:"vm_trust_report"` //json formatted VMtrust report. 
-	alg				string 			`json:"hash_alg"`
-	cert			string			`json:"cert"` //pem formatted certificate
-	signature 		[]byte			`json:"signature"`
-}
 
 // Start method is used perform the VM confidentiality check before lunching the VM
 func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, filewatcher *filewatch.Watcher) int {
@@ -285,7 +279,7 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 	report, _ := json.Marshal(*signedVMTrustReport)
 
 	fmt.Println("Report: ", string(report))
-	err = wlsclient.PostVMReport(vmTrustReport.(*verifier.VMTrustReport))
+	err = wlsclient.PostVMReport(report)
 	if err!= nil {
 		fmt.Println("Error while posting the VM trust report on to workload service")
 		fmt.Println("Error: ", err)
@@ -304,29 +298,29 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 	return 0
 }
 
-func signVMTrustReport(report *verifier.VMTrustReport) (*SignedVMTrustReport, error){
+func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error){
 
 	
-	var signedreport SignedVMTrustReport
+	var signedreport crypt.SignedData
 
 	jsonVMTrustReport, err := json.Marshal(*report)
 	if err != nil {
 		return nil, fmt.Errorf("Error : could not marshal VMTrustReport - %s", err)
 	}
 	
-	signedreport.jsonVMTrustReport = string(jsonVMTrustReport)
-	signedreport.alg = config.GetHashingAlgorithmName()
+	signedreport.Data = jsonVMTrustReport
+	signedreport.Alg = config.GetHashingAlgorithmName()
 	
-	signedreport.cert, err = config.GetSigningCertFromFile()
+	signedreport.Cert, err = config.GetSigningCertFromFile()
 	if err != nil {
 		return nil, err
 	}
 
-	signature, err := createSignatureWithTPM([]byte(signedreport.jsonVMTrustReport), config.GetHashingAlgorithm())
+	signature, err := createSignatureWithTPM([]byte(signedreport.Data), config.GetHashingAlgorithm())
 	if err != nil {
 		return nil, err
 	}
-	signedreport.signature = signature
+	signedreport.Signature = signature
 	return &signedreport, nil
 
 }

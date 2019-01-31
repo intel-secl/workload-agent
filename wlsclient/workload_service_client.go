@@ -5,7 +5,6 @@ import (
 	"errors"
 	f "intel/isecl/lib/flavor"
 	"intel/isecl/wlagent/config"
-	"intel/isecl/lib/verifier"
 	"log"
 	"net/http"
 	"bytes"
@@ -57,16 +56,13 @@ func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error)
 }
 
 //PostVMReport method is used to upload the VM trust report to workload service
-func PostVMReport(vmTrustReport *verifier.VMTrustReport) error {
+func PostVMReport(report []byte) error {
 	var err error
 	var requestURL string
 
 	//Add client here
 	requestURL = config.Configuration.Wls.APIURL + "reports"
 
-	//build request body using username and password from config
-	report, _ := json.Marshal(vmTrustReport)
-	
 	fmt.Println("RequestURL: ", requestURL)
 	// set POST request Accept and Content-Type headers
 	httpRequest, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(report))
