@@ -9,6 +9,7 @@ import (
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/osutil"
 	"io/ioutil"
 	"net/http"
@@ -63,7 +64,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	url = config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-signing-key"
 
 	// join configuration path and signing key file name
-	signingkeyFilePath := config.ConfigDirPath + config.SigningKeyFileName
+	signingkeyFilePath := consts.ConfigDirPath + consts.SigningKeyFileName
 
 	// check if signing key file exists
 	_, err := os.Stat(signingkeyFilePath)
@@ -98,7 +99,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	nameDigest := b.StdEncoding.EncodeToString(originalNameDigest)
 
 	//get trustagent aik cert location
-	aikCertFileName, _ := osutil.MakeFilePathFromEnvVariable(config.TrustAgentConfigDirEnv, "aik.pem", true)
+	aikCertFileName, _ := osutil.MakeFilePathFromEnvVariable(consts.TrustAgentConfigDirEnv, "aik.pem", true)
 
 	//getAikCert removes the begin / end certificate tags and newline characters
 	aik := getAikCert(aikCertFileName)
@@ -148,7 +149,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	aikPem := beginCertTag + "\n" + signingKeyCert.SigningKeyCertificate + "\n" + endCertTag + "\n"
 
 	//write the signing key certificate to file
-	signingKeyCertPath := config.ConfigDirPath + config.SigningKeyPemFileName
+	signingKeyCertPath := consts.ConfigDirPath + consts.SigningKeyPemFileName
 
 	file, _ := os.Create(signingKeyCertPath)
 	_, err = file.Write([]byte(aikPem))
@@ -177,7 +178,7 @@ func getAikCertFile(aikCertFileName string) string {
 // Validate checks whether or not the Register Signing Key task was completed successfully
 func (rs RegisterSigningKey) Validate(c csetup.Context) error {
 	log.Info("Validation for registering signing key.")
-	signingKeyCertPath := config.ConfigDirPath + config.SigningKeyPemFileName
+	signingKeyCertPath := consts.ConfigDirPath + consts.SigningKeyPemFileName
 	_, err := os.Stat(signingKeyCertPath)
 	if os.IsNotExist(err) {
 		return errors.New("Signing key certificate file does not exist")

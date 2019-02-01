@@ -4,9 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	cutils "intel/isecl/lib/common/utils"
+	"intel/isecl/lib/common/crypt"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/consts"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -20,7 +21,7 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 	if usage != tpm.Binding && usage != tpm.Signing {
 		return nil, errors.New("incorrect KeyUsage parameter - needs to be signing or binding")
 	}
-	secretbytes, err := cutils.GetRandomBytes(secretKeyLength)
+	secretbytes, err := crypt.GetRandomBytes(secretKeyLength)
 	if err != nil {
 		return nil, err
 	}
@@ -89,13 +90,13 @@ func GenerateKey(usage tpm.Usage, t tpm.Tpm) error {
 	var filename string
 	switch usage {
 	case tpm.Binding:
-		filename = config.BindingKeyFileName
+		filename = consts.BindingKeyFileName
 	case tpm.Signing:
-		filename = config.SigningKeyFileName
+		filename = consts.SigningKeyFileName
 	}
 
 	// Join configuration path and signing or binding file name
-	filepath := config.ConfigDirPath + filename
+	filepath := consts.ConfigDirPath + filename
 
 	// Writing certified key value to file path
 	err = writeCertifiedKeyToDisk(certKey, filepath)
@@ -117,13 +118,13 @@ func ValidateKey(usage tpm.Usage) error {
 	var filename string
 	switch usage {
 	case tpm.Binding:
-		filename = config.BindingKeyFileName
+		filename = consts.BindingKeyFileName
 	case tpm.Signing:
-		filename = config.SigningKeyFileName
+		filename = consts.SigningKeyFileName
 	}
 
 	// Join configuration path and signing or binding file name
-	filepath := config.ConfigDirPath + filename
+	filepath := consts.ConfigDirPath + filename
 	fi, err := os.Stat(filepath)
 	if err != nil {
 		return err

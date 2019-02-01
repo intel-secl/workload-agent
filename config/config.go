@@ -3,7 +3,7 @@ package config
 import (
 	"encoding/hex"
 	"fmt"
-	cutils "intel/isecl/lib/common/utils"
+	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/osutil"
 	"io"
 	"os"
@@ -31,44 +31,16 @@ var Configuration struct {
 		APIPassword string
 		TLSSha256   string
 	}
+	LogLevel string
 }
-
-// Define constants to be accessed in other packages
-const (
-	MTWILSON_API_URL                      = "MTWILSON_API_URL"
-	MTWILSON_API_USERNAME                 = "MTWILSON_API_USERNAME"
-	MTWILSON_API_PASSWORD                 = "MTWILSON_API_PASSWORD"
-	MTWILSON_TLS_SHA256                   = "MTWILSON_TLS_SHA256"
-	WLS_API_URL                           = "WLS_API_URL"
-	WLS_API_USERNAME                      = "WLS_API_USERNAME"
-	WLS_API_PASSWORD                      = "WLS_API_PASSWORD"
-	WLS_TLS_SHA256                        = "WLS_TLS_SHA256"
-	aikSecretKeyName                      = "aik.secret"
-	TrustAgentConfigDirEnv                = "TRUST_AGENT_CONFIGURATION"
-	taConfigAikSecretCmd                  = "tagent config aik.secret"
-	BindingKeyFileName                    = "bindingkey.json"
-	SigningKeyFileName                    = "signingkey.json"
-	BindingKeyPemFileName                 = "bindingkey.pem"
-	SigningKeyPemFileName                 = "signingkey.pem"
-	ImageInstanceCountAssociationFileName = "image_instance_association"
-	EnvFileName                           = "workloadagent.env"
-	DevMapperDirPath                      = "/dev/mapper/"
-	LogDirPath                            = "/var/log/workloadagent/"
-	LogFileName                           = "workloadagent.log"
-	ConfigFilePath                        = "/etc/workloadagent/config.yml"
-	ConfigDirPath                         = "/etc/workloadagent/"
-	OptDirPath                            = "/opt/workloadagent/"
-	LibvirtHookFilePath                   = "/etc/libvirt/hooks/qemu"
-)
 
 // GetAikSecret returns the AIK Secret as a byte array running the tagent config command
 func GetAikSecret() ([]byte, error) {
 	log.Info("Getting AIK secret from trustagent configuration.")
-	aikSecret, stderr, err := osutil.RunCommandWithTimeout(taConfigAikSecretCmd, 2)
+	aikSecret, stderr, err := osutil.RunCommandWithTimeout(consts.TAConfigAikSecretCmd, 2)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"Issued Command:": taConfigAikSecretCmd,
-			"StdOut:":         aikSecret,
+			"Issued Command:": consts.TAConfigAikSecretCmd,
 			"StdError:":       stderr,
 		}).Error("GetAikSecret: Command Failed. Details follow")
 		return nil, err
@@ -78,18 +50,18 @@ func GetAikSecret() ([]byte, error) {
 
 // Save the configuration struct into configuration directory
 func Save() error {
-	file, err := os.OpenFile(ConfigFilePath, os.O_RDWR, 0)
+	file, err := os.OpenFile(consts.ConfigFilePath, os.O_RDWR, 0)
+	defer file.Close()
 	if err != nil {
 		// we have an error
 		if os.IsNotExist(err) {
 			// error is that the config doesnt yet exist, create it
-			file, err = os.Create(ConfigFilePath)
+			file, err = os.Create(consts.ConfigFilePath)
 			if err != nil {
 				return err
 			}
 		}
 	}
-	defer file.Close()
 	return yaml.NewEncoder(file).Encode(Configuration)
 }
 
@@ -97,7 +69,7 @@ var LogWriter io.Writer
 
 func init() {
 	// load from config
-	file, err := os.Open(ConfigFilePath)
+	file, err := os.Open(consts.ConfigFilePath)
 	if err == nil {
 		defer file.Close()
 		yaml.NewDecoder(file).Decode(&Configuration)
@@ -109,31 +81,31 @@ func init() {
 // This is called when setup tasks are called
 func SaveConfiguration(c csetup.Context) error {
 	var err error
-	Configuration.Mtwilson.APIURL, err = c.GetenvString(MTWILSON_API_URL, "Mtwilson URL")
+	Configuration.Mtwilson.APIURL, err = c.GetenvString(consts.MTWILSON_API_URL, "Mtwilson URL")
 	if err != nil {
 		return err
 	}
-	Configuration.Mtwilson.APIUsername, err = c.GetenvString(MTWILSON_API_USERNAME, "Mtwilson Username")
+	Configuration.Mtwilson.APIUsername, err = c.GetenvString(consts.MTWILSON_API_USERNAME, "Mtwilson Username")
 	if err != nil {
 		return err
 	}
-	Configuration.Mtwilson.APIPassword, err = c.GetenvString(MTWILSON_API_PASSWORD, "Mtwilson Password")
+	Configuration.Mtwilson.APIPassword, err = c.GetenvString(consts.MTWILSON_API_PASSWORD, "Mtwilson Password")
 	if err != nil {
 		return err
 	}
-	Configuration.Mtwilson.TLSSha256, err = c.GetenvString(MTWILSON_TLS_SHA256, "Mtwilson TLS SHA256")
+	Configuration.Mtwilson.TLSSha256, err = c.GetenvString(consts.MTWILSON_TLS_SHA256, "Mtwilson TLS SHA256")
 	if err != nil {
 		return err
 	}
-	Configuration.Wls.APIURL, err = c.GetenvString(WLS_API_URL, "Workload Service URL")
+	Configuration.Wls.APIURL, err = c.GetenvString(consts.WLS_API_URL, "Workload Service URL")
 	if err != nil {
 		return err
 	}
-	Configuration.Wls.APIUsername, err = c.GetenvString(WLS_API_USERNAME, "Workload Service API Username")
+	Configuration.Wls.APIUsername, err = c.GetenvString(consts.WLS_API_USERNAME, "Workload Service API Username")
 	if err != nil {
 		return err
 	}
-	Configuration.Wls.APIPassword, err = c.GetenvString(WLS_API_PASSWORD, "Workload Service API Password")
+	Configuration.Wls.APIPassword, err = c.GetenvString(consts.WLS_API_PASSWORD, "Workload Service API Password")
 	if err != nil {
 		return err
 	}
@@ -146,23 +118,31 @@ func SaveConfiguration(c csetup.Context) error {
 
 // LogConfiguration is used to setup log rotation configurations
 func LogConfiguration() {
-	// creating the log file if not preset
-	LogFilePath := LogDirPath + LogFileName
-	_, err := os.Stat(LogFilePath)
-	if os.IsNotExist(err) {
-		fmt.Println("Log file does not exist. Creating the file.")
-		_, touchErr := cutils.ExecuteCommand("touch", []string{LogFilePath})
-		if touchErr != nil {
-			fmt.Println("Error while creating the log file.", touchErr)
-			return
-		}
+	var succ bool
+	Configuration.LogLevel, succ = os.LookupEnv("LOG_LEVEL")
+	if !succ {
+		fmt.Printf("Log level configuration variable not set.")
+		Configuration.LogLevel = "debug"
 	}
-	logFile, err := os.OpenFile(LogFilePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	// creating the log file if not preset
+	LogFilePath := consts.LogDirPath + consts.LogFileName
+	logFile, err := os.OpenFile(LogFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		fmt.Printf("unable to write file on filehook %v\n", err)
 		return
 	}
+	// parse string, this is built-in feature of logrus
+	logLevel, err := log.ParseLevel(Configuration.LogLevel)
+	if err != nil {
+		logLevel = log.DebugLevel
+	}
+	// set global log level
+	log.SetLevel(logLevel)
+
+	// set formatting of logs
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true, TimestampFormat: time.RFC1123Z})
+
+	// print logs to std out and logfile
 	logMultiWriter := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(logMultiWriter)
 }

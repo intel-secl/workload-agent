@@ -92,6 +92,8 @@ else
   echo "No environment file"
 fi
 
+export LOG_LEVEL=${LOG_LEVEL:-"debug"}
+
 # 3. exit workloadagent setup if WORKLOAD_AGENT_NOSETUP is set
 if [ -n "$WORKLOAD_AGENT_NOSETUP" ]; then
   echo "WORKLOAD_AGENT_NOSETUP value is set. So, skipping the workloadagent setup task."

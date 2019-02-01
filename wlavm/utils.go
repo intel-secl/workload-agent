@@ -3,7 +3,7 @@ package wlavm
 import (
 	"errors"
 	"fmt"
-	cutils "intel/isecl/lib/common/utils"
+	"intel/isecl/lib/common/exec"
 	"intel/isecl/lib/vml"
 	"os"
 	"strings"
@@ -13,7 +13,7 @@ import (
 func IsImageEncrypted(filePath string) (bool, error) {
 	//check if image is encrypted
 	// this has to be changed
-	fileCmdOutput, err := cutils.ExecuteCommand("file", []string{filePath})
+	fileCmdOutput, err := exec.ExecuteCommand("file", []string{filePath})
 	if err != nil {
 		fmt.Println("Error while checking if the image is encrypted")
 		return false, errors.New("error while checking if the image is encrypted")
@@ -37,7 +37,7 @@ func CheckMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) erro
 	_, err := os.Stat(mountPath)
 	if os.IsNotExist(err) {
 		args := []string{"-p", mountPath}
-		_, mkdirErr := cutils.ExecuteCommand("mkdir", args)
+		_, mkdirErr := exec.ExecuteCommand("mkdir", args)
 		if mkdirErr != nil {
 			fmt.Println("Error while creating the mount point for the image device mapper")
 			return mkdirErr

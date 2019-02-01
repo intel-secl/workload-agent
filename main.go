@@ -5,6 +5,8 @@ import (
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/consts"
+	"intel/isecl/wlagent/pkg"
 	"intel/isecl/wlagent/setup"
 	"intel/isecl/wlagent/wlavm"
 	"log"
@@ -144,10 +146,10 @@ func main() {
 
 	case "uninstall":
 		deleteFile("/usr/local/bin/wlagent")
-		deleteFile(config.OptDirPath)
-		deleteFile(config.LibvirtHookFilePath)
-		deleteFile(config.ConfigDirPath)
-		deleteFile(config.LogDirPath)
+		deleteFile(consts.OptDirPath)
+		deleteFile(consts.LibvirtHookFilePath)
+		deleteFile(consts.ConfigDirPath)
+		deleteFile(consts.LogDirPath)
 
 	default:
 		fmt.Printf("Unrecognized option : %s\n", arg)

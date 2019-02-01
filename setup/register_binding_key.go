@@ -13,6 +13,7 @@ import (
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/osutil"
 	"io/ioutil"
 
@@ -68,7 +69,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	url = config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-binding-key"
 
 	// join configuration path and binding key file name
-	bindingkeyFilePath := config.ConfigDirPath + config.BindingKeyFileName
+	bindingkeyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
 
 	// check if binding key file exists
 	_, err := os.Stat(bindingkeyFilePath)
@@ -99,7 +100,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	nameDigest := b.StdEncoding.EncodeToString(originalNameDigest)
 
 	//get trustagent aik cert location
-	aikCertName, _ := osutil.MakeFilePathFromEnvVariable(config.TrustAgentConfigDirEnv, "aik.pem", true)
+	aikCertName, _ := osutil.MakeFilePathFromEnvVariable(consts.TrustAgentConfigDirEnv, "aik.pem", true)
 
 	// set operating system
 	if runtime.GOOS == "linux" {
@@ -152,7 +153,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	aikPem := beginCert + "\n" + bindingKeyCert.BindingKeyCertificate + "\n" + endCert + "\n"
 
 	//write the binding key certificate to file
-	bindingKeyCertPath := config.ConfigDirPath + config.BindingKeyPemFileName
+	bindingKeyCertPath := consts.ConfigDirPath + consts.BindingKeyPemFileName
 
 	file, _ = os.Create(bindingKeyCertPath)
 	_, err = file.Write([]byte(aikPem))
@@ -181,7 +182,7 @@ func getAikCert(aikCertName string) string {
 // Validate checks whether or not the register binding key task was completed successfully
 func (rb RegisterBindingKey) Validate(c csetup.Context) error {
 	log.Info("Validation for registering binding key.")
-	bindingKeyCertFilePath := config.ConfigDirPath + config.BindingKeyPemFileName
+	bindingKeyCertFilePath := consts.ConfigDirPath + consts.BindingKeyPemFileName
 	_, err := os.Stat(bindingKeyCertFilePath)
 	if os.IsNotExist(err) {
 		return errors.New("Binding key certificate file does not exist")

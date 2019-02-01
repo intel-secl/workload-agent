@@ -4,16 +4,17 @@ package wlavm
 
 import (
 	//"log"
-	cutils "intel/isecl/lib/common/utils"
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/wlsclient"
 	"os"
 	"strings"
 
 	//"intel/isecl/lib/verifier"
+	"intel/isecl/lib/common/exec"
 	pinfo "intel/isecl/lib/platform-info"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/consts"
 
 	//"intel/isecl/lib/flavor"
 	"encoding/base64"
@@ -124,7 +125,7 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 
 		// create image dm-crypt volume
 		fmt.Println("Creating a dm-crypt volume for the image")
-		imageDeviceMapperPath := config.DevMapperDirPath + imageUUID
+		imageDeviceMapperPath := consts.DevMapperDirPath + imageUUID
 		sparseFilePath := imagePath + "_sparseFile"
 		size, _ := strconv.Atoi(diskSize)
 		err = vml.CreateVolume(sparseFilePath, imageDeviceMapperPath, key, size)
@@ -170,7 +171,7 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 		// remove the encrypted image file and create a symlink with the dm-crypt volume
 		fmt.Println("Deleting the enc image file from :", imagePath)
 		args := []string{"-rf", imagePath}
-		_, rmErr := cutils.ExecuteCommand("rm", args)
+		_, rmErr := exec.ExecuteCommand("rm", args)
 		if rmErr != nil {
 			fmt.Println("Error while deleting the encrypted image from disk: ", imagePath)
 			return 1
@@ -185,7 +186,7 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 			return 1
 		}
 		// create instance volume
-		instanceDeviceMapperPath := config.DevMapperDirPath + instanceUUID
+		instanceDeviceMapperPath := consts.DevMapperDirPath + instanceUUID
 		instanceSparseFilePath := strings.Replace(instancePath, "disk", instanceUUID+"_sparse", -1)
 
 		fmt.Println("Creating dm-crypt volume for the instance: ", instanceUUID)
@@ -213,7 +214,7 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 
 		// copy the files from instance path and create a symlink
 		args = []string{instancePath, instanceDeviceMapperMountPath}
-		_, err = cutils.ExecuteCommand("cp", args)
+		_, err = exec.ExecuteCommand("cp", args)
 		if err != nil {
 			fmt.Println("Error while copying the instance change disk: ", instanceUUID)
 			return 1
@@ -222,7 +223,7 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 		// remove the encrypted image file and create a symlink with the dm-crypt volume
 		// fmt.Println("Deleting change disk :", instancePath)
 		// args := []string{"-rf", instancePath}
-		// _, err := cutils.ExecuteCommand("rm", args)
+		// _, err := exec.ExecuteCommand("rm", args)
 		// if err != nil {
 		// 	fmt.Println("Error while deleting the change disk: ", imagePath)
 		// 	return 1
@@ -263,7 +264,7 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 
 	defer t.Close()
 
-	bindingKeyFilePath := config.ConfigDirPath + config.BindingKeyFileName
+	bindingKeyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
 	fmt.Println("Bindkey file name:", bindingKeyFilePath)
 	bindingKeyCert, fileErr := ioutil.ReadFile(bindingKeyFilePath)
 	if fileErr != nil {
@@ -295,13 +296,13 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 func imageInstanceCountAssociation(imageUUID, imagePath string) error {
 
 	imageUUIDFound := false
-	imageInstanceCountAssociationFilePath := config.ConfigDirPath + config.ImageInstanceCountAssociationFileName
+	imageInstanceCountAssociationFilePath := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
 
 	// creating the image-instance file if not preset
 	_, err := os.Stat(imageInstanceCountAssociationFilePath)
 	if os.IsNotExist(err) {
 		fmt.Println("Image-instance count file doesnot exists. Creating the file")
-		_, touchErr := cutils.ExecuteCommand("touch", []string{imageInstanceCountAssociationFilePath})
+		_, touchErr := exec.ExecuteCommand("touch", []string{imageInstanceCountAssociationFilePath})
 		if touchErr != nil {
 			fmt.Println("Error while trying to create the image-instance count association file")
 			return touchErr
@@ -309,7 +310,7 @@ func imageInstanceCountAssociation(imageUUID, imagePath string) error {
 	}
 
 	// read the contents of the file
-	output, err := cutils.ExecuteCommand("cat", []string{imageInstanceCountAssociationFilePath})
+	output, err := exec.ExecuteCommand("cat", []string{imageInstanceCountAssociationFilePath})
 	if err != nil {
 		fmt.Println("Error while reading the contents of the file")
 		return err
@@ -325,7 +326,7 @@ func imageInstanceCountAssociation(imageUUID, imagePath string) error {
 			currentCount, _ := strconv.Atoi(splitCountSection[len(splitCountSection)-1])
 			replaceString := strconv.Itoa(i+1) + " s/count:" + strconv.Itoa(currentCount) + "/count:" + strconv.Itoa(currentCount+1) + "/"
 			args := []string{"-i", replaceString, imageInstanceCountAssociationFilePath}
-			_, sedErr := cutils.ExecuteCommand("sed", args)
+			_, sedErr := exec.ExecuteCommand("sed", args)
 			if sedErr != nil {
 				fmt.Println("Error while replacing the count of the instance for an image")
 				return err
