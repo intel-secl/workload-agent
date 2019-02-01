@@ -3,9 +3,9 @@ package wlavm
 import (
 	"errors"
 	"fmt"
+	cutils "intel/isecl/lib/common/utils"
 	"intel/isecl/lib/vml"
 	"os"
-	"os/exec"
 	"strings"
 )
 
@@ -13,7 +13,7 @@ import (
 func IsImageEncrypted(filePath string) (bool, error) {
 	//check if image is encrypted
 	// this has to be changed
-	fileCmdOutput, err := exec.Command("file", filePath).Output()
+	fileCmdOutput, err := cutils.ExecuteCommand("file", []string{filePath})
 	if err != nil {
 		fmt.Println("Error while checking if the image is encrypted")
 		return false, errors.New("error while checking if the image is encrypted")
@@ -36,7 +36,8 @@ func CheckMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) erro
 	fmt.Println("Mounting the device mapper: ", deviceMapperPath)
 	_, err := os.Stat(mountPath)
 	if os.IsNotExist(err) {
-		_, mkdirErr := exec.Command("mkdir", "-p", mountPath).Output()
+		args := []string{"-p", mountPath}
+		_, mkdirErr := cutils.ExecuteCommand("mkdir", args)
 		if mkdirErr != nil {
 			fmt.Println("Error while creating the mount point for the image device mapper")
 			return mkdirErr
@@ -71,11 +72,4 @@ func Cleanup() error {
 	// 	return 1
 	// }
 	return nil
-}
-
-// Execute command is used to execute a linux command line command and return the output of the command with an error if it exists.
-// Deprecated, use Common functionality in lib common
-func ExecuteCommand(cmd string, args []string) (string, error) {
-	out, err := exec.Command(cmd, args...).Output()
-	return string(out), err
 }

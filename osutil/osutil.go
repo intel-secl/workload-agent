@@ -3,9 +3,7 @@ package osutil
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/csv"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -95,28 +93,4 @@ func GetValueFromEnvBody(content, keyName string) (value string, err error) {
 		return rs[1], nil
 	}
 	return "", fmt.Errorf("Could not find Value for %s", keyName)
-}
-
-// GetHexRandomString return a random string of 'length'
-//
-// Move this to common lib
-func GetHexRandomString(length int) (string, error) {
-
-	bytes, err := GetRandomBytes(length)
-	if err != nil {
-		return "", err
-	}
-
-	return hex.EncodeToString(bytes), nil
-}
-
-// GetRandomBytes retrieves a byte array of 'length'
-//
-// Move this to common lib
-func GetRandomBytes(length int) ([]byte, error) {
-	bytes := make([]byte, length)
-	if _, err := rand.Read(bytes); err != nil {
-		return nil, err
-	}
-	return bytes, nil
 }

@@ -3,10 +3,10 @@ package config
 import (
 	"encoding/hex"
 	"fmt"
+	cutils "intel/isecl/lib/common/utils"
 	"intel/isecl/wlagent/osutil"
 	"io"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -151,7 +151,7 @@ func LogConfiguration() {
 	_, err := os.Stat(LogFilePath)
 	if os.IsNotExist(err) {
 		fmt.Println("Log file does not exist. Creating the file.")
-		_, touchErr := exec.Command("touch", LogFilePath).Output()
+		_, touchErr := cutils.ExecuteCommand("touch", []string{LogFilePath})
 		if touchErr != nil {
 			fmt.Println("Error while creating the log file.", touchErr)
 			return

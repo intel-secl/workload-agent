@@ -4,9 +4,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	cutils "intel/isecl/lib/common/utils"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
-	"intel/isecl/wlagent/osutil"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -20,7 +20,7 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 	if usage != tpm.Binding && usage != tpm.Signing {
 		return nil, errors.New("incorrect KeyUsage parameter - needs to be signing or binding")
 	}
-	secretbytes, err := osutil.GetRandomBytes(secretKeyLength)
+	secretbytes, err := cutils.GetRandomBytes(secretKeyLength)
 	if err != nil {
 		return nil, err
 	}
