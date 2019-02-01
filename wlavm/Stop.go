@@ -112,8 +112,12 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 
 	log.Info("Recursively checking if imageid exists in file. If it does, reduce the instance count by 1.")
 	lines := strings.Split(string(str), "\n")
+	log.Info("lines: ", lines)
 	for i, line := range lines {
 		log.Info("line: ", line)
+		if strings.TrimSpace(line) == "" {
+			break
+		}
 		// Split words of each line by space character into an array
 		words := strings.Fields(line)
 		imagePath = words[1]
@@ -121,9 +125,9 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 		// check if the first part of the line matches given image uuid and
 		// then check if there is only 1 instance running of that image (which is the current one)
 		count := strings.Split(words[2], ":")
-
 		// Reduce the number of instance by 1 and if it is zero; delete that entry
 		if strings.Contains(words[0], imageUUID) {
+			log.Debug("Image ID found in image instance association file. Reducing instance count by 1.")
 			cnt, _ := strconv.Atoi(count[1])
 			replaceLine := strings.Replace(string(line), "count:"+count[1], "count:"+strconv.Itoa(cnt-1), 1)
 			lines[i] = replaceLine
@@ -149,6 +153,7 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 			return true, imagePath
 		}
 	}
+	log.Debug("Image ID not found in image instance association file.")
 	// Add mutex lock so that at one time only one process can write to a file
 	fileMutex.Lock()
 	outputToFile := strings.Join(lines, "\n")
