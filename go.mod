@@ -12,13 +12,11 @@ require (
 	intel/isecl/lib/vml v0.0.0
 )
 
-replace intel/isecl/lib/tpm => gitlab.devtools.intel.com/sst/isecl/lib/tpm v0.0.0-20190117184038-fe4d003b4366
+replace intel/isecl/lib/tpm => gitlab.devtools.intel.com/sst/isecl/lib/tpm v0.0.0-20190202165337-322040ceed08
 
 replace intel/isecl/lib/vml => gitlab.devtools.intel.com/sst/isecl/lib/volume-management v0.0.0-20190113075051-785605883a21
 
-//replace intel/isecl/lib/common => gitlab.devtools.intel.com/sst/isecl/lib/common v0.0.0-20190110234046-29fc7aa6f95d
-
-replace intel/isecl/lib/common => /mnt/c/Users/vcheeram/Source/DCGSecurity/gitlab/lib/common
+replace intel/isecl/lib/common => gitlab.devtools.intel.com/sst/isecl/lib/common v0.0.0-20190201215905-ea0db0eff855
 
 replace intel/isecl/lib/flavor => gitlab.devtools.intel.com/sst/isecl/lib/flavor v0.0.0-20181206181952-1ec1e81fed41
 

@@ -62,7 +62,7 @@ const WLS_API_PASSWORD = "WLS_API_PASSWORD"
 const WLS_TLS_SHA256 = "WLS_TLS_SHA256"
 
 //TODO - this should be moved elsewhere to some sort of global constants
-const hashingAlgorithm crypto.Hash = crypto.SHA384
+const hashingAlgorithm crypto.Hash = crypto.SHA256
 
 const workloadAgentConfigDir string = "WORKLOAD_AGENT_CONFIGURATION"
 const trustAgentConfigDir string = "TRUST_AGENT_CONFIGURATION"
@@ -117,6 +117,8 @@ func GetHashingAlgorithm()  crypto.Hash {
 
 func GetHashingAlgorithmName() string {
 	switch GetHashingAlgorithm() {
+	case crypto.SHA256:
+		return "SHA-256"
 	case crypto.SHA384:
 		return "SHA-384"
 	}
@@ -143,19 +145,34 @@ func getFileContents(fileName string) ([]byte, error){
 	return byteValue, nil 
 }
 
+func getFileContentFromConfigDir(fileName string) ([]byte, error){
+		keyFilePath := "/etc/workloadagent/" + fileName
+		// check if key file exists
+		_, err := os.Stat(keyFilePath)
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("File does not exist %s", keyFilePath)
+		}
+
+		// read contents of file
+		file, _ := os.Open(keyFilePath)
+		defer file.Close()
+		byteValue, _ := ioutil.ReadAll(file)
+		return byteValue, nil
+}
+
 func GetSigningKeyFromFile() ([]byte, error) {
 
-	return getFileContents(GetSigningKeyFileName())
+	return getFileContentFromConfigDir(GetSigningKeyFileName())
 }
 
 func GetBindingKeyFromFile() ([]byte, error) {
 		
-	return getFileContents(GetBindingKeyFileName())
+	return getFileContentFromConfigDir(GetBindingKeyFileName())
 }
 
 func GetSigningCertFromFile() (string, error){
 
-	f, err := getFileContents(GetSigningKeyPemFileName())
+	f, err := getFileContentFromConfigDir(GetSigningKeyPemFileName())
 	if err != nil {
 		return "", err
 	}
@@ -164,7 +181,7 @@ func GetSigningCertFromFile() (string, error){
 
 func GetBindingCertFromFile() (string, error){
 
-	f, err := getFileContents(GetBindingKeyPemFileName())
+	f, err := getFileContentFromConfigDir(GetBindingKeyPemFileName())
 	if err != nil {
 		return "", err
 	}

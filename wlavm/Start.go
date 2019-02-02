@@ -10,7 +10,7 @@ import (
 	"intel/isecl/wlagent/wlsclient"
 	"intel/isecl/lib/vml"
 	"intel/isecl/lib/verifier"
-	"intel/isecl/lib/common/pkg/crypt"
+	"intel/isecl/lib/common/crypt"
 	pinfo "intel/isecl/lib/platform-info"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
@@ -24,6 +24,23 @@ import (
 )
 
 const mountPath = "/mnt/crypto/"
+
+// Todo: ISECL-3352 Move the TPM initialization to deamon start
+
+var vmstartTpm tpm.Tpm
+
+func GetTpmInstance()(tpm.Tpm, error){
+	if vmstartTpm == nil {
+		return tpm.Open()
+	}
+	return vmstartTpm, nil
+}
+
+func CloseTpmInstance(){
+	if vmstartTpm != nil {
+		vmstartTpm.Close()
+	}
+}
 
 // Start method is used perform the VM confidentiality check before lunching the VM
 func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, filewatcher *filewatch.Watcher) int {
@@ -70,6 +87,11 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 		fmt.Println("Error while trying to check if the image is encrypted")
 		return 1
 	}
+	
+	// defer the CloseTpmInstance() to take care of closing the Tpm connection
+	// Todo: ISECL-3352 remove when TPM instance is managed by daemon start and stop
+
+	defer CloseTpmInstance()
 
 	//check if the key is cached by filtercriteria imageUUID
 	var keyID string
@@ -101,7 +123,8 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 		return 0
 	}
 
-	if flavorKeyInfo.Image.Encryption.EncryptionRequired {
+
+	if (flavorKeyInfo.Image.Encryption.EncryptionRequired) {
 
 		// if key not cached, cache the key
 		if len(strings.TrimSpace(keyID)) <= 0 {
@@ -310,12 +333,12 @@ func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error
 	
 	signedreport.Data = jsonVMTrustReport
 	signedreport.Alg = config.GetHashingAlgorithmName()
-	
+	fmt.Println("Getting SigningKeyCert from disk")
 	signedreport.Cert, err = config.GetSigningCertFromFile()
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println("Using TPM to create signature")
 	signature, err := createSignatureWithTPM([]byte(signedreport.Data), config.GetHashingAlgorithm())
 	if err != nil {
 		return nil, err
@@ -348,11 +371,11 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	}
 
     // Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
-	t, err := tpm.Open()
+	t, err := GetTpmInstance()
 	if err != nil {
+		fmt.Println("Could not open TPM, Error :", err)
 		return nil, fmt.Errorf("Error while attempting to create signature - could not open TPM")
 	}
-	defer t.Close()
 
 	if t.Version() == tpm.V12 {
 		// tpm 1.2 only supports SHA1, so override the algorithm that we get here
@@ -364,6 +387,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 		return nil, err
 	}
 
+	fmt.Println("Using TPM to sign the hash")
 	signature, err  := 	t.Sign(&signingKey, keyAuth, alg, h)
 	if err != nil {
 		return nil, err
@@ -448,17 +472,16 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 
 	var certifiedKey tpm.CertifiedKey
-	t, err := tpm.Open()
+	t, err := GetTpmInstance()
 
 	if err != nil {
 		fmt.Println("Error while opening the TPM")
 		fmt.Println("Err: ", err)
 		return nil, err
-	}
+	} 
 
-	defer t.Close()
-
-	bindingKeyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
+	
+	bindingKeyFilePath := "/etc/workloadagent/bindingkey.json"
 	fmt.Println("Bindkey file name:", bindingKeyFilePath)
 	bindingKeyCert, fileErr := ioutil.ReadFile(bindingKeyFilePath)
 	if fileErr != nil {
