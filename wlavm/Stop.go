@@ -141,28 +141,26 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 
 			// Add mutex lock so that at one time only one process can write to a file
 			fileMutex.Lock()
-
+			// Release the mutext lock
+			defer fileMutex.Unlock()
 			outputToFile := strings.Join(lines[:len(lines)-1], "\n")
 			err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(outputToFile), 0644)
 			if err != nil {
 				log.Error(err)
 			}
-
-			// Release the mutext lock
-			defer fileMutex.Unlock()
 			return true, imagePath
 		}
 	}
 	log.Debug("Image ID not found in image instance association file.")
 	// Add mutex lock so that at one time only one process can write to a file
 	fileMutex.Lock()
+	// Release the mutext lock
+	defer fileMutex.Unlock()
 	outputToFile := strings.Join(lines, "\n")
 	err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(outputToFile), 0644)
 	if err != nil {
 		log.Error(err)
 	}
-	// Release the mutext lock
-	defer fileMutex.Unlock()
 	return false, imagePath
 }
 
