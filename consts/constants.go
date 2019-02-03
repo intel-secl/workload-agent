@@ -21,6 +21,7 @@ const (
 	ImageInstanceCountAssociationFileName = "image_instance_association"
 	EnvFileName                           = "workloadagent.env"
 	DevMapperDirPath                      = "/dev/mapper/"
+	MountDirPath                          = "/mnt/crypto/"
 	LogDirPath                            = "/var/log/workloadagent/"
 	LogFileName                           = "workloadagent.log"
 	ConfigFilePath                        = "/etc/workloadagent/config.yml"

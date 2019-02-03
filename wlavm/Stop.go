@@ -3,14 +3,14 @@
 package wlavm
 
 import (
+	"intel/isecl/lib/common/exec"
 	"intel/isecl/lib/vml"
-	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/consts"
 	"io/ioutil"
 	"strconv"
 	"sync"
 
 	"os"
-	"os/exec"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -28,7 +28,7 @@ import (
 func Stop(vmUUID string, imageUUID string,
 	instancePath string) int {
 	log.Info("Stop call intercepted.")
-	var mntLocation = config.GetMountDir()
+	var mntLocation = consts.MountDirPath
 
 	// check if instance exists at given path
 	log.Info("Checking if instance eixsts at given instance path.")
@@ -72,25 +72,28 @@ func Stop(vmUUID string, imageUUID string,
 
 	// Close the image volume
 	vml.DeleteVolume(imageUUID)
+	log.Info("Successfully stopped instance.")
 	return 0
 }
 
 func isInstanceVolumeEncrypted(vmUUID string) bool {
-	var deviceMapperPath = config.GetDevMapperDir()
+	var deviceMapperPath = consts.DevMapperDirPath
 
 	// check the status of the device mapper
 	log.Info("Checking the status of the device mapper.")
 	deviceMapperLocation := deviceMapperPath + vmUUID
 	args := []string{"status", deviceMapperLocation}
-	cmdOutput, err := runCommand("cryptsetup", args)
+	cmdOutput, err := exec.ExecuteCommand("cryptsetup", args)
 
 	if cmdOutput != "" && strings.Contains(cmdOutput, "inactive") {
+		log.Debug("The device mapper is inactive.")
 		return false
 	}
 
 	if err != nil {
 		log.Error(err)
 	}
+	log.Debug("The device mapper is encrypted and active.")
 	return true
 }
 
@@ -98,7 +101,7 @@ var fileMutex sync.Mutex
 
 func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 	var imagePath = ""
-	imageInstanceAssociationFile := "/etc/workloadagent/" + config.ImageInstanceCountAssociationFileName()
+	imageInstanceAssociationFile := "/etc/workloadagent/" + consts.ImageInstanceCountAssociationFileName
 
 	// Read from a file and store it in a string
 	// FORMAT OF THE FILE:
@@ -112,9 +115,8 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 
 	log.Info("Recursively checking if imageid exists in file. If it does, reduce the instance count by 1.")
 	lines := strings.Split(string(str), "\n")
-	log.Info("lines: ", lines)
 	for i, line := range lines {
-		log.Info("line: ", line)
+		log.Debug("line: ", line)
 		if strings.TrimSpace(line) == "" {
 			break
 		}
@@ -133,11 +135,11 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 			lines[i] = replaceLine
 		}
 		if strings.Contains(words[0], imageUUID) && count[1] == "1" {
-			log.Infof("Deleting image entry %s as this was last instance to use the image.", imageUUID)
+			log.Debugf("Deleting image entry %s as this was last instance to use the image.", imageUUID)
 			lines[i] = lines[len(lines)-1]
 
 			// After modifying contents, store it back to the file
-			log.Info("Outputting modified text back to file.")
+			log.Debug("Outputting modified text back to file.")
 
 			// Add mutex lock so that at one time only one process can write to a file
 			fileMutex.Lock()
@@ -162,9 +164,4 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 		log.Error(err)
 	}
 	return false, imagePath
-}
-
-func runCommand(cmd string, args []string) (string, error) {
-	out, err := exec.Command(cmd, args...).Output()
-	return string(out), err
 }

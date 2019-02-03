@@ -6,7 +6,6 @@ import (
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/pkg"
 	"intel/isecl/wlagent/setup"
 	"intel/isecl/wlagent/wlavm"
 	"log"
@@ -63,15 +62,14 @@ func main() {
 		printUsage()
 		return
 	}
+	// Save log configurations
+	config.LogConfiguration()
 
 	switch arg := strings.ToLower(args[0]); arg {
 	case "--version", "-v", "version":
 		printVersion()
 
 	case "setup":
-		// Save log rotation configurations
-		config.LogConfiguration()
-
 		// Check if nosetup environment variable is true, if yes then skip the setup tasks
 		if nosetup, err := strconv.ParseBool(os.Getenv("WORKLOAD_AGENT_NOSETUP")); err != nil && nosetup == false {
 			// Workaround for tpm2-abrmd bug in RHEL 7.5
@@ -112,7 +110,7 @@ func main() {
 
 	case "start-vm":
 		if len(args[1:]) < 5 {
-			fmt.Println("Invalid number of parameters")
+			log.Info("Invalid number of parameters")
 		}
 		log.Info("VM start called in main method")
 		log.Info("image path: ", args[3])
@@ -128,14 +126,13 @@ func main() {
 		}
 		fmt.Println("Return code from VM start :", returnCode)
 	case "stop":
-		config.LogConfiguration()
 		if len(args[1:]) < 3 {
-			fmt.Println("Invalid number of parameters")
+			log.Info("Invalid number of parameters")
 		}
-		fmt.Println("VM stop called in main method")
-		fmt.Println("image UUID: ", args[2])
-		fmt.Println("instance path: ", args[3])
-		fmt.Println("instance UUID: ", args[1])
+		log.Info("VM stop called in main method")
+		log.Info("image UUID: ", args[2])
+		log.Info("instance path: ", args[3])
+		log.Info("instance UUID: ", args[1])
 		returnCode := wlavm.Stop(strings.TrimSpace(args[1]), strings.TrimSpace(args[2]),
 			strings.TrimSpace(args[3]))
 		if returnCode == 1 {

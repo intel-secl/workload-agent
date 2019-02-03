@@ -28,7 +28,7 @@ if [ $2 == "start" ] || [ $2 == "stopped" ]; then
 			fi
 	elif [ $2 == "stopped" ] ; then
 			echo "VM Stop called" >>$logfile
-			wlagent stop $instanceUUID $imageUUID $instancePath $imagePath >>$logfile
+			wlagent stop $instanceUUID $imageUUID $instancePath >>$logfile
 			if [ $? -ne 0 ]; then
 					echo "Error occured" >>$logfile
 					exit 1
