@@ -101,7 +101,7 @@ var fileMutex sync.Mutex
 
 func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 	var imagePath = ""
-	imageInstanceAssociationFile := "/etc/workloadagent/" + consts.ImageInstanceCountAssociationFileName
+	imageInstanceAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
 
 	// Read from a file and store it in a string
 	// FORMAT OF THE FILE:
