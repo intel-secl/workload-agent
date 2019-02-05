@@ -146,15 +146,15 @@ func getFileContents(fileName string) ([]byte, error){
 }
 
 func getFileContentFromConfigDir(fileName string) ([]byte, error){
-		keyFilePath := "/etc/workloadagent/" + fileName
+		filePath := consts.ConfigDirPath + fileName
 		// check if key file exists
-		_, err := os.Stat(keyFilePath)
+		_, err := os.Stat(filePath)
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("File does not exist %s", keyFilePath)
+			return nil, fmt.Errorf("File does not exist - %s", filePath)
 		}
 
 		// read contents of file
-		file, _ := os.Open(keyFilePath)
+		file, _ := os.Open(filePath)
 		defer file.Close()
 		byteValue, _ := ioutil.ReadAll(file)
 		return byteValue, nil

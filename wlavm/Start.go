@@ -279,12 +279,12 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 		return 1
 	}
 
-	//create VM report
-	fmt.Println("Creating VM report")
+	//create VM Trust Report
+	fmt.Println("Creating VM Trust Report")
 	
 	vmTrustReport, err := verifier.Verify(&manifest, &flavorKeyInfo.ImageFlavor)
 	if err != nil {
-		fmt.Println("Error while creating VM report")
+		fmt.Println("Error while creating VM Trust Report")
 		fmt.Println("Error: ", err)
 		return 1
 	}
@@ -292,19 +292,19 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 	// compute the hash and sign
 	signedVMTrustReport, err := signVMTrustReport(vmTrustReport.(*verifier.VMTrustReport))
 	if err != nil {
-		fmt.Println("Error while trying to sign VMTrust report using TPM")
+		fmt.Println("Could not sign VM Trust Report using TPM")
 		fmt.Println("Error :", err)
 		return 1
 	}
 	
-	//post VM report on to workload service
-	fmt.Println("Posting VM report on WLS")
+	//post VM Trust Report on to workload service
+	fmt.Println("Posting VM Trust Report on WLS")
 	report, _ := json.Marshal(*signedVMTrustReport)
 
 	fmt.Println("Report: ", string(report))
 	err = wlsclient.PostVMReport(report)
 	if err!= nil {
-		fmt.Println("Error while posting the VM trust report on to workload service")
+		fmt.Println("Failed to post the VM Trust Report on to workload service")
 		fmt.Println("Error: ", err)
 		return 1
 	}
@@ -322,18 +322,17 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 }
 
 func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error){
-
 	
 	var signedreport crypt.SignedData
 
 	jsonVMTrustReport, err := json.Marshal(*report)
 	if err != nil {
-		return nil, fmt.Errorf("Error : could not marshal VMTrustReport - %s", err)
+		return nil, fmt.Errorf("Error : could not marshal VM Trust Report - %s", err)
 	}
 	
 	signedreport.Data = jsonVMTrustReport
-	signedreport.Alg = config.GetHashingAlgorithmName()
-	fmt.Println("Getting SigningKeyCert from disk")
+	signedreport.Alg = crypt.GetHashingAlgorithmName(config.HashingAlgorithm)
+	fmt.Println("Getting Signing Key Certificate from disk")
 	signedreport.Cert, err = config.GetSigningCertFromFile()
 	if err != nil {
 		return nil, err
@@ -344,8 +343,8 @@ func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error
 		return nil, err
 	}
 	signedreport.Signature = signature
-	return &signedreport, nil
 
+	return &signedreport, nil
 }
 
 
@@ -388,7 +387,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	}
 
 	fmt.Println("Using TPM to sign the hash")
-	signature, err  := 	t.Sign(&signingKey, keyAuth, alg, h)
+	signature, err := t.Sign(&signingKey, keyAuth, alg, h)
 	if err != nil {
 		return nil, err
 	}
@@ -475,7 +474,7 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	t, err := GetTpmInstance()
 
 	if err != nil {
-		fmt.Println("Error while opening the TPM")
+		fmt.Println("Error : Could not establish connection to TPM")
 		fmt.Println("Err: ", err)
 		return nil, err
 	} 
