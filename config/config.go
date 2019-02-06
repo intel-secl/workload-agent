@@ -95,56 +95,6 @@ func GetDevMapperDir() string {
 	return devMapperDirPath
 }
 
-func GetBindingKeyFileName() string {
-	return bindingKeyFileName
-}
-
-func GetSigningKeyFileName() string {
-	return signingKeyFileName
-}
-
-func GetBindingKeyPemFileName() string {
-	return bindingKeyPemFileName
-}
-
-func GetSigningKeyPemFileName() string {
-	return signingKeyPemFileName
-}
-
-func GetHashingAlgorithm()  crypto.Hash {
-	return hashingAlgorithm
-}
-
-func GetHashingAlgorithmName() string {
-	switch GetHashingAlgorithm() {
-	case crypto.SHA256:
-		return "SHA-256"
-	case crypto.SHA384:
-		return "SHA-384"
-	}
-	return ""
-}
-
-func getFileContents(fileName string) ([]byte, error){
-
-	keyFilePath, err := osutil.MakeFilePathFromEnvVariable(GetConfigDir(), fileName, true)
-	if err != nil {
-		return nil, err
-	}
-
-	// check if key file exists
-	_, err = os.Stat(keyFilePath)
-	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("File does not exist %s", fileName)
-	}
-
-	// read contents of file
-	file, _ := os.Open(keyFilePath)
-	defer file.Close()
-	byteValue, _ := ioutil.ReadAll(file)
-	return byteValue, nil 
-}
-
 func getFileContentFromConfigDir(fileName string) ([]byte, error){
 		filePath := consts.ConfigDirPath + fileName
 		// check if key file exists
