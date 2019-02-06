@@ -46,8 +46,6 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 
 	config.Save()
 
-	log.Println("The binding key secret is:", base64.StdEncoding.EncodeToString(secretbytes))
-	log.Println("The binding key secret from the config var is:", config.Configuration.BindingKeySecret)
 	return tpmck, nil
 }
 
