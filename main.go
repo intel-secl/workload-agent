@@ -82,7 +82,7 @@ func main() {
 			// Workaround for tpm2-abrmd bug in RHEL 7.5
 			t, err := tpm.Open()
 			if err != nil {
-				fmt.Println("Error while opening a connection to TPM.")
+				log.Error("Error while opening a connection to TPM.")
 				os.Exit(1)
 			}
 
