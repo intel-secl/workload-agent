@@ -152,10 +152,9 @@ func main() {
 			os.Exit(0)
 		}
 		log.Info("Return code from VM start :", returnCode)
-	case "stop-vm":
-		conn, err := net.Dial("unix", rpcSocketFilePath)
-		if err != nil {
-			log.Fatal("stop-vm: failed to dial wlagent.sock, is wlagent running?")
+	case "stop":
+		if len(args[1:]) < 3 {
+			log.Info("Invalid number of parameters")
 		}
 		client := rpc.NewClient(conn)
 		var returnCode int

@@ -26,7 +26,6 @@ import (
 	"io/ioutil"
 	"strconv"
 
-	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -517,61 +516,36 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 }
 
 func imageInstanceCountAssociation(imageUUID, imagePath string) error {
-
 	imageUUIDFound := false
-	imageInstanceCountAssociationFilePath := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
-
-	// creating the image-instance file if not preset
-	_, err := os.Stat(imageInstanceCountAssociationFilePath)
-	if os.IsNotExist(err) {
-		fmt.Println("Image-instance count file doesnot exists. Creating the file")
-		_, touchErr := exec.ExecuteCommand("touch", []string{imageInstanceCountAssociationFilePath})
-		if touchErr != nil {
-			fmt.Println("Error while trying to create the image-instance count association file")
-			return touchErr
-		}
-	}
-
-	// read the contents of the file
-	output, err := exec.ExecuteCommand("cat", []string{imageInstanceCountAssociationFilePath})
+	log.Debug("Unmarshal yaml file to instance image association structure.")
+	err := UnmarshalImageInstanceAssociation()
 	if err != nil {
-		fmt.Println("Error while reading the contents of the file")
 		return err
 	}
 
-	fileContents := strings.Split(string(output), "\n")
-	for i, lineContent := range fileContents {
-		if strings.Contains(lineContent, imageUUID) {
-			// increment the count and replace the count in the string
-			contentArray := strings.Split(lineContent, "\t")
-			countSection := contentArray[len(contentArray)-1]
-			splitCountSection := strings.Split(countSection, ":")
-			currentCount, _ := strconv.Atoi(splitCountSection[len(splitCountSection)-1])
-			replaceString := strconv.Itoa(i+1) + " s/count:" + strconv.Itoa(currentCount) + "/count:" + strconv.Itoa(currentCount+1) + "/"
-			args := []string{"-i", replaceString, imageInstanceCountAssociationFilePath}
-			_, sedErr := exec.ExecuteCommand("sed", args)
-			if sedErr != nil {
-				fmt.Println("Error while replacing the count of the instance for an image")
+	for _, item := range ImageInstanceAssociations {
+		if strings.Contains(item.ImageID, imageUUID) {
+			log.Debug("Image ID already exist in file, increasing the count of instance by 1.")
+			item.InstanceCount = item.InstanceCount + 1
+			err = MarshalImageInstanceAssociation()
+			if err != nil {
 				return err
 			}
 			imageUUIDFound = true
 			break
 		}
-
 	}
 
 	if !imageUUIDFound {
-		data := imageUUID + "\t" + imagePath + "\t" + "count:" + strconv.Itoa(1) + "\n"
-
-		f, err := os.OpenFile(imageInstanceCountAssociationFilePath, os.O_WRONLY|os.O_APPEND, 0600)
-		if err != nil {
-			fmt.Println("Error while opening image-instance information")
-			return err
+		log.Debug("Image ID does not exist in file, adding an entry with the image ID ", imageUUID)
+		data := ImageInstanceAssociation{
+			ImageID:       imageUUID,
+			ImagePath:     imagePath,
+			InstanceCount: 1,
 		}
-
-		defer f.Close()
-		if _, err = f.WriteString(data); err != nil {
-			fmt.Println("Error while writing image-instance information")
+		ImageInstanceAssociations = append(ImageInstanceAssociations, data)
+		err = MarshalImageInstanceAssociation()
+		if err != nil {
 			return err
 		}
 	}
