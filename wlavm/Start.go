@@ -25,8 +25,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strconv"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const mountPath = "/mnt/crypto/"
@@ -514,43 +512,6 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	fmt.Println("Unbind successful")
 	fmt.Println("Unwrapped key length returned by TPM: ", len(key))
 	return key, nil
-}
-
-func imageInstanceCountAssociation(imageUUID, imagePath string) error {
-	imageUUIDFound := false
-	log.Debug("Unmarshal yaml file to instance image association structure.")
-	err := UnmarshalImageInstanceAssociation()
-	if err != nil {
-		return err
-	}
-
-	for _, item := range ImageInstanceAssociations {
-		if strings.Contains(item.ImageID, imageUUID) {
-			log.Debug("Image ID already exist in file, increasing the count of instance by 1.")
-			item.InstanceCount = item.InstanceCount + 1
-			err = MarshalImageInstanceAssociation()
-			if err != nil {
-				return err
-			}
-			imageUUIDFound = true
-			break
-		}
-	}
-
-	if !imageUUIDFound {
-		log.Debug("Image ID does not exist in file, adding an entry with the image ID ", imageUUID)
-		data := ImageInstanceAssociation{
-			ImageID:       imageUUID,
-			ImagePath:     imagePath,
-			InstanceCount: 1,
-		}
-		ImageInstanceAssociations = append(ImageInstanceAssociations, data)
-		err = MarshalImageInstanceAssociation()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // This method is used to check if the key for an image file is cached.
