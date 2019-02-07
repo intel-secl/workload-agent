@@ -134,7 +134,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	httpRequest.Header.Set("Content-Type", "application/json")
 	httpRequest.SetBasicAuth(config.Configuration.Mtwilson.APIUsername, config.Configuration.Mtwilson.APIPassword)
 
-	httpResponse, err := common.SendHttpRequest(httpRequest)
+	httpResponse, err := common.SendHTTPRequest(httpRequest)
 	if err != nil {
 		return errors.New("error in signing key registration")
 	}

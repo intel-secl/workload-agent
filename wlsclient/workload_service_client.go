@@ -1,12 +1,16 @@
 package wlsclient
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	f "intel/isecl/lib/flavor"
+	"intel/isecl/lib/verifier"
 	"intel/isecl/wlagent/config"
 	"net/http"
-	"bytes"
 	"strings"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,8 +22,7 @@ type FlavorKey struct {
 
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
 func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error) {
-	var flavorKeyInfo FlavorKey
-	requestURL := config.Configuration.Wls.APIURL + "images/" + imageUUID +"/flavor-key?hardware_uuid=" + hardwareUUID
+	requestURL := config.Configuration.Wls.APIURL + "images/" + imageUUID + "/flavor-key?hardware_uuid=" + hardwareUUID
 
 	if len(strings.TrimSpace(keyID)) > 0 {
 		requestURL = requestURL + "&&keyId=" + keyID
@@ -27,7 +30,7 @@ func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error)
 
 	httpRequest, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
-		return flavorKeyInfo, err
+		log.Error(err)
 	}
 
 	log.Debugf("WLS image-flavor-key retrieval GET request URL: %s", requestURL)
@@ -60,7 +63,10 @@ func PostVMReport(report []byte) error {
 	//Add client here
 	requestURL = config.Configuration.Wls.APIURL + "reports"
 
-	log.Debugf("WLS VM reports POST Request URL: %s", requestURL)
+	//build request body using username and password from config
+	report, _ := json.Marshal(vmTrustReport)
+
+	fmt.Println("RequestURL: ", requestURL)
 	// set POST request Accept and Content-Type headers
 	httpRequest, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(report))
 	httpRequest.Header.Set("Accept", "application/json")
@@ -71,7 +77,5 @@ func PostVMReport(report []byte) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
-
 }

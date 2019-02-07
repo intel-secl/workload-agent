@@ -6,9 +6,10 @@ import (
 	t "intel/isecl/lib/common/tls"
 	"intel/isecl/wlagent/config"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
 )
 
 //SendRequest method is used to create an http client object and send the request to the server
@@ -17,7 +18,8 @@ func SendRequest(req *http.Request, insecureConnection bool) ([]byte, error) {
 
 	cert, err := hex.DecodeString(config.Configuration.Wls.TLSSha256)
 	if err != nil {
-		log.Fatal(err)
+		log.Error("Error decoding WLS TLS.")
+		return nil, err
 	}
 
 	copy(certificateDigest[:], cert)
@@ -43,7 +45,7 @@ func SendRequest(req *http.Request, insecureConnection bool) ([]byte, error) {
 	}
 	response, err := client.Do(req)
 	if err != nil {
-		log.Println("Error in sending request.", err)
+		log.Error("Error in sending request.", err)
 		return nil, err
 	}
 	defer response.Body.Close()
@@ -55,6 +57,6 @@ func SendRequest(req *http.Request, insecureConnection bool) ([]byte, error) {
 		return nil, err
 	}
 
-	log.Println("status code returned : ", strconv.Itoa(response.StatusCode))
+	log.Info("status code returned : ", strconv.Itoa(response.StatusCode))
 	return body, nil
 }

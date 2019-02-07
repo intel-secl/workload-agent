@@ -135,11 +135,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	httpRequest.Header.Set("Content-Type", "application/json")
 	httpRequest.SetBasicAuth(config.Configuration.Mtwilson.APIUsername, config.Configuration.Mtwilson.APIPassword)
 
-	fmt.Println("HVS Username: ", config.Configuration.Mtwilson.APIUsername)
-	fmt.Println("HVS Password: ", config.Configuration.Mtwilson.APIPassword)
-	fmt.Println("HVS URL: ", url)
-
-	httpResponse, err := common.SendRequest(httpRequest)
+	httpResponse, err := common.SendHTTPRequest(httpRequest)
 	if err != nil {
 		return errors.New("error in binding key registration.")
 	}

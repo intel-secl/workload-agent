@@ -184,6 +184,6 @@ func deleteFile(path string) {
 	// delete file
 	var err = os.RemoveAll(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
 	}
 }
