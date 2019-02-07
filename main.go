@@ -108,7 +108,7 @@ func main() {
 			}
 		} else {
 			fmt.Println("WORKLOAD_AGENT_NOSETUP is set, skipping setup")
-			os.Exit(1)
+			os.Exit(0)
 		}
 
 	case "start":
