@@ -25,8 +25,8 @@ type ImageInstanceAssociation struct {
 	InstanceCount int
 }
 
-// LoadImageInstanceAssociation method loads image instance association from yaml file
-func LoadImageInstanceAssociation() error {
+// UnmarshalImageInstanceAssociation image instance association yaml file to ImageInstanceAssociation structure
+func UnmarshalImageInstanceAssociation() error {
 	imageInstanceAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
 	// Read from a file and store it in a string
 	// FORMAT OF THE FILE:
@@ -35,10 +35,12 @@ func LoadImageInstanceAssociation() error {
 	log.Info("Reading image instance association file.")
 	data, err := ioutil.ReadFile(imageInstanceAssociationFile)
 	if err != nil {
+		log.Error("Error occured reading yaml file.")
 		return err
 	}
 	err = yaml.Unmarshal([]byte(data), &ImageInstanceAssociations)
 	if err != nil {
+		log.Error("Error occured while unmarshaling yaml file.")
 		return err
 	}
 	return nil
@@ -46,8 +48,8 @@ func LoadImageInstanceAssociation() error {
 
 var fileMutex sync.Mutex
 
-// SaveImageInstanceAssociation method saves instance image association to yaml file
-func SaveImageInstanceAssociation() error {
+// MarshalImageInstanceAssociation ImageInstanceAssociation structure to instance image association yaml file
+func MarshalImageInstanceAssociation() error {
 	imageInstanceAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
 	// FORMAT OF THE FILE:
 	// <image UUID> <instances running of that image>
@@ -55,6 +57,7 @@ func SaveImageInstanceAssociation() error {
 	log.Info("Writing to image instance association file.")
 	data, err := yaml.Marshal(&ImageInstanceAssociations)
 	if err != nil {
+		log.Error("Error occured during marshaling to yaml.")
 		return err
 	}
 	// Apply mutex lock to yaml file
@@ -63,6 +66,7 @@ func SaveImageInstanceAssociation() error {
 	defer fileMutex.Unlock()
 	err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(string(data)), 0644)
 	if err != nil {
+		log.Error("Error occured during writing to yaml file.")
 		return err
 	}
 	return nil

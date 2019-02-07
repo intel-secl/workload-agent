@@ -94,3 +94,34 @@ func isInstanceVolumeEncrypted(vmUUID string) bool {
 	log.Debug("The device mapper is encrypted and active.")
 	return true
 }
+
+func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
+	var imagePath = ""
+	err := UnmarshalImageInstanceAssociation()
+	if err != nil {
+		log.Error(err)
+	}
+	for i, item := range ImageInstanceAssociations {
+		imagePath = item.ImagePath
+		if strings.Contains(item.ImageID, imageUUID) {
+			log.Debug("Image ID already exist in file, decreasing the count of instance by 1.")
+			item.InstanceCount = item.InstanceCount - 1
+			if item.InstanceCount == 0 {
+				log.Debug("Instance count is 0, hence deleting the entry with image id ", imageUUID)
+				ImageInstanceAssociations[i] = ImageInstanceAssociations[0]
+				ImageInstanceAssociations = ImageInstanceAssociations[1:]
+				err = MarshalImageInstanceAssociation()
+				if err != nil {
+					log.Error(err)
+				}
+				return true, imagePath
+			}
+		}
+	}
+	log.Debug("Image ID not found in the file.")
+	err = MarshalImageInstanceAssociation()
+	if err != nil {
+		log.Error(err)
+	}
+	return false, imagePath
+}
