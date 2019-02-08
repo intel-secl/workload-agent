@@ -335,14 +335,14 @@ func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error
 	}
 
 	signedreport.Data = jsonVMTrustReport
-	signedreport.Alg = crypt.GetHashingAlgorithmName(config.HashingAlgorithm)
+	signedreport.Alg = crypt.GetHashingAlgorithmName(consts.HashingAlgorithm)
 	fmt.Println("Getting Signing Key Certificate from disk")
 	signedreport.Cert, err = config.GetSigningCertFromFile()
 	if err != nil {
 		return nil, err
 	}
 	fmt.Println("Using TPM to create signature")
-	signature, err := createSignatureWithTPM([]byte(signedreport.Data), config.GetHashingAlgorithm())
+	signature, err := createSignatureWithTPM([]byte(signedreport.Data), consts.HashingAlgorithm)
 	if err != nil {
 		return nil, err
 	}

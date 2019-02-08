@@ -1,7 +1,7 @@
 package main
 
 import (
-	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/filewatch"
 	wlrpc "intel/isecl/wlagent/rpc"
 	"log"
@@ -24,8 +24,9 @@ func main() {
 	}()
 	go func() {
 		for {
+			RPCSocketFilePath := consts.RunDirPath + consts.RPCSocketFileName
 			// block and loop, daemon doesnt need to run on go routine
-			l, err := net.Listen("unix", config.RPCSocketFilePath)
+			l, err := net.Listen("unix", RPCSocketFilePath)
 			if err != nil {
 				return
 			}

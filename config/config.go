@@ -1,7 +1,6 @@
 package config
 
 import (
-	"crypto"
 	"encoding/hex"
 	"fmt"
 	"intel/isecl/wlagent/consts"
@@ -39,16 +38,10 @@ var Configuration struct {
 	LogLevel string
 }
 
-// RPCSocketFile points to the location of wlagent.sock for RPC communication over a unix domain socket
-const RPCSocketFilePath = "/var/run/workloadagent/wlagent.sock"
-
-// PIDFile points to the location of wlagent.pid, containing the last known pid of the workload agent daemon
-const PIDFilePath = "/var/run/workloadagent/wlagent.pid"
-
-// DaemonFilePath points to the location of the workload agent daemon binary
-const DaemonFilePath = "/opt/workloadagent/bin/wlagentd"
-
-const HashingAlgorithm crypto.Hash = crypto.SHA256
+var (
+	configFilePath string = consts.ConfigDirPath + consts.ConfigFileName
+	LogWriter      io.Writer
+)
 
 // MTWILSON_API_URL is a string environment variable for specifying the
 func getFileContentFromConfigDir(fileName string) ([]byte, error) {
@@ -94,7 +87,7 @@ func GetBindingCertFromFile() (string, error) {
 	return string(f), nil
 }
 
-// This function returns the AIK Secret as a byte array running the tagent export config command
+// GetAikSecret function returns the AIK Secret as a byte array running the tagent export config command
 func GetAikSecret() ([]byte, error) {
 	log.Info("Getting AIK secret from trustagent configuration.")
 	tagentConfig, stderr, err := osutil.RunCommandWithTimeout(taConfigExportCmd, 2)
@@ -118,13 +111,13 @@ func GetAikSecret() ([]byte, error) {
 }
 
 func Save() error {
-	file, err := os.OpenFile(consts.ConfigFilePath, os.O_RDWR, 0)
+	file, err := os.OpenFile(configFilePath, os.O_RDWR, 0)
 	defer file.Close()
 	if err != nil {
 		// we have an error
 		if os.IsNotExist(err) {
 			// error is that the config doesnt yet exist, create it
-			file, err = os.Create(consts.ConfigFilePath)
+			file, err = os.Create(configFilePath)
 			if err != nil {
 				return err
 			}
@@ -133,11 +126,9 @@ func Save() error {
 	return yaml.NewEncoder(file).Encode(Configuration)
 }
 
-var LogWriter io.Writer
-
 func init() {
 	// load from config
-	file, err := os.Open(consts.ConfigFilePath)
+	file, err := os.Open(configFilePath)
 	if err == nil {
 		defer file.Close()
 		yaml.NewDecoder(file).Decode(&Configuration)
@@ -184,7 +175,7 @@ func SaveConfiguration(c csetup.Context) error {
 	return Save()
 }
 
-// LogConfiguration is used to setup log rotation configurations
+// LogConfiguration is used to save log configurations
 func LogConfiguration() {
 	var succ bool
 	Configuration.LogLevel, succ = os.LookupEnv("LOG_LEVEL")

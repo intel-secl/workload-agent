@@ -24,10 +24,12 @@ import (
 )
 
 var (
-	component string = "workload-agent"
-	version   string = ""
-	buildid   string = ""
-	buildtype string = "dev"
+	component         string = "workload-agent"
+	version           string = ""
+	buildid           string = ""
+	buildtype         string = "dev"
+	rpcSocketFilePath string = consts.RunDirPath + consts.RPCSocketFileName
+	pidFilePath              = consts.RunDirPath + consts.PIDFileName
 )
 
 func printVersion() {
@@ -122,16 +124,30 @@ func main() {
 		log.Info("instance path: ", args[4])
 		log.Info("instance UUID: ", args[1])
 		log.Info("disksize: ", args[5])
-		returnCode := wlavm.Start(args[1], args[2], args[3], args[4], args[5])
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			log.Fatal("start-vm: failed to dial wlagent.sock, is wlagent running?")
+		}
+		client := rpc.NewClient(conn)
+		var returnCode int
+		var args = wlrpc.StartVMArgs{
+			InstanceUUID: args[1],
+			ImageUUID:    args[2],
+			ImagePath:    args[3],
+			InstancePath: args[4],
+			DiskSize:     args[5],
+		}
+		client.Call("VirtualMachine.Start", &args, &returnCode)
 		if returnCode == 1 {
 			os.Exit(1)
 		} else {
 			os.Exit(0)
 		}
 		fmt.Println("Return code from VM start :", returnCode)
-	case "stop":
-		if len(args[1:]) < 3 {
-			log.Info("Invalid number of parameters")
+	case "stop-vm":
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			log.Fatal("stop-vm: failed to dial wlagent.sock, is wlagent running?")
 		}
 		client := rpc.NewClient(conn)
 		var returnCode int
@@ -181,7 +197,7 @@ const (
 )
 
 func readPidFile() (int, error) {
-	pidData, err := ioutil.ReadFile(config.PIDFilePath)
+	pidData, err := ioutil.ReadFile(pidFilePath)
 	if err != nil {
 		log.WithError(err).Debug("Failed to read wlagent.pid")
 		return 0, err
@@ -198,7 +214,7 @@ func status() state {
 	pid, err := readPidFile()
 	if err != nil {
 		// failure reading pid file
-		os.Remove(config.PIDFilePath)
+		os.Remove(pidFilePath)
 		return Stopped
 	}
 	p, err := os.FindProcess(pid)
@@ -214,12 +230,12 @@ func status() state {
 func start() {
 	if status() == Stopped {
 		// exec wlagentd
-		cmd := exec.Command(config.DaemonFilePath)
+		cmd := exec.Command(consts.BinDirPath + consts.DaemonFileName)
 		err := cmd.Start()
 		if err != nil {
 			log.WithError(err).Fatal("Failed to start wlagentd")
 		}
-		file, err := os.Create(config.PIDFilePath)
+		file, err := os.Create(pidFilePath)
 		if err != nil {
 			log.WithError(err).Fatal("Failed to create wlagentd pid file")
 		}
