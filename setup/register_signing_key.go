@@ -10,7 +10,7 @@ import (
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/osutil"
+	"intel/isecl/lib/common/exec"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -99,7 +99,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	nameDigest := b.StdEncoding.EncodeToString(originalNameDigest)
 
 	//get trustagent aik cert location
-	aikCertFileName, _ := osutil.MakeFilePathFromEnvVariable(consts.TrustAgentConfigDirEnv, "aik.pem", true)
+	aikCertFileName, _ := exec.MkDirFilePathFromEnvVariable(consts.TrustAgentConfigDirEnv, consts.AIKPemFileName, true)
 
 	//getAikCert removes the begin / end certificate tags and newline characters
 	aik := getAikCert(aikCertFileName)

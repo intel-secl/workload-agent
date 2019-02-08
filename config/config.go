@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/osutil"
+	"intel/isecl/lib/common/exec"
 	"io"
 	"io/ioutil"
 	"os"
@@ -90,16 +90,7 @@ func GetBindingCertFromFile() (string, error) {
 // GetAikSecret function returns the AIK Secret as a byte array running the tagent export config command
 func GetAikSecret() ([]byte, error) {
 	log.Info("Getting AIK secret from trustagent configuration.")
-	tagentConfig, stderr, err := osutil.RunCommandWithTimeout(taConfigExportCmd, 2)
-	if err != nil {
-		log.Info("Error: GetAikSecret: Command Failed. Details follow")
-		log.Infof("Issued Command: \n%s\n", taConfigExportCmd)
-		log.Infof("StdOut:\n%s\n", tagentConfig)
-		log.Infof("StdError:\n%s\n", stderr)
-		return nil, err
-	}
-
-	secret, err := osutil.GetMapValueFromConfigFileContent(tagentConfig, aikSecretKeyName)
+	aikSecret, stderr, err := exec.RunCommandWithTimeout(consts.TAConfigAikSecretCmd, 2)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"Issued Command:": consts.TAConfigAikSecretCmd,

@@ -14,7 +14,7 @@ import (
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/osutil"
+	"intel/isecl/lib/common/exec"
 	"io/ioutil"
 
 	"net/http"
@@ -100,7 +100,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	nameDigest := b.StdEncoding.EncodeToString(originalNameDigest)
 
 	//get trustagent aik cert location
-	aikCertName, _ := osutil.MakeFilePathFromEnvVariable(consts.TrustAgentConfigDirEnv, "aik.pem", true)
+	aikCertName, _ := exec.MkDirFilePathFromEnvVariable(consts.TrustAgentConfigDirEnv, consts.AIKPemFileName, true)
 
 	// set operating system
 	if runtime.GOOS == "linux" {

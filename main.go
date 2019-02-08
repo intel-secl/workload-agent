@@ -8,19 +8,14 @@ import (
 	"intel/isecl/wlagent/consts"
 	wlrpc "intel/isecl/wlagent/rpc"
 	"intel/isecl/wlagent/setup"
-	"io/ioutil"
-	"net"
-	"net/rpc"
-
-	// "intel/isecl/wlagent/wlavm"
+	"intel/isecl/wlagent/wlavm"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -34,8 +29,8 @@ var (
 
 func printVersion() {
 	if version == "" {
-		fmt.Printf("Version Infromation not set\n")
-		fmt.Printf("Have to be set at build time using -ldflags -X options\n")
+		fmt.Println("Version information not set")
+		fmt.Println("Have to be set at build time using -ldflags -X options")
 		return
 	}
 	if buildid == "" {
@@ -62,6 +57,10 @@ func printUsage() {
 
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
+
+	// Save log configurations
+	config.LogConfiguration()
+	
 	args := os.Args[1:]
 	if len(args) <= 0 {
 		fmt.Println("Command not found. Usage below")
@@ -79,7 +78,8 @@ func main() {
 			// Workaround for tpm2-abrmd bug in RHEL 7.5
 			t, err := tpm.Open()
 			if err != nil {
-				log.Fatal("Error while opening a connection to TPM.")
+				fmt.Println("Error while opening a connection to TPM.")
+				os.Exit(1)
 			}
 
 			// Run list of setup tasks one by one
@@ -108,62 +108,27 @@ func main() {
 		}
 
 	case "start":
-		start()
-	case "stop":
-		stop()
-	case "status":
-		if s := status(); s == Running {
-			fmt.Println("Workload Agent is running")
-		} else {
-			fmt.Println("Workload Agent is stopped")
-		}
-
-	case "start-vm":
-		if len(args[1:]) < 5 {
+		if len(args[1:]) < 1 {
 			log.Info("Invalid number of parameters")
-		}
-		log.Info("VM start called in main method")
-		log.Info("image path: ", args[3])
-		log.Info("image UUID: ", args[2])
-		log.Info("instance path: ", args[4])
-		log.Info("instance UUID: ", args[1])
-		log.Info("disksize: ", args[5])
-		conn, err := net.Dial("unix", rpcSocketFilePath)
-		if err != nil {
-			log.Fatal("start-vm: failed to dial wlagent.sock, is wlagent running?")
-		}
-		client := rpc.NewClient(conn)
-		var returnCode int
-		var args = wlrpc.StartVMArgs{
-			InstanceUUID: args[1],
-			ImageUUID:    args[2],
-			ImagePath:    args[3],
-			InstancePath: args[4],
-			DiskSize:     args[5],
-		}
-		err = client.Call("VirtualMachine.Start", &args, &returnCode)
-		if err != nil {
-			log.Error("client call failed")
+			os.Exit(1)
 		}
 
+		log.Info("workload-agent start called")
+		returnCode := wlavm.Start(args[1])
 		if returnCode == 1 {
 			os.Exit(1)
 		} else {
 			os.Exit(0)
 		}
-		log.Info("Return code from VM start :", returnCode)
+
 	case "stop":
-		if len(args[1:]) < 3 {
+		if len(args[1:]) < 1 {
 			log.Info("Invalid number of parameters")
+			os.Exit(1)
 		}
-		client := rpc.NewClient(conn)
-		var returnCode int
-		var args = wlrpc.StopVMArgs{
-			InstanceUUID: args[1],
-			ImageUUID:    args[2],
-			InstancePath: args[3],
-		}
-		client.Call("VirtualMachine.Stop", &args, &returnCode)
+
+		log.Info("workload-agent stop called")
+		returnCode := wlavm.Stop(args[1])
 		if returnCode == 1 {
 			os.Exit(1)
 		} else {
@@ -172,8 +137,7 @@ func main() {
 		fmt.Println("Return code from VM stop :", returnCode)
 
 	case "uninstall":
-		stop()
-		deleteFile("/usr/local/bin/wlagent")
+		deleteFile(consts.WLABinFilePath)
 		deleteFile(consts.OptDirPath)
 		deleteFile(consts.LibvirtHookFilePath)
 		deleteFile(consts.ConfigDirPath)
@@ -199,81 +163,5 @@ func deleteFile(path string) {
 	var err = os.RemoveAll(path)
 	if err != nil {
 		log.Fatal(err)
-	}
-}
-
-type state bool
-
-const (
-	Stopped state = false
-	Running state = true
-)
-
-func readPidFile() (int, error) {
-	pidData, err := ioutil.ReadFile(pidFilePath)
-	if err != nil {
-		log.WithError(err).Debug("Failed to read wlagent.pid")
-		return 0, err
-	}
-	pid, err := strconv.Atoi(string(pidData))
-	if err != nil {
-		log.WithError(err).WithField("pid", pidData).Debug("Failed to convert pid data string to int")
-		return 0, err
-	}
-	return pid, nil
-}
-
-func status() state {
-	pid, err := readPidFile()
-	if err != nil {
-		// failure reading pid file
-		os.Remove(pidFilePath)
-		return Stopped
-	}
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		return Stopped
-	}
-	if err := p.Signal(syscall.Signal(0)); err != nil {
-		return Stopped
-	}
-	return Running
-}
-
-func start() {
-	if status() == Stopped {
-		// exec wlagentd
-		cmd := exec.Command(consts.BinDirPath + consts.DaemonFileName)
-		err := cmd.Start()
-		if err != nil {
-			log.WithError(err).Fatal("Failed to start wlagentd")
-		}
-		file, err := os.Create(pidFilePath)
-		if err != nil {
-			log.WithError(err).Fatal("Failed to create wlagentd pid file")
-		}
-		file.WriteString(strconv.Itoa(cmd.Process.Pid))
-		cmd.Process.Release()
-	} else {
-		fmt.Println("Workload Agent is already running")
-	}
-}
-
-func stop() {
-	if status() == Running {
-		pid, err := readPidFile()
-		if err != nil {
-			log.WithError(err).Error("Could not read PID file")
-			fmt.Println("Failed to stop Workload Agent")
-			return
-		}
-		if err := syscall.Kill(pid, syscall.SIGQUIT); err != nil {
-			log.WithError(err).Error("Failed to kill Workload Agent with signal SIGQUIT")
-			fmt.Println("Failed to stop Workload Agent")
-			return
-		}
-		fmt.Println("Workloa Agent stopped")
-	} else {
-		fmt.Println("Workload Agent is already stopped")
 	}
 }

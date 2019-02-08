@@ -2,39 +2,19 @@
 
 domainxml="-"
 
-logfile="/var/log/workloadagent/libvirt_hook_eventlog.log"
-
-
-#echo "=========qemu hook event at $dt ========" >>$logfile
-echo "$dt parameters: $0 $1 $2 $3 $4" >>$logfile
-#echo "--domain.xml:" >>$logfile
-
-
 if [ $2 == "start" ] || [ $2 == "stopped" ]; then
-	domainFile="/tmp/domain.xml"
-	cat $domainxml > $domainFile
-	instanceUUID=$(xmlstarlet sel -t -v '//domain/uuid' $domainFile)
-	imageUUID=$(xmlstarlet sel -N nova="http://openstack.org/xmlns/libvirt/nova/1.0" -t -v '//nova:root/@uuid' $domainFile)
-	imagePath=$(xmlstarlet sel -t -v '//domain/devices/disk/backingStore/source/@file' $domainFile)
-	instancePath=$(xmlstarlet sel -t -v '//domain/devices/disk/source/@file' $domainFile)
-	diskSize=$(xmlstarlet sel -N nova="http://openstack.org/xmlns/libvirt/nova/1.0" -t -v '//nova:disk' $domainFile)
-
+	domainXmlContents=$( cat $domainxml )
 	if [ $2 == "start" ]; then
-			echo "VM Start called" >>$logfile
-			wlagent start-vm $instanceUUID $imageUUID $imagePath $instancePath $diskSize >>$logfile
+			wlagent start "'$domainXmlContents'"
 			if [ $? -ne 0 ]; then
-					echo "Error occured" >>$logfile
 					exit 1
 			fi
 	elif [ $2 == "stopped" ] ; then
-			echo "VM Stop called" >>$logfile
-			wlagent stop $instanceUUID $imageUUID $instancePath >>$logfile
+			wlagent stop "'$domainXmlContents'"
 			if [ $? -ne 0 ]; then
-					echo "Error occured" >>$logfile
 					exit 1
 			fi
 	fi
-	rm -rf $domainFile
 fi
 
 exit 0
