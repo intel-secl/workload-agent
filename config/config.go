@@ -3,19 +3,15 @@ package config
 import (
 	"encoding/hex"
 	"fmt"
-	"intel/isecl/lib/common/exec"
+	log "github.com/sirupsen/logrus"
+	yaml "gopkg.in/yaml.v2"
+	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/wlagent/consts"
 	"io"
 	"io/ioutil"
 	"os"
 	"strings"
 	"time"
-	"fmt"
-
-	csetup "intel/isecl/lib/common/setup"
-
-	log "github.com/sirupsen/logrus"
-	yaml "gopkg.in/yaml.v2"
 )
 
 // Configuration is the global configuration struct that is marshalled/unmarshaled to a persisted yaml file
@@ -38,12 +34,8 @@ var Configuration struct {
 	LogLevel string
 }
 
-var (
-	configFilePath string = consts.ConfigDirPath + consts.ConfigFileName
-	LogWriter      io.Writer
-)
+const HashingAlgorithm crypto.Hash = crypto.SHA256
 
-// MTWILSON_API_URL is a string environment variable for specifying the
 func getFileContentFromConfigDir(fileName string) ([]byte, error) {
 	filePath := consts.ConfigDirPath + fileName
 	// check if key file exists
@@ -51,7 +43,7 @@ func getFileContentFromConfigDir(fileName string) ([]byte, error) {
 	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("File does not exist - %s", filePath)
 	}
-	// mtwilson API URL and is used to  connect to mtwilson
+
 	// read contents of file
 	file, _ := os.Open(filePath)
 	defer file.Close()
