@@ -28,7 +28,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	log.Info("Registering signing key with host verification service.")
 	err := common.RegisterKey(tpm.Signing)
 	if err != nil {
-		return err
+		return errors.New("error registering signing key. " + err.Error())
 	}
 
 	return nil

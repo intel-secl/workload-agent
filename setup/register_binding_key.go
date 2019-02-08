@@ -32,7 +32,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	log.Info("Registering binding key with host verification service.")
 	err := common.RegisterKey(tpm.Binding)
 	if err != nil {
-		return err
+		return errors.New("error registering binding key. " + err.Error())
 	}
 	return nil
 }

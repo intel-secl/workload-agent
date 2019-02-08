@@ -64,35 +64,49 @@ func RegisterKey(usage tpm.Usage) error {
 		keyFilePath = consts.ConfigDirPath + consts.BindingKeyFileName
 		certifyKeyUrl, err = url.Parse(config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-binding-key")
 		if err != nil {
-			fmt.Println(err)
+			return errors.New("errror parsing binding key request url. " + err.Error())
 		}
-	
+
 	} else {
 		keyFilePath = consts.ConfigDirPath + consts.SigningKeyFileName
 		certifyKeyUrl, err = url.Parse(config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-signing-key")
 		if err != nil {
-			fmt.Println(err)
+			return errors.New("errror parsing signing key request url. " + err.Error())
 		}
 	}
-	
+
 	// check if binding key file exists
 	_, err = os.Stat(keyFilePath)
 	if os.IsNotExist(err) {
 		return errors.New("key file does not exist")
 	}
-	// read contents of binding key file and store in KeyInfo struct
-	file, _ := os.Open(keyFilePath)
+	// read contents of key file and store in KeyInfo struct
+	file, err := os.Open(keyFilePath)
+	if err != nil {
+		return errors.New("errror opening key file. " + err.Error())
+	}
+
 	defer file.Close()
 
-	byteValue, _ := ioutil.ReadAll(file)
+	byteValue, err := ioutil.ReadAll(file)
+	if err != nil {
+		return errors.New("errror reading file. ")
+	}
 
-	_ = json.Unmarshal(byteValue, &keyInfo)
+	err = json.Unmarshal(byteValue, &keyInfo)
+	if err != nil {
+		return errors.New("error unmarshalling. " + err.Error())
+	}
+
 	// remove first two bytes from KeyAttestation. These are extra bytes written.
 	tpmCertifyKeyBytes, _ := b.StdEncoding.DecodeString(keyInfo.KeyAttestation)
 	tpmCertifyKey := b.StdEncoding.EncodeToString(tpmCertifyKeyBytes[2:])
 
 	// remove first byte from the value written to KeyName. This is an extra byte written.
-	originalNameDigest, _ = b.StdEncoding.DecodeString(keyInfo.KeyName)
+	originalNameDigest, err = b.StdEncoding.DecodeString(keyInfo.KeyName)
+	if err != nil {
+		return errors.New("errror decoding name digest. " + err.Error())
+	}
 	originalNameDigest = originalNameDigest[1:]
 
 	//append 0 added as padding
@@ -134,17 +148,18 @@ func RegisterKey(usage tpm.Usage) error {
 	}
 	requestBody, err = json.Marshal(httpRequestBody)
 	if err != nil {
-		fmt.Println(err)
+		return errors.New("error marshalling http request. " + err.Error())
+
 	}
 	// set POST request Accept, Content-Type and Authorization headers
-	httpRequest, err := http.NewRequest("POST", certifyKeyUrl.String(), bytes.NewBuffer(requestBody))
+	httpRequest, _ := http.NewRequest("POST", certifyKeyUrl.String(), bytes.NewBuffer(requestBody))
 	httpRequest.Header.Set("Accept", "application/json")
 	httpRequest.Header.Set("Content-Type", "application/json")
 	httpRequest.SetBasicAuth(config.Configuration.Mtwilson.APIUsername, config.Configuration.Mtwilson.APIPassword)
 
 	httpResponse, err := SendHttpRequest(httpRequest)
 	if err != nil {
-		return errors.New("error in key registration.")
+		return errors.New("error in key registration. " + err.Error())
 	}
 	switch usage {
 	case tpm.Binding:
@@ -154,16 +169,20 @@ func RegisterKey(usage tpm.Usage) error {
 			var bindingkeyCert BindingKeyCert
 			err = json.Unmarshal([]byte(httpResponse), &bindingkeyCert)
 			if err != nil {
-				fmt.Println("Error Marshalling." + err.Error())
+				return errors.New("error unmarshalling http response. " + err.Error())
 			}
 			aikPem := beginCert + "\n" + bindingkeyCert.BindingKeyCertificate + "\n" + endCert + "\n"
 
 			//write the binding key certificate to file
 			keyCertPath := consts.ConfigDirPath + consts.BindingKeyPemFileName
-			file, _ = os.Create(keyCertPath)
+			file, err = os.Create(keyCertPath)
+			if err != nil {
+				return errors.New("error creating file. " + err.Error())
+			}
+
 			_, err = file.Write([]byte(aikPem))
 			if err != nil {
-				return errors.New("error in writing to file.")
+				return errors.New("error writing to file. " + err.Error())
 			}
 		}
 	case tpm.Signing:
@@ -171,7 +190,7 @@ func RegisterKey(usage tpm.Usage) error {
 			var signingkeyCert SigningKeyCert
 			err = json.Unmarshal([]byte(httpResponse), &signingkeyCert)
 			if err != nil {
-				fmt.Printf("error Marshalling. %s", err.Error())
+				return errors.New("error unmarshalling http response. " + err.Error())
 			}
 			//construct the certificate by adding begin and end certificate tags
 			aikPem := beginCert + "\n" + signingkeyCert.SigningKeyCertificate + "\n" + endCert + "\n"
@@ -179,10 +198,13 @@ func RegisterKey(usage tpm.Usage) error {
 			//write the binding key certificate to file
 			keyCertPath := consts.ConfigDirPath + consts.SigningKeyPemFileName
 
-			file, _ = os.Create(keyCertPath)
+			file, err = os.Create(keyCertPath)
+			if err != nil {
+				return errors.New("error creating file. " + err.Error())
+			}
 			_, err = file.Write([]byte(aikPem))
 			if err != nil {
-				return errors.New("error in writing to file.")
+				return errors.New("error writing to file. " + err.Error())
 			}
 		}
 	}
