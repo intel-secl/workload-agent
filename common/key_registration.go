@@ -146,7 +146,7 @@ func RegisterKey(usage tpm.Usage) error {
 			var bindingkeyCert BindingKeyCert
 			err = json.Unmarshal([]byte(httpResponse), &bindingkeyCert)
 			if err != nil {
-				fmt.Println("Error Marshalling. %s", err.Error())
+				fmt.Println("Error Marshalling." + err.Error())
 			}
 			aikPem := beginCert + "\n" + bindingkeyCert.BindingKeyCertificate + "\n" + endCert + "\n"
 
@@ -163,7 +163,7 @@ func RegisterKey(usage tpm.Usage) error {
 			var signingkeyCert SigningKeyCert
 			err = json.Unmarshal([]byte(httpResponse), &signingkeyCert)
 			if err != nil {
-				fmt.Println("Error Marshalling. %s", err.Error())
+				fmt.Printf("error Marshalling. %s",err.Error())
 			}
 			//construct the certificate by adding begin and end certificate tags
 			aikPem := beginCert + "\n" + signingkeyCert.SigningKeyCertificate + "\n" + endCert + "\n"
