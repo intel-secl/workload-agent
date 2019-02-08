@@ -15,29 +15,29 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// ImageInstanceAssociations is variable that consists of array of ImageInstanceAssociation struct
-var ImageInstanceAssociations []ImageInstanceAssociation
+// ImageVMAssociations is variable that consists of array of ImageVMAssociation struct
+var ImageVMAssociations []ImageVMAssociation
 
-// ImageInstanceAssociation is the global struct that is used to store the image instance count to yaml file
-type ImageInstanceAssociation struct {
-	ImageID       string
-	ImagePath     string
-	InstanceCount int
+// ImageVMAssociation is the global struct that is used to store the image instance count to yaml file
+type ImageVMAssociation struct {
+	ImageID   string
+	ImagePath string
+	VMCount   int
 }
 
-// LoadImageInstanceAssociation method loads image instance association from yaml file
-func LoadImageInstanceAssociation() error {
-	imageInstanceAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
+// LoadImageVMAssociation method loads image instance association from yaml file
+func LoadImageVMAssociation() error {
+	imageVMAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
 	// Read from a file and store it in a string
 	// FORMAT OF THE FILE:
 	// <image UUID> <instances running of that image>
 	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
 	log.Info("Reading image instance association file.")
-	data, err := ioutil.ReadFile(imageInstanceAssociationFile)
+	data, err := ioutil.ReadFile(imageVMAssociationFile)
 	if err != nil {
 		return err
 	}
-	err = yaml.Unmarshal([]byte(data), &ImageInstanceAssociations)
+	err = yaml.Unmarshal([]byte(data), &ImageVMAssociations)
 	if err != nil {
 		return err
 	}
@@ -46,14 +46,14 @@ func LoadImageInstanceAssociation() error {
 
 var fileMutex sync.Mutex
 
-// SaveImageInstanceAssociation method saves instance image association to yaml file
-func SaveImageInstanceAssociation() error {
-	imageInstanceAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
+// SaveImageVMAssociation method saves instance image association to yaml file
+func SaveImageVMAssociation() error {
+	imageVMAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
 	// FORMAT OF THE FILE:
 	// <image UUID> <instances running of that image>
 	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
 	log.Info("Writing to image instance association file.")
-	data, err := yaml.Marshal(&ImageInstanceAssociations)
+	data, err := yaml.Marshal(&ImageVMAssociations)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func SaveImageInstanceAssociation() error {
 	fileMutex.Lock()
 	// Release the mutext lock
 	defer fileMutex.Unlock()
-	err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(string(data)), 0644)
+	err = ioutil.WriteFile(imageVMAssociationFile, []byte(string(data)), 0644)
 	if err != nil {
 		return err
 	}

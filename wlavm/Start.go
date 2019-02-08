@@ -266,8 +266,8 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 
 		fmt.Println("Successfully created instance path")
 		fmt.Println("Updating the image-instance count file")
-		I := ImageVMAssociation{imageUUID, imagePath}
-		err = I.Create()
+		iAssoc := ImageVMAssoc{imageUUID, imagePath}
+		err = iAssoc.Create()
 		if err != nil {
 			fmt.Println("Error while updating the image-instance count file")
 			fmt.Println("Error: ", err)
@@ -315,8 +315,8 @@ func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, fi
 
 	//associate instance UUID with the image UUID
 	fmt.Println("Creating image-instance count association")
-	I := ImageVMAssociation{imageUUID, imagePath}
-	err = I.Create()
+	iAssoc := ImageVMAssoc{imageUUID, imagePath}
+	err = iAssoc.Create()
 	if err != nil {
 		fmt.Println("Error while associating the image with the instance")
 		fmt.Println("Error: ", err)

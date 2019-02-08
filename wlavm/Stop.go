@@ -47,8 +47,8 @@ func Stop(vmUUID string, imageUUID string,
 
 	// check if this is the last instance associated with the image
 	log.Info("Checking if this is the last instance using the image.")
-	I := ImageVMAssociation{imageUUID, ""}
-	var isLastInstance, imagePath = I.Delete()
+	iAssoc := ImageVMAssoc{imageUUID, ""}
+	var isLastInstance, imagePath = iAssoc.Delete()
 	// as the original image is deleted during the VM start process, there is no way
 	// to check if original image is encrypted. Instead we check if sparse file of image
 	// exists at given path, if it does that means the image was enrypted and volumes were created

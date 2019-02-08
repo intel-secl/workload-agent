@@ -6,41 +6,41 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ImageVMAssociation structure is used to call create and delete with input parameters
-type ImageVMAssociation struct {
+// ImageVMAssoc structure is used to call create and delete with input parameters
+type ImageVMAssoc struct {
 	ImageUUID string
 	ImagePath string
 }
 
 // Create method is used to check if an entry exists with the image ID. If it does, increment the instance count,
 // else create an entry with image instance association and append it.
-func (I ImageVMAssociation) Create() error {
+func (IAssoc ImageVMAssoc) Create() error {
 	imageUUIDFound := false
 	log.Debug("Loading yaml file to instance image association structure.")
-	err := LoadImageInstanceAssociation()
+	err := LoadImageVMAssociation()
 	if err != nil {
 		log.Error("Failed to unmarshal.")
 		return err
 	}
-	for _, item := range ImageInstanceAssociations {
-		if strings.Contains(item.ImageID, I.ImageUUID) {
+	for _, item := range ImageVMAssociations {
+		if strings.Contains(item.ImageID, IAssoc.ImageUUID) {
 			log.Debug("Image ID already exist in file, increasing the count of instance by 1.")
-			item.InstanceCount = item.InstanceCount + 1
+			item.VMCount = item.VMCount + 1
 			imageUUIDFound = true
 			break
 		}
 	}
 
 	if !imageUUIDFound {
-		log.Debug("Image ID does not exist in file, adding an entry with the image ID ", I.ImageUUID)
-		data := ImageInstanceAssociation{
-			ImageID:       I.ImageUUID,
-			ImagePath:     I.ImagePath,
-			InstanceCount: 1,
+		log.Debug("Image ID does not exist in file, adding an entry with the image ID ", IAssoc.ImageUUID)
+		data := ImageVMAssociation{
+			ImageID:   IAssoc.ImageUUID,
+			ImagePath: IAssoc.ImagePath,
+			VMCount:   1,
 		}
-		ImageInstanceAssociations = append(ImageInstanceAssociations, data)
+		ImageVMAssociations = append(ImageVMAssociations, data)
 	}
-	err = SaveImageInstanceAssociation()
+	err = SaveImageVMAssociation()
 	if err != nil {
 		log.Error("Failed to marshal.")
 		return err
@@ -50,30 +50,30 @@ func (I ImageVMAssociation) Create() error {
 
 // Delete method is used to check if an entry exists with the image ID. If it does, decrement the instance count.
 // Check if the instance count is zero, then delete the image entry from the file.
-func (I ImageVMAssociation) Delete() (bool, string) {
+func (IAssoc ImageVMAssoc) Delete() (bool, string) {
 	imagePath := ""
-	isLastInstance := false
-	err := LoadImageInstanceAssociation()
+	isLastVM := false
+	err := LoadImageVMAssociation()
 	if err != nil {
 		log.Error("Failed to unmarshal.", err)
 	}
-	for i, item := range ImageInstanceAssociations {
+	for i, item := range ImageVMAssociations {
 		imagePath = item.ImagePath
-		if strings.Contains(item.ImageID, I.ImageUUID) {
+		if strings.Contains(item.ImageID, IAssoc.ImageUUID) {
 			log.Debug("Image ID already exist in file, decreasing the count of instance by 1.")
-			item.InstanceCount = item.InstanceCount - 1
-			if item.InstanceCount == 0 {
-				log.Debug("Instance count is 0, hence deleting the entry with image id ", I.ImageUUID)
-				ImageInstanceAssociations[i] = ImageInstanceAssociations[0]
-				ImageInstanceAssociations = ImageInstanceAssociations[1:]
-				isLastInstance = true
+			item.VMCount = item.VMCount - 1
+			if item.VMCount == 0 {
+				log.Debug("VM count is 0, hence deleting the entry with image id ", IAssoc.ImageUUID)
+				ImageVMAssociations[i] = ImageVMAssociations[0]
+				ImageVMAssociations = ImageVMAssociations[1:]
+				isLastVM = true
 				break
 			}
 		}
 	}
-	err = SaveImageInstanceAssociation()
+	err = SaveImageVMAssociation()
 	if err != nil {
 		log.Error("Failed to marshal.", err)
 	}
-	return isLastInstance, imagePath
+	return isLastVM, imagePath
 }
