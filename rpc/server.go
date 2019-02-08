@@ -19,7 +19,6 @@ type StopVMArgs struct {
 	InstanceUUID string
 	ImageUUID    string
 	InstancePath string
-	ImagePath    string
 }
 
 // VirtualMachine is type that defines the RPC functions for communicating with the Wlagent daemon Starting/Stopping a VM
@@ -34,9 +33,9 @@ func (vm *VirtualMachine) Start(args *StartVMArgs, reply *int) error {
 	return nil
 }
 
-// Stop forwards the RPC request to pkg.QemuStopIntercept
+// Stop forwards the RPC request to wlavm.Stop
 func (vm *VirtualMachine) Stop(args *StopVMArgs, reply *int) error {
 	// pass in vm.Watcher to get the instance to the File System Watcher
-	*reply = wlavm.Stop(args.InstanceUUID, args.ImageUUID, args.InstancePath)
+	*reply = wlavm.Stop(args.InstanceUUID, args.ImageUUID, args.InstancePath, vm.Watcher)
 	return nil
 }

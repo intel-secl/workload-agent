@@ -133,17 +133,20 @@ func main() {
 		if len(args[1:]) < 3 {
 			log.Info("Invalid number of parameters")
 		}
-		log.Info("VM stop called in main method")
-		log.Info("image UUID: ", args[2])
-		log.Info("instance path: ", args[3])
-		log.Info("instance UUID: ", args[1])
-		returnCode := wlavm.Stop(strings.TrimSpace(args[1]), strings.TrimSpace(args[2]),
-			strings.TrimSpace(args[3]))
+		client := rpc.NewClient(conn)
+		var returnCode int
+		var args = wlrpc.StopVMArgs{
+			InstanceUUID: args[1],
+			ImageUUID:    args[2],
+			InstancePath: args[3],
+		}
+		client.Call("VirtualMachine.Stop", &args, &returnCode)
 		if returnCode == 1 {
 			os.Exit(1)
 		} else {
 			os.Exit(0)
 		}
+		fmt.Println("Return code from VM stop :", returnCode)
 
 	case "uninstall":
 		deleteFile("/usr/local/bin/wlagent")

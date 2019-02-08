@@ -6,6 +6,7 @@ import (
 	"intel/isecl/lib/common/exec"
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/consts"
+	"intel/isecl/wlagent/filewatch"
 	"io/ioutil"
 	"strconv"
 	"sync"
@@ -26,7 +27,7 @@ import (
 //  imageUUID - Image uuid
 //  instancePath - Absolute path of the instance
 func Stop(vmUUID string, imageUUID string,
-	instancePath string) int {
+	instancePath string, filewatcher *filewatch.Watcher) int {
 	log.Info("Stop call intercepted.")
 	var mntLocation = consts.MountDirPath
 
