@@ -1,15 +1,72 @@
 package util
 
 import (
+	"fmt"
 	"intel/isecl/lib/common/crypt"
 	"intel/isecl/lib/vml"
+	"intel/isecl/wlagent/consts"
+	"io/ioutil"
 	"os"
 	"strings"
-	"io/ioutil"
+	"sync"
+
 	log "github.com/sirupsen/logrus"
 	xmlpath "gopkg.in/xmlpath.v2"
-	"fmt"
+	yaml "gopkg.in/yaml.v2"
 )
+
+// ImageVMAssociations is variable that consists of array of ImageVMAssociation struct
+var ImageVMAssociations []ImageVMAssociation
+
+// ImageVMAssociation is the global struct that is used to store the image instance count to yaml file
+type ImageVMAssociation struct {
+	ImageID   string
+	ImagePath string
+	VMCount   int
+}
+
+// LoadImageVMAssociation method loads image instance association from yaml file
+func LoadImageVMAssociation() error {
+	imageVMAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
+	// Read from a file and store it in a string
+	// FORMAT OF THE FILE:
+	// <image UUID> <instances running of that image>
+	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
+	log.Info("Reading image instance association file.")
+	data, err := ioutil.ReadFile(imageVMAssociationFile)
+	if err != nil {
+		return err
+	}
+	err = yaml.Unmarshal([]byte(data), &ImageVMAssociations)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+var fileMutex sync.Mutex
+
+// SaveImageVMAssociation method saves instance image association to yaml file
+func SaveImageVMAssociation() error {
+	imageVMAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
+	// FORMAT OF THE FILE:
+	// <image UUID> <instances running of that image>
+	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
+	log.Info("Writing to image instance association file.")
+	data, err := yaml.Marshal(&ImageVMAssociations)
+	if err != nil {
+		return err
+	}
+	// Apply mutex lock to yaml file
+	fileMutex.Lock()
+	// Release the mutext lock
+	defer fileMutex.Unlock()
+	err = ioutil.WriteFile(imageVMAssociationFile, []byte(string(data)), 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 //IsImageEncrypted method is used to check if the image is encryped and returns a boolean value.
 func IsImageEncrypted(encImagePath string) (bool, error) {
@@ -32,9 +89,9 @@ func IsImageEncrypted(encImagePath string) (bool, error) {
 	return true, nil
 }
 
-// CheckMountPathExistsAndMountVolume method is used to check if te mount path exists, 
+// CheckMountPathExistsAndMountVolume method is used to check if te mount path exists,
 // if it does not exists, the method creates the mount path and mounts the device mapper.
-func CheckMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) error{	
+func CheckMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) error {
 	log.Infof("Mounting the device mapper: %s", deviceMapperPath)
 	mkdirErr := os.MkdirAll(mountPath, 0644)
 	if mkdirErr != nil {
@@ -53,7 +110,7 @@ func CheckMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) erro
 }
 
 func getItemFromDomainXML(domainXML *xmlpath.Node, xmlPath string, item string) (string, error) {
-	
+
 	// parse the item in xml path from domainXMl
 	parseItem := xmlpath.MustCompile(xmlPath)
 	itemValue, ok := parseItem.String(domainXML)

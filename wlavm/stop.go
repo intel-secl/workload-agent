@@ -3,16 +3,14 @@
 package wlavm
 
 import (
+	"intel/isecl/lib/common/exec"
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/consts"
-	"io/ioutil"
-	"strconv"
-	"sync"
+	"intel/isecl/wlagent/util"
 	"os"
 	"strings"
+
 	log "github.com/sirupsen/logrus"
-	"intel/isecl/wlagent/util"
-	"intel/isecl/lib/common/exec"
 	xmlpath "gopkg.in/xmlpath.v2"
 )
 
@@ -80,7 +78,7 @@ func Stop(domainXMLContent string) int {
 
 	// check if this is the last instance associated with the image
 	log.Info("Checking if this is the last instance using the image.")
-	iAssoc := ImageVMAssoc{imageUUID, ""}
+	iAssoc := ImageVMAssocociation{imageUUID, ""}
 	var isLastInstance, imagePath = iAssoc.Delete()
 	// as the original image is deleted during the VM start process, there is no way
 	// to check if original image is encrypted. Instead we check if sparse file of image

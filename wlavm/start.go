@@ -4,22 +4,23 @@ package wlavm
 
 import (
 	//"log"
-	"os"
-	"strings"
-	"intel/isecl/wlagent/wlsclient"
-	"intel/isecl/lib/vml"
-	pinfo "intel/isecl/lib/platform-info"
-	"intel/isecl/lib/tpm"
-	"intel/isecl/wlagent/config"
-	"intel/isecl/wlagent/util"
-	"intel/isecl/wlagent/consts"
+	"encoding/base64"
+	"encoding/json"
 	"intel/isecl/lib/common/exec"
 	osutil "intel/isecl/lib/common/os"
-	"encoding/base64"
+	pinfo "intel/isecl/lib/platform-info"
+	"intel/isecl/lib/tpm"
+	"intel/isecl/lib/vml"
+	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/consts"
+	"intel/isecl/wlagent/util"
+	"intel/isecl/wlagent/wlsclient"
 	"io/ioutil"
-	"encoding/json"
-	"strconv"
+	"os"
 	"os/user"
+	"strconv"
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 	xmlpath "gopkg.in/xmlpath.v2"
 )
@@ -27,7 +28,7 @@ import (
 // Start method is used perform the VM confidentiality check before lunching the VM
 // Input Parameters: domainXML content string
 // Return : Returns an int value to the libvirt hook.
-// 0 if the instance is launched sucessfully, else return 1. 
+// 0 if the instance is launched sucessfully, else return 1.
 func Start(domainXMLContent string) int {
 
 	var skipImageVolumeCreation = false
@@ -80,8 +81,8 @@ func Start(domainXMLContent string) int {
 		log.Infof("image does not exist in location %s", imagePath)
 		return 1
 	}
-	
-	// check if the image is a symlink, if it is avoid creating image dm-crypt volume 
+
+	// check if the image is a symlink, if it is avoid creating image dm-crypt volume
 	log.Info("Check if the image file is a symlink")
 	symLinkOut, err := os.Readlink(imagePath)
 	if len(strings.TrimSpace(symLinkOut)) > 0 {
@@ -113,7 +114,7 @@ func Start(domainXMLContent string) int {
 
 	// get host hardware UUID
 	log.Info("Getting host hardware UUID...")
-	hardwareUUID,err := pinfo.HardwareUUID()
+	hardwareUUID, err := pinfo.HardwareUUID()
 	if err != nil {
 		log.Info("Unable to get the host hardware UUID")
 		return 1
@@ -132,10 +133,10 @@ func Start(domainXMLContent string) int {
 		return 0
 	}
 
-	if (flavorKeyInfo.Image.Encryption.EncryptionRequired) {
+	if flavorKeyInfo.Image.Encryption.EncryptionRequired {
 
-			// if key not cached, cache the key
-		if (len(strings.TrimSpace(keyID)) <= 0) {
+		// if key not cached, cache the key
+		if len(strings.TrimSpace(keyID)) <= 0 {
 			// get key from flavor and store it in the cache
 			keyURLSplit := strings.Split(flavorKeyInfo.Image.Encryption.KeyURL, "/")
 			keyID := keyURLSplit[len(keyURLSplit)-2]
@@ -166,7 +167,7 @@ func Start(domainXMLContent string) int {
 		groupID, _ := strconv.Atoi(userInfo.Gid)
 
 		if !skipImageVolumeCreation {
-				// create image dm-crypt volume
+			// create image dm-crypt volume
 			log.Info("Creating a dm-crypt volume for the image")
 			imageDeviceMapperPath := consts.DevMapperDirPath + imageUUID
 			sparseFilePath := imagePath + "_sparseFile"
@@ -194,7 +195,7 @@ func Start(domainXMLContent string) int {
 			}
 
 			//decrypt the image
-			log.Info("Decrypting the image")		
+			log.Info("Decrypting the image")
 			decryptedImage, err := vml.Decrypt(encryptedImage, key)
 			if err != nil {
 				log.Infof("Error while decrypting the image. %s", err.Error())
@@ -225,7 +226,7 @@ func Start(domainXMLContent string) int {
 				return 1
 			}
 
-			// change the image symlink file ownership to nova 
+			// change the image symlink file ownership to nova
 			log.Info("Changing image symlink ownership to nova")
 			err = os.Lchown(imagePath, userID, groupID)
 			if err != nil {
@@ -245,7 +246,7 @@ func Start(domainXMLContent string) int {
 
 		// create instance volume
 		instanceDeviceMapperPath := consts.DevMapperDirPath + instanceUUID
-		instanceSparseFilePath := strings.Replace(instancePath, "disk", instanceUUID + "_sparse", -1)
+		instanceSparseFilePath := strings.Replace(instancePath, "disk", instanceUUID+"_sparse", -1)
 
 		log.Infof("Creating dm-crypt volume for the instance: %s", instanceUUID)
 		err = vml.CreateVolume(instanceSparseFilePath, instanceDeviceMapperPath, key, size)
@@ -303,7 +304,7 @@ func Start(domainXMLContent string) int {
 			log.Info("Error while trying to change decrypted image owner to nova")
 			return 1
 		}
-		
+
 	}
 
 	// create VM manifest
@@ -316,7 +317,8 @@ func Start(domainXMLContent string) int {
 
 	// Updating image-instance count association
 	log.Info("Updating the image-instance count file")
-	err = imageInstanceCountAssociation(imageUUID, imagePath)
+	iAssoc := ImageVMAssocociation{imageUUID, imagePath}
+	err = iAssoc.Create()
 	if err != nil {
 		log.Infof("Error while updating the image-instance count file. %s", err.Error())
 		return 1
@@ -327,18 +329,18 @@ func Start(domainXMLContent string) int {
 }
 
 func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
-	
+
 	var certifiedKey tpm.CertifiedKey
 	t, err := tpm.Open()
 
 	if err != nil {
-			log.Info("Error while opening the TPM")
-			log.Info("Err: ", err)
-			return nil, err
-		} 
+		log.Info("Error while opening the TPM")
+		log.Info("Err: ", err)
+		return nil, err
+	}
 
 	defer t.Close()
-	
+
 	bindingKeyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
 	log.Info("Bindkey file name:", bindingKeyFilePath)
 	bindingKeyCert, fileErr := ioutil.ReadFile(bindingKeyFilePath)
@@ -354,7 +356,7 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	}
 
 	log.Info("Binding key deserialized")
-	keyAuth,_ := base64.StdEncoding.DecodeString(config.Configuration.BindingKeySecret)
+	keyAuth, _ := base64.StdEncoding.DecodeString(config.Configuration.BindingKeySecret)
 	key, unbindErr := t.Unbind(&certifiedKey, keyAuth, tpmWrappedKey)
 	if unbindErr != nil {
 		log.Info("Error while unbinding the tpm wrapped key")
@@ -363,70 +365,6 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	}
 	log.Info("Unbind successful")
 	return key, nil
-}
-
-func imageInstanceCountAssociation(imageUUID, imagePath string) error {
-
-	imageUUIDFound := false
-	imageInstanceCountAssociationFilePath := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
-	
-	// creating the image-instance file if not preset
-	_, err := os.Stat(imageInstanceCountAssociationFilePath)
-	if os.IsNotExist(err) {
-		log.Info("Image-instance count file doesnot exists. Creating the file")
-		args := []string{imageInstanceCountAssociationFilePath}
-		_, touchErr := exec.ExecuteCommand("touch", args)
-		if touchErr != nil {
-			log.Info("Error while trying to create the image-instance count association file")
-			return touchErr
-		}
-	}
-	
-	// read the contents of the file
-	args := []string{imageInstanceCountAssociationFilePath}
-	output, err := exec.ExecuteCommand("cat", args)
-	if err != nil {
-		log.Info("Error while reading the contents of the file")
-		return err
-	}
-
-	fileContents := strings.Split(string(output), "\n")
-	for i, lineContent := range fileContents {
-		if strings.Contains(lineContent, imageUUID) {
-			// increment the count and replace the count in the string
-			contentArray := strings.Split(lineContent, "\t")
-			countSection := contentArray[len(contentArray)-1]
-			splitCountSection := strings.Split(countSection, ":")
-			currentCount, _ := strconv.Atoi(splitCountSection[len(splitCountSection)-1])
-			replaceString := strconv.Itoa(i+1) + " s/count:" + strconv.Itoa(currentCount) + "/count:" + strconv.Itoa(currentCount+1) + "/"
-			args := []string{ "-i", replaceString, imageInstanceCountAssociationFilePath}
-			_, sedErr := exec.ExecuteCommand("sed", args)
-			if sedErr != nil {
-				log.Info("Error while replacing the count of the instance for an image")
-				return err
-			}
-			imageUUIDFound = true
-			break
-		}
-
-	}
-
-	if !imageUUIDFound {
-		data := imageUUID + "\t" + imagePath + "\t" + "count:" + strconv.Itoa(1) + "\n"
-
-		f, err := os.OpenFile(imageInstanceCountAssociationFilePath, os.O_WRONLY|os.O_APPEND, 0600)
-		if err != nil {
-			log.Info("Error while opening image-instance information")
-			return err
-		}
-
-		defer f.Close()
-		if _, err = f.WriteString(data); err != nil {
-			log.Info("Error while writing image-instance information")
-			return err
-		}
-	}
-	return nil
 }
 
 // This method is used to check if the key for an image file is cached.
