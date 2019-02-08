@@ -18,7 +18,6 @@ func SendRequest(req *http.Request, insecureConnection bool) ([]byte, error) {
 
 	cert, err := hex.DecodeString(config.Configuration.Wls.TLSSha256)
 	if err != nil {
-		log.Error("Error decoding WLS TLS.")
 		return nil, err
 	}
 
@@ -45,7 +44,6 @@ func SendRequest(req *http.Request, insecureConnection bool) ([]byte, error) {
 	}
 	response, err := client.Do(req)
 	if err != nil {
-		log.Error("Error in sending request.", err)
 		return nil, err
 	}
 	defer response.Body.Close()
