@@ -12,6 +12,7 @@ import (
 	"intel/isecl/wlagent/osutil"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"runtime"
@@ -45,13 +46,14 @@ const beginCert string = "-----BEGIN CERTIFICATE-----"
 const endCert string = "-----END CERTIFICATE-----"
 
 func RegisterKey(usage tpm.Usage) error {
-	var url string
+	var certifyKeyUrl *url.URL
 	var keyInfo KeyInfo
 	var keyFilePath string
 	var originalNameDigest []byte
 	var requestBody []byte
 	var tpmVersion string
 	var operatingSystem string
+	var err error
 
 	if usage != tpm.Binding && usage != tpm.Signing {
 		return errors.New("incorrect KeyUsage parameter - needs to be signing or binding")
@@ -60,14 +62,21 @@ func RegisterKey(usage tpm.Usage) error {
 	// join configuration path and binding key file name
 	if usage == tpm.Binding {
 		keyFilePath = consts.ConfigDirPath + consts.BindingKeyFileName
-		url = config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-binding-key"
+		certifyKeyUrl, err = url.Parse(config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-binding-key")
+		if err != nil {
+			fmt.Println(err)
+		}
+	
 	} else {
 		keyFilePath = consts.ConfigDirPath + consts.SigningKeyFileName
-		url = config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-signing-key"
+		certifyKeyUrl, err = url.Parse(config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-signing-key")
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
-
+	
 	// check if binding key file exists
-	_, err := os.Stat(keyFilePath)
+	_, err = os.Stat(keyFilePath)
 	if os.IsNotExist(err) {
 		return errors.New("key file does not exist")
 	}
@@ -127,9 +136,8 @@ func RegisterKey(usage tpm.Usage) error {
 	if err != nil {
 		fmt.Println(err)
 	}
-
 	// set POST request Accept, Content-Type and Authorization headers
-	httpRequest, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
+	httpRequest, err := http.NewRequest("POST", certifyKeyUrl.String(), bytes.NewBuffer(requestBody))
 	httpRequest.Header.Set("Accept", "application/json")
 	httpRequest.Header.Set("Content-Type", "application/json")
 	httpRequest.SetBasicAuth(config.Configuration.Mtwilson.APIUsername, config.Configuration.Mtwilson.APIPassword)
@@ -163,7 +171,7 @@ func RegisterKey(usage tpm.Usage) error {
 			var signingkeyCert SigningKeyCert
 			err = json.Unmarshal([]byte(httpResponse), &signingkeyCert)
 			if err != nil {
-				fmt.Printf("error Marshalling. %s",err.Error())
+				fmt.Printf("error Marshalling. %s", err.Error())
 			}
 			//construct the certificate by adding begin and end certificate tags
 			aikPem := beginCert + "\n" + signingkeyCert.SigningKeyCertificate + "\n" + endCert + "\n"
