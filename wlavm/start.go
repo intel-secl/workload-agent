@@ -9,21 +9,40 @@ import (
 	"intel/isecl/lib/common/exec"
 	osutil "intel/isecl/lib/common/os"
 	pinfo "intel/isecl/lib/platform-info"
+	"intel/isecl/lib/verifier"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/util"
-	"intel/isecl/wlagent/wlsclient"
+	"intel/isecl/lib/common/exec"
+	osutil "intel/isecl/lib/common/os"
+	"intel/isecl/lib/common/crypt"
+	"crypto"
+	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"os/user"
-	"strconv"
-	"strings"
-
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	xmlpath "gopkg.in/xmlpath.v2"
 )
+
+// Todo: ISECL-3352 Move the TPM initialization to deamon start
+
+var vmstartTpm tpm.Tpm
+
+func GetTpmInstance()(tpm.Tpm, error){
+	if vmstartTpm == nil {
+		return tpm.Open()
+	}
+	return vmstartTpm, nil
+}
+
+func CloseTpmInstance(){
+	if vmstartTpm != nil {
+		vmstartTpm.Close()
+	}
+}
 
 // Start method is used perform the VM confidentiality check before lunching the VM
 // Input Parameters: domainXML content string
@@ -101,6 +120,11 @@ func Start(domainXMLContent string) int {
 			return 1
 		}
 	}
+
+	// defer the CloseTpmInstance() to take care of closing the Tpm connection
+	// Todo: ISECL-3352 remove when TPM instance is managed by daemon start and stop
+
+	defer CloseTpmInstance()
 
 	//check if the key is cached by filtercriteria imageUUID
 	var keyID string
@@ -307,13 +331,44 @@ func Start(domainXMLContent string) int {
 
 	}
 
-	// create VM manifest
+	//create VM manifest
+	log.Info("Creating VM Manifest")
+	manifest, err := vml.CreateVMManifest(instanceUUID, hardwareUUID, imageUUID, true)
+	if err != nil {
+		log.Info("Error while creating VM manifest")
+		log.Infof("Error: %s", err)
+		return 1
+	}
 
-	// create VM trust reports
+	//create VM Trust Report
+	log.Info("Creating VM Trust Report")
+	
+	vmTrustReport, err := verifier.Verify(&manifest, &flavorKeyInfo.ImageFlavor)
+	if err != nil {
+		log.Info("Error while creating VM Trust Report")
+		log.Infof("Error: %s", err)
+		return 1
+	}
 
-	// sign VM trust report
+	// compute the hash and sign
+	signedVMTrustReport, err := signVMTrustReport(vmTrustReport.(*verifier.VMTrustReport))
+	if err != nil {
+		log.Info("Could not sign VM Trust Report using TPM")
+		log.Infof("Error :%s", err)
+		return 1
+	}
+	
+	//post VM Trust Report on to workload service
+	log.Info("Posting VM Trust Report on WLS")
+	report, _ := json.Marshal(*signedVMTrustReport)
 
-	// post VM Trust report
+	log.Infof("Report: %s", string(report))
+	err = wlsclient.PostVMReport(report)
+	if err!= nil {
+		log.Info("Failed to post the VM Trust Report on to workload service")
+		log.Info("Error: ", err)
+		return 1
+	}
 
 	// Updating image-instance count association
 	log.Info("Updating the image-instance count file")
@@ -328,19 +383,90 @@ func Start(domainXMLContent string) int {
 	return 0
 }
 
-func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
+func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error){
+	
+	var signedreport crypt.SignedData
 
-	var certifiedKey tpm.CertifiedKey
-	t, err := tpm.Open()
-
+	jsonVMTrustReport, err := json.Marshal(*report)
 	if err != nil {
-		log.Info("Error while opening the TPM")
-		log.Info("Err: ", err)
+		return nil, fmt.Errorf("Error : could not marshal VM Trust Report - %s", err)
+	}
+	
+	signedreport.Data = jsonVMTrustReport
+	signedreport.Alg = crypt.GetHashingAlgorithmName(config.HashingAlgorithm)
+	log.Info("Getting Signing Key Certificate from disk")
+	signedreport.Cert, err = config.GetSigningCertFromFile()
+	if err != nil {
+		return nil, err
+	}
+	log.Info("Using TPM to create signature")
+	signature, err := createSignatureWithTPM([]byte(signedreport.Data), config.HashingAlgorithm)
+	if err != nil {
+		return nil, err
+	}
+	signedreport.Signature = signature
+
+	return &signedreport, nil
+}
+
+func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
+	
+	var signingKey tpm.CertifiedKey
+
+	// Get the Signing Key that is stored on disk
+	signingKeyJson, err := config.GetSigningKeyFromFile()
+	if err != nil {
 		return nil, err
 	}
 
-	defer t.Close()
+	err = json.Unmarshal(signingKeyJson, &signingKey)
+	if  err != nil {
+		return nil, err
+	}
 
+	// Get the secret associated when the SigningKey was created. 
+	keyAuth, err := base64.StdEncoding.DecodeString(config.Configuration.SigningKeySecret)
+	if err != nil{
+		return nil, fmt.Errorf("Error - Could not retrieve Secret Associated with SigningKey")
+	}
+
+    // Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
+	t, err := GetTpmInstance()
+	if err != nil {
+		log.Info("Could not open TPM, Error :", err)
+		return nil, fmt.Errorf("Error while attempting to create signature - could not open TPM")
+	}
+
+	if t.Version() == tpm.V12 {
+		// tpm 1.2 only supports SHA1, so override the algorithm that we get here
+		alg = crypto.SHA1
+	}
+
+	h, err := crypt.GetHashData(data, alg)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Info("Using TPM to sign the hash")
+	signature, err := t.Sign(&signingKey, keyAuth, alg, h)
+	if err != nil {
+		return nil, err
+	}
+
+	return signature, nil
+}
+
+func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
+
+	var certifiedKey tpm.CertifiedKey
+	t, err := GetTpmInstance()
+
+	if err != nil {
+		log.Info("Error : Could not establish connection to TPM")
+		log.Infof("Error: %s", err)
+		return nil, err
+	}
+	
 	bindingKeyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
 	log.Info("Bindkey file name:", bindingKeyFilePath)
 	bindingKeyCert, fileErr := ioutil.ReadFile(bindingKeyFilePath)
