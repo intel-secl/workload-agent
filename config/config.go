@@ -23,7 +23,7 @@ import (
 var Configuration struct {
 	BindingKeySecret string
 	SigningKeySecret string
-	
+
 	Mtwilson struct {
 		APIURL      string
 		APIUsername string
@@ -39,75 +39,31 @@ var Configuration struct {
 	LogLevel string
 }
 
+// RPCSocketFile points to the location of wlagent.sock for RPC communication over a unix domain socket
+const RPCSocketFilePath = "/var/run/workloadagent/wlagent.sock"
+
+// PIDFile points to the location of wlagent.pid, containing the last known pid of the workload agent daemon
+const PIDFilePath = "/var/run/workloadagent/wlagent.pid"
+
+// DaemonFilePath points to the location of the workload agent daemon binary
+const DaemonFilePath = "/opt/workloadagent/bin/wlagentd"
+
+const HashingAlgorithm crypto.Hash = crypto.SHA256
+
 // MTWILSON_API_URL is a string environment variable for specifying the
-// mtwilson API URL and is used to  connect to mtwilson
-const MTWILSON_API_URL = "MTWILSON_API_URL"
-
-// MTWILSON_API_USERNAME is a string environment variable for specifying the
-// mtwilson API URL and is used to connect to mtwilson
-const MTWILSON_API_USERNAME = "MTWILSON_API_USERNAME"
-
-// MTWILSON_API_PASSWORD is a string environment variable for specifying
-// the mtwilson API password and is used to connect to mtwilson
-const MTWILSON_API_PASSWORD = "MTWILSON_API_PASSWORD"
-
-// MTWILSON_TLS_SHA256 is a string environment variable for specifying
-// the mtwilson TLS sha256 and is used to connect to mtwilson
-const MTWILSON_TLS_SHA256 = "MTWILSON_TLS_SHA256"
-
-//WLS vars
-const WLS_API_URL = "WLS_API_URL"
-const WLS_API_USERNAME = "WLS_API_USERNAME"
-const WLS_API_PASSWORD = "WLS_API_PASSWORD"
-const WLS_TLS_SHA256 = "WLS_TLS_SHA256"
-
-//TODO - this should be moved elsewhere to some sort of global constants
-const hashingAlgorithm crypto.Hash = crypto.SHA256
-
-const workloadAgentConfigDir string = "WORKLOAD_AGENT_CONFIGURATION"
-const trustAgentConfigDir string = "TRUST_AGENT_CONFIGURATION"
-const taConfigExportCmd string = "tagent export-config --stdout"
-const aikSecretKeyName string = "aik.secret"
-const bindingKeyFileName string = "bindingkey.json"
-const signingKeyFileName string = "signingkey.json"
-const bindingKeyPemFileName string = "bindingkey.pem"
-const signingKeyPemFileName string = "signingkey.pem"
-const imageInstanceCountAssociationFileName string = "image_instance_association"
-const devMapperPath string = "/dev/mapper/"
-const configFilePath = "workloadagent.env"
-const devMapperDirPath = "/dev/mapper/"
-
-var LogFilePath string = os.Getenv("WORKLOAD_AGENT_LOGS") + "/workloadagent.log"
-
-func GetConfigDir() string {
-	return workloadAgentConfigDir
-}
-
-func GetTrustAgentConfigDir() string {
-	return trustAgentConfigDir
-}
-
-func ImageInstanceCountAssociationFileName() string {
-	return imageInstanceCountAssociationFileName
-}
-
-func GetDevMapperDir() string {
-	return devMapperDirPath
-}
-
-func getFileContentFromConfigDir(fileName string) ([]byte, error){
-		filePath := consts.ConfigDirPath + fileName
-		// check if key file exists
-		_, err := os.Stat(filePath)
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("File does not exist - %s", filePath)
-		}
-
-		// read contents of file
-		file, _ := os.Open(filePath)
-		defer file.Close()
-		byteValue, _ := ioutil.ReadAll(file)
-		return byteValue, nil
+func getFileContentFromConfigDir(fileName string) ([]byte, error) {
+	filePath := consts.ConfigDirPath + fileName
+	// check if key file exists
+	_, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("File does not exist - %s", filePath)
+	}
+	// mtwilson API URL and is used to  connect to mtwilson
+	// read contents of file
+	file, _ := os.Open(filePath)
+	defer file.Close()
+	byteValue, _ := ioutil.ReadAll(file)
+	return byteValue, nil
 }
 
 func GetSigningKeyFromFile() ([]byte, error) {
@@ -116,26 +72,26 @@ func GetSigningKeyFromFile() ([]byte, error) {
 }
 
 func GetBindingKeyFromFile() ([]byte, error) {
-		
-	return getFileContentFromConfigDir(GetBindingKeyFileName())
+
+	return getFileContentFromConfigDir(consts.BindingKeyFileName)
 }
 
-func GetSigningCertFromFile() (string, error){
+func GetSigningCertFromFile() (string, error) {
 
 	f, err := getFileContentFromConfigDir(GetSigningKeyPemFileName())
 	if err != nil {
 		return "", err
 	}
-	return string(f), nil 
+	return string(f), nil
 }
 
-func GetBindingCertFromFile() (string, error){
+func GetBindingCertFromFile() (string, error) {
 
 	f, err := getFileContentFromConfigDir(GetBindingKeyPemFileName())
 	if err != nil {
 		return "", err
 	}
-	return string(f), nil 
+	return string(f), nil
 }
 
 // This function returns the AIK Secret as a byte array running the tagent export config command
@@ -161,7 +117,6 @@ func GetAikSecret() ([]byte, error) {
 	return hex.DecodeString(strings.TrimSpace(aikSecret))
 }
 
-// Save the configuration struct into configuration directory
 func Save() error {
 	file, err := os.OpenFile(consts.ConfigFilePath, os.O_RDWR, 0)
 	defer file.Close()

@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"intel/isecl/wlagent/filewatch"
-	"intel/isecl/wlagent/pkg"
 	"intel/isecl/wlagent/wlavm"
 )
 
@@ -38,6 +37,6 @@ func (vm *VirtualMachine) Start(args *StartVMArgs, reply *int) error {
 // Stop forwards the RPC request to pkg.QemuStopIntercept
 func (vm *VirtualMachine) Stop(args *StopVMArgs, reply *int) error {
 	// pass in vm.Watcher to get the instance to the File System Watcher
-	*reply = pkg.QemuStopIntercept(args.InstanceUUID, args.ImageUUID, args.InstancePath, args.ImagePath)
+	*reply = wlavm.Stop(args.InstanceUUID, args.ImageUUID, args.InstancePath)
 	return nil
 }

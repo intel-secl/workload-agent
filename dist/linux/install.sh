@@ -158,6 +158,12 @@ cp -f wlagent $WORKLOAD_AGENT_BIN
 chown $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $WORKLOAD_AGENT_BIN/wlagent
 ln -sfT $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/wlagent
 
+cp -f wlagentd $WORKLOAD_AGENT_BIN
+chown $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $WORKLOAD_AGENT_BIN/wlagentd
+
+# Create PID file directory in /var/run
+mkdir -p /var/run/workloadagent
+
 # 9. Call workloadagent setup
 wlagent setup | tee $logfile
 
