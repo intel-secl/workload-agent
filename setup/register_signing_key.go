@@ -4,10 +4,10 @@ import (
 	"errors"
 	log "github.com/sirupsen/logrus"
 	csetup "intel/isecl/lib/common/setup"
-	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
+	"intel/isecl/wlagent/mtwilsonclient"
 	"os"
 )
 
@@ -15,6 +15,9 @@ type RegisterSigningKey struct {
 }
 
 func (rs RegisterSigningKey) Run(c csetup.Context) error {
+	const beginCert string = "-----BEGIN CERTIFICATE-----"
+	const endCert string = "-----END CERTIFICATE-----"
+
 	if rs.Validate(c) == nil {
 		log.Info("Signing key already registered. Skipping this setup task.")
 		return nil
@@ -26,11 +29,26 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 		return e
 	}
 	log.Info("Registering signing key with host verification service.")
-	err := common.RegisterKey(tpm.Signing)
+	keyFilePath := consts.ConfigDirPath + consts.SigningKeyFileName
+
+	httpRequestBody, err := common.CreateRequest(keyFilePath)
 	if err != nil {
 		return errors.New("error registering signing key. " + err.Error())
 	}
 
+	mc, err := mtwilsonclient.InitializeClient()
+	if err != nil {
+		return errors.New("error initializing HVS client")
+	}
+	registerKey, err := mc.HostKey().CertifyHostSigningKey(httpRequestBody)
+	if err != nil {
+		return errors.New("error while updating the KBS user with envelope public key. " + err.Error())
+	}
+
+	aikPem := beginCert + "\n" + registerKey.SigningKeyCertificate + "\n" + endCert + "\n"
+
+	keyCertFilePath := consts.ConfigDirPath + consts.SigningKeyPemFileName
+	_ = common.WriteKeyCertToDisk(keyCertFilePath, aikPem)
 	return nil
 }
 

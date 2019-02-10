@@ -1,20 +1,16 @@
 package common
 
 import (
-	"bytes"
+	"crypto/x509"
 	b "encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
-	"fmt"
-	"intel/isecl/lib/tpm"
-	"intel/isecl/wlagent/config"
+	mtwilson "intel/isecl/lib/mtwilson-client"
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/osutil"
 	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
-	"regexp"
 	"runtime"
 	"strings"
 )
@@ -26,76 +22,35 @@ type KeyInfo struct {
 	KeySignature   string `json:"KeySignature"`
 	KeyName        string `json:"KeyName"`
 }
-type BindingKeyCert struct {
-	BindingKeyCertificate string `json:"binding_key_der_certificate"`
-}
-type SigningKeyCert struct {
-	SigningKeyCertificate string `json:"signing_key_der_certificate"`
-}
-type HttpRequestBody struct {
-	PublicKeyModulus       string `json:"public_key_modulus"`
-	TpmCertifyKey          string `json:"tpm_certify_key"`
-	TpmCertifyKeySignature string `json:"tpm_certify_key_signature"`
-	AikDerCertificate      string `json:"aik_der_certificate"`
-	NameDigest             string `json:"name_digest"`
-	TpmVersion             string `json:"tpm_version"`
-	OsType                 string `json:"operating_system"`
-}
 
-const beginCert string = "-----BEGIN CERTIFICATE-----"
-const endCert string = "-----END CERTIFICATE-----"
-
-func RegisterKey(usage tpm.Usage) error {
-	var certifyKeyUrl *url.URL
+func CreateRequest(keyfilePath string) (mtwilson.RegisterKeyInfo, error) {
+	var httpRequestBody mtwilson.RegisterKeyInfo
 	var keyInfo KeyInfo
-	var keyFilePath string
-	var originalNameDigest []byte
-	var requestBody []byte
 	var tpmVersion string
-	var operatingSystem string
+	var originalNameDigest []byte
 	var err error
 
-	if usage != tpm.Binding && usage != tpm.Signing {
-		return errors.New("incorrect KeyUsage parameter - needs to be signing or binding")
-	}
-
-	// join configuration path and binding key file name
-	if usage == tpm.Binding {
-		keyFilePath = consts.ConfigDirPath + consts.BindingKeyFileName
-		certifyKeyUrl, err = url.Parse(config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-binding-key")
-		if err != nil {
-			return errors.New("errror parsing binding key request url. " + err.Error())
-		}
-
-	} else {
-		keyFilePath = consts.ConfigDirPath + consts.SigningKeyFileName
-		certifyKeyUrl, err = url.Parse(config.Configuration.Mtwilson.APIURL + "/rpc/certify-host-signing-key")
-		if err != nil {
-			return errors.New("errror parsing signing key request url. " + err.Error())
-		}
-	}
-
 	// check if binding key file exists
-	_, err = os.Stat(keyFilePath)
+	_, err = os.Stat(keyfilePath)
 	if os.IsNotExist(err) {
-		return errors.New("key file does not exist")
+		return httpRequestBody, errors.New("key file does not exist")
 	}
 	// read contents of key file and store in KeyInfo struct
-	file, err := os.Open(keyFilePath)
+	file, err := os.Open(keyfilePath)
 	if err != nil {
-		return errors.New("errror opening key file. " + err.Error())
+		return httpRequestBody, errors.New("error opening key file. " + err.Error())
 	}
 
 	defer file.Close()
 
 	byteValue, err := ioutil.ReadAll(file)
 	if err != nil {
-		return errors.New("errror reading file. ")
+		return httpRequestBody, errors.New("error reading file. ")
 	}
 
 	err = json.Unmarshal(byteValue, &keyInfo)
 	if err != nil {
-		return errors.New("error unmarshalling. " + err.Error())
+		return httpRequestBody, errors.New("error unmarshalling. " + err.Error())
 	}
 
 	// remove first two bytes from KeyAttestation. These are extra bytes written.
@@ -105,7 +60,7 @@ func RegisterKey(usage tpm.Usage) error {
 	// remove first byte from the value written to KeyName. This is an extra byte written.
 	originalNameDigest, err = b.StdEncoding.DecodeString(keyInfo.KeyName)
 	if err != nil {
-		return errors.New("errror decoding name digest. " + err.Error())
+		return httpRequestBody, errors.New("errror decoding name digest. " + err.Error())
 	}
 	originalNameDigest = originalNameDigest[1:]
 
@@ -117,112 +72,49 @@ func RegisterKey(usage tpm.Usage) error {
 	nameDigest := b.StdEncoding.EncodeToString(originalNameDigest)
 
 	//get trustagent aik cert location
+	//TODO Vinil
 	aikCertName, _ := osutil.MakeFilePathFromEnvVariable(consts.TrustAgentConfigDirEnv, "aik.pem", true)
 
-	// set operating system
-	if runtime.GOOS == "linux" {
-		operatingSystem = "Linux"
-	} else {
-		operatingSystem = "Windows"
-	}
-
 	//set tpm version
+	//TODO Vinil
 	if keyInfo.Version == 2 {
 		tpmVersion = "2.0"
 	} else {
 		tpmVersion = "1.2"
 	}
 
-	//getAikCert removes the begin / end certificate tags and newline characters
-	aik := getAikCert(aikCertName)
+	aikCert, err := ioutil.ReadFile(aikCertName)
+	if err != nil {
+		return httpRequestBody, errors.New("error reading certificate file. " + err.Error())
+	}
+	aikDer, _ := pem.Decode(aikCert)
+	_, err = x509.ParseCertificate(aikDer.Bytes)
+	if err != nil {
+		return httpRequestBody, errors.New("error parsing certificate file. " + err.Error())
+	}
 
 	//construct request body
-	httpRequestBody := HttpRequestBody{
+	httpRequestBody = mtwilson.RegisterKeyInfo{
 		PublicKeyModulus:       keyInfo.PublicKey,
 		TpmCertifyKey:          tpmCertifyKey,
 		TpmCertifyKeySignature: keyInfo.KeySignature,
-		AikDerCertificate:      aik,
+		AikDerCertificate:      aikDer.Bytes,
 		NameDigest:             nameDigest,
 		TpmVersion:             tpmVersion,
-		OsType:                 operatingSystem,
+		OsType:                 strings.Title(runtime.GOOS),
 	}
-	requestBody, err = json.Marshal(httpRequestBody)
+
+	return httpRequestBody, nil
+}
+func WriteKeyCertToDisk(keyCertPath string, aikPem string) error {
+	file, err := os.Create(keyCertPath)
 	if err != nil {
-		return errors.New("error marshalling http request. " + err.Error())
-
+		return errors.New("error creating file. " + err.Error())
 	}
-	// set POST request Accept, Content-Type and Authorization headers
-	httpRequest, _ := http.NewRequest("POST", certifyKeyUrl.String(), bytes.NewBuffer(requestBody))
-	httpRequest.Header.Set("Accept", "application/json")
-	httpRequest.Header.Set("Content-Type", "application/json")
-	httpRequest.SetBasicAuth(config.Configuration.Mtwilson.APIUsername, config.Configuration.Mtwilson.APIPassword)
-
-	httpResponse, err := SendHttpRequest(httpRequest)
+	_, err = file.Write([]byte(aikPem))
 	if err != nil {
-		return errors.New("error in key registration. " + err.Error())
-	}
-	switch usage {
-	case tpm.Binding:
-		{
-			//construct the certificate by adding begin and end certificate tags
-			//*****pem Decode and encode
-			var bindingkeyCert BindingKeyCert
-			err = json.Unmarshal([]byte(httpResponse), &bindingkeyCert)
-			if err != nil {
-				return errors.New("error unmarshalling http response. " + err.Error())
-			}
-			aikPem := beginCert + "\n" + bindingkeyCert.BindingKeyCertificate + "\n" + endCert + "\n"
-
-			//write the binding key certificate to file
-			keyCertPath := consts.ConfigDirPath + consts.BindingKeyPemFileName
-			file, err = os.Create(keyCertPath)
-			if err != nil {
-				return errors.New("error creating file. " + err.Error())
-			}
-
-			_, err = file.Write([]byte(aikPem))
-			if err != nil {
-				return errors.New("error writing to file. " + err.Error())
-			}
-		}
-	case tpm.Signing:
-		{
-			var signingkeyCert SigningKeyCert
-			err = json.Unmarshal([]byte(httpResponse), &signingkeyCert)
-			if err != nil {
-				return errors.New("error unmarshalling http response. " + err.Error())
-			}
-			//construct the certificate by adding begin and end certificate tags
-			aikPem := beginCert + "\n" + signingkeyCert.SigningKeyCertificate + "\n" + endCert + "\n"
-
-			//write the binding key certificate to file
-			keyCertPath := consts.ConfigDirPath + consts.SigningKeyPemFileName
-
-			file, err = os.Create(keyCertPath)
-			if err != nil {
-				return errors.New("error creating file. " + err.Error())
-			}
-			_, err = file.Write([]byte(aikPem))
-			if err != nil {
-				return errors.New("error writing to file. " + err.Error())
-			}
-		}
+		return errors.New("error writing to file. " + err.Error())
 	}
 	return nil
-}
 
-//getAikCert method removes begin and end certificate tag and newline character.
-func getAikCert(aikCertName string) string {
-	aikfile, err := os.Open(aikCertName)
-	if err != nil {
-		fmt.Println(err)
-	}
-	aikCert, _ := ioutil.ReadAll(aikfile)
-	aik := string(aikCert)
-	aik = strings.Replace(aik, beginCert, "", -1)
-	aik = strings.Replace(aik, endCert, "", -1)
-
-	re := regexp.MustCompile(`\r?\n`)
-	aik = re.ReplaceAllString(aik, "")
-	return aik
 }

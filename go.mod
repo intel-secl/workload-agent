@@ -8,6 +8,7 @@ require (
 	gopkg.in/yaml.v2 v2.2.2
 	intel/isecl/lib/common v0.0.0
 	intel/isecl/lib/flavor v0.0.0
+	intel/isecl/lib/mtwilson-client v0.0.0
 	intel/isecl/lib/platform-info v0.0.0
 	intel/isecl/lib/tpm v0.0.0
 	intel/isecl/lib/verifier v0.0.0
@@ -25,3 +26,5 @@ replace intel/isecl/lib/flavor => gitlab.devtools.intel.com/sst/isecl/lib/flavor
 replace intel/isecl/lib/verifier => gitlab.devtools.intel.com/sst/isecl/lib/verifier v0.0.0-20190219043745-4337d01a5a89
 
 replace intel/isecl/lib/platform-info => gitlab.devtools.intel.com/sst/isecl/lib/platform-info v0.0.0-20181206180455-b2908f06aa05
+
+replace intel/isecl/lib/mtwilson-client => gitlab.devtools.intel.com/sst/isecl/lib/mtwilson-client v0.0.0-20190210045813-8e0890707ce3

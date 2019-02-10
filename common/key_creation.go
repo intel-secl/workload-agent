@@ -9,7 +9,6 @@ import (
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
 	"os"
-
 	log "github.com/sirupsen/logrus"
 )
 

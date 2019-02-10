@@ -8,12 +8,15 @@ import (
 	"errors"
 	log "github.com/sirupsen/logrus"
 	csetup "intel/isecl/lib/common/setup"
-	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
+	"intel/isecl/wlagent/mtwilsonclient"
 	"os"
 )
+
+const beginCert string = "-----BEGIN CERTIFICATE-----"
+const endCert string = "-----END CERTIFICATE-----"
 
 type RegisterBindingKey struct {
 }
@@ -30,10 +33,25 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 		return e
 	}
 	log.Info("Registering binding key with host verification service.")
-	err := common.RegisterKey(tpm.Binding)
+	keyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
+
+	httpRequestBody, err := common.CreateRequest(keyFilePath)
 	if err != nil {
 		return errors.New("error registering binding key. " + err.Error())
 	}
+
+	mc, err := mtwilsonclient.InitializeClient()
+	if err != nil {
+		return errors.New("error initializing HVS client")
+	}
+	registerKey, err := mc.HostKey().CertifyHostBindingKey(httpRequestBody)
+	if err != nil {
+		return errors.New("error while updating the KBS user with envelope public key. " + err.Error())
+	}
+	aikPem := beginCert + "\n" + registerKey.BindingKeyCertificate + "\n" + endCert + "\n"
+
+	keyCertFilePath := consts.ConfigDirPath + consts.BindingKeyPemFileName
+	_ = common.WriteKeyCertToDisk(keyCertFilePath, aikPem)
 	return nil
 }
 
