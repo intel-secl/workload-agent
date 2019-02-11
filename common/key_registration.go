@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	exec "intel/isecl/lib/common/exec"
 	mtwilson "intel/isecl/lib/mtwilson-client"
 	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/osutil"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -73,7 +73,7 @@ func CreateRequest(keyfilePath string) (mtwilson.RegisterKeyInfo, error) {
 
 	//get trustagent aik cert location
 	//TODO Vinil
-	aikCertName, _ := osutil.MakeFilePathFromEnvVariable(consts.TrustAgentConfigDirEnv, "aik.pem", true)
+	aikCertName, _ := exec.MkDirFilePathFromEnvVariable(consts.TrustAgentConfigDirEnv, "aik.pem", true)
 
 	//set tpm version
 	//TODO Vinil
