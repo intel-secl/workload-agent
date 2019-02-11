@@ -315,7 +315,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 		}
 
 		// remove the encrypted image file and create a symlink with the dm-crypt volume
-		log.Debugf("Deleting change disk %s:", instancePath)
+		log.Info("Deleting change disk :", instancePath)
 		err = os.RemoveAll(instancePath)
 		if err != nil {
 			log.Info("Error while deleting the change disk: ", imagePath)
@@ -331,8 +331,8 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 			return 1
 		}
 
-		//change the instance symlink file ownership to qemu
-		log.Info("Changing instance symlink ownership to qemu")
+		//change the instance symlink file ownership to nova
+		log.Info("Changing instance symlink ownership to nova")
 		err = os.Lchown(instancePath, userID, groupID)
 		if err != nil {
 			log.Error(err.Error())
