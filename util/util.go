@@ -93,7 +93,7 @@ func IsImageEncrypted(encImagePath string) (bool, error) {
 // if it does not exists, the method creates the mount path and mounts the device mapper.
 func CheckMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) error {
 	log.Infof("Mounting the device mapper: %s", deviceMapperPath)
-	mkdirErr := os.MkdirAll(mountPath, 0644)
+	mkdirErr := os.MkdirAll(mountPath, 0655)
 	if mkdirErr != nil {
 		log.Info("Error while creating the mount point for the image device mapper")
 		return mkdirErr

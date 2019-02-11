@@ -2,14 +2,12 @@ package wlsclient
 
 import (
 	"encoding/json"
-	"errors"
 	f "intel/isecl/lib/flavor"
 	"intel/isecl/wlagent/config"
-	"log"
 	"net/http"
 	"bytes"
 	"strings"
-	"fmt"
+	log "github.com/sirupsen/logrus"
 )
 
 //FlavorKey is a representation of flavor-key information
@@ -20,6 +18,7 @@ type FlavorKey struct {
 
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
 func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error) {
+	var flavorKeyInfo FlavorKey
 	requestURL := config.Configuration.Wls.APIURL + "images/" + imageUUID +"/flavor-key?hardware_uuid=" + hardwareUUID
 
 	if len(strings.TrimSpace(keyID)) > 0 {
@@ -28,28 +27,26 @@ func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error)
 
 	httpRequest, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
-		log.Fatal(err)
+		return flavorKeyInfo, err
 	}
 
-	fmt.Println("RequestURL: ", requestURL)
+	log.Debugf("WLS image-flavor-key retrieval GET request URL: %s", requestURL)
 	httpRequest.Header.Set("Accept", "application/json")
 	httpRequest.Header.Set("Content-Type", "application/json")
 	//httpRequest.SetBasicAuth(config.WlaConfig.WlsAPIUsername, config.WlaConfig.WlsAPIPassword)
 
-	var flavorKeyInfo FlavorKey
-
 	httpResponse, err := SendRequest(httpRequest, true)
 	if err != nil {
-		return flavorKeyInfo, errors.New("error while getting http response")
+		return flavorKeyInfo, err
 	}
 
 	//deserialize the response to UserInfo response
 	err = json.Unmarshal(httpResponse, &flavorKeyInfo)
 	if err != nil {
-		return flavorKeyInfo, errors.New("error while unmarshalling the http response to the type flavor-key")
+		return flavorKeyInfo, err
 	}
 
-	fmt.Println("response from API: ", string(httpResponse))
+	log.Debugf("response from API: %s", string(httpResponse))
 
 	return flavorKeyInfo, nil
 
@@ -63,7 +60,7 @@ func PostVMReport(report []byte) error {
 	//Add client here
 	requestURL = config.Configuration.Wls.APIURL + "reports"
 
-	fmt.Println("RequestURL: ", requestURL)
+	log.Debugf("WLS VM reports POST Request URL: %s", requestURL)
 	// set POST request Accept and Content-Type headers
 	httpRequest, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(report))
 	httpRequest.Header.Set("Accept", "application/json")

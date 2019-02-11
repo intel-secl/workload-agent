@@ -55,7 +55,7 @@ func Start(domainXMLContent string) int {
 
 	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
 	if err != nil {
-		log.Infof("Error while parsing domaXML: %s", err)
+		log.Error(err.Error())
 		return 1
 	}
 
@@ -157,10 +157,9 @@ func Start(domainXMLContent string) int {
 		return 0
 	}
 
-	if flavorKeyInfo.Image.Encryption.EncryptionRequired {
-
+	if (flavorKeyInfo.Image.Encryption.EncryptionRequired) {
 		// if key not cached, cache the key
-		if len(strings.TrimSpace(keyID)) <= 0 {
+		if (len(strings.TrimSpace(keyID)) <= 0) {
 			// get key from flavor and store it in the cache
 			keyURLSplit := strings.Split(flavorKeyInfo.Image.Encryption.KeyURL, "/")
 			keyID := keyURLSplit[len(keyURLSplit)-2]
@@ -180,10 +179,10 @@ func Start(domainXMLContent string) int {
 
 		size, _ := strconv.Atoi(diskSize)
 
-		// get the nova user info and change image and instance file owner to nova
-		userInfo, err := user.Lookup("nova")
+		// get the qemu user info and change image and instance file owner to qemu
+		userInfo, err := user.Lookup("qemu")
 		if err != nil {
-			log.Info("Error while trying to look up nova gid")
+			log.Errorf(err.Error())
 			return 1
 		}
 
@@ -228,7 +227,7 @@ func Start(domainXMLContent string) int {
 
 			// write the decrypted data into a file in image mount path
 			decryptedImagePath := imageDeviceMapperMountPath + "/" + imageUUID
-			ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0644)
+			ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0655)
 			if ioWriteErr != nil {
 				log.Info("error during writing the decrypted image to file")
 				return 1
@@ -250,20 +249,20 @@ func Start(domainXMLContent string) int {
 				return 1
 			}
 
-			// change the image symlink file ownership to nova
-			log.Info("Changing image symlink ownership to nova")
+			// change the image symlink file ownership to qemu 
+			log.Info("Changing image symlink ownership to qemu")
 			err = os.Lchown(imagePath, userID, groupID)
 			if err != nil {
-				log.Info("Error while trying to change image symlink owner to nova")
+				log.Info("Error while trying to change image symlink owner to qemu")
 				return 1
 			}
 
-			// change the image mount path directory ownership to nova
-			log.Info("Changing the decrypted image file ownership to nova")
+			// change the image mount path directory ownership to qemu
+			log.Info("Changing the decrypted image file ownership to qemu")
 			log.Info("image device mapper path: ", imageDeviceMapperMountPath)
 			err = osutil.ChownR(imageDeviceMapperMountPath, userID, groupID)
 			if err != nil {
-				log.Info("Error while trying to change decrypted image owner to nova")
+				log.Info("Error while trying to change decrypted image owner to qemu")
 				return 1
 			}
 		}
@@ -296,36 +295,35 @@ func Start(domainXMLContent string) int {
 		}
 
 		// remove the encrypted image file and create a symlink with the dm-crypt volume
-		// log.Info("Deleting change disk :", instancePath)
-		// _, err = exec.Command("rm", "-rf", instancePath).Output()
-		// if err != nil {
-		// 	log.Info("Error while deleting the change disk: ", imagePath)
-		// 	return 1
-		// }
+		log.Debugf("Deleting change disk %s:", instancePath)
+		err = os.RemoveAll(instancePath)
+		if err != nil {
+			log.Info("Error while deleting the change disk: ", imagePath)
+			return 1
+		}
 
 		log.Info("Creating a symlink between the instance and the volume")
 		// create symlink between the image and the dm-crypt volume
-		instanceSymLinkFile := strings.Replace(instancePath, "disk", instanceUUID, -1)
-		err = os.Symlink(instanceDeviceMapperMountPath, instanceSymLinkFile)
+		diskFileInMountPath := instanceDeviceMapperMountPath + "/disk"
+		err = os.Symlink(diskFileInMountPath, instancePath)
 		if err != nil {
-			log.Info("Instance : Error while creating symbolic link")
-			log.Infof("Error: %s", err.Error())
+			log.Error(err.Error())
 			return 1
 		}
 
-		//change the instance symlink file ownership to nova
-		log.Info("Changing instance symlink ownership to nova")
-		err = os.Lchown(instanceSymLinkFile, userID, groupID)
+		//change the instance symlink file ownership to qemu
+		log.Info("Changing instance symlink ownership to qemu")
+		err = os.Lchown(instancePath, userID, groupID)
 		if err != nil {
-			log.Info("Error while trying to change image symlink owner to nova")
+			log.Error(err.Error())
 			return 1
 		}
 
-		// change the instance mount path directory ownership to nova
-		log.Info("Changing the instance change disk file ownership to nova")
+		// change the instance mount path directory ownership to qemu
+		log.Info("Changing the instance change disk file ownership to qemu")
 		err = osutil.ChownR(instanceDeviceMapperMountPath, userID, groupID)
 		if err != nil {
-			log.Info("Error while trying to change decrypted image owner to nova")
+			log.Info("Error while trying to change decrypted image owner to qemu")
 			return 1
 		}
 
