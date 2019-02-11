@@ -111,17 +111,10 @@ func GetAikSecret() ([]byte, error) {
 }
 
 func Save() error {
-	file, err := os.OpenFile(configFilePath, os.O_RDWR, 0)
+	file, err := os.OpenFile(configFilePath, os.O_CREATE|os.O_RDWR, 0)
 	defer file.Close()
 	if err != nil {
-		// we have an error
-		if os.IsNotExist(err) {
-			// error is that the config doesnt yet exist, create it
-			file, err = os.Create(configFilePath)
-			if err != nil {
-				return err
-			}
-		}
+		return err
 	}
 	return yaml.NewEncoder(file).Encode(Configuration)
 }

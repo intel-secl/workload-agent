@@ -196,5 +196,7 @@ fi
 #  echo 0
 #fi
 
-# 10. Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
-#cp -f qemu /etc/libvirt/hooks 
+# 9. Call workloadagent start
+wlagent start | tee $logfile
+
+echo_success "Installation completed."

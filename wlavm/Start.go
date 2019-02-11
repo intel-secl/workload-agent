@@ -25,6 +25,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strconv"
+
+	"github.com/fsnotify/fsnotify"
+	log "github.com/sirupsen/logrus"
 )
 
 const mountPath = "/mnt/crypto/"
@@ -49,6 +52,7 @@ func CloseTpmInstance() {
 // Start method is used perform the VM confidentiality check before lunching the VM
 func Start(instanceUUID, imageUUID, imagePath, instancePath, diskSize string, filewatcher *filewatch.Watcher) int {
 	// validate input parameters
+	log.Info("vm start WLA start")
 	if len(strings.TrimSpace(instancePath)) <= 0 {
 		fmt.Println("instance path not given")
 		return 1

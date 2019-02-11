@@ -3,6 +3,8 @@ package rpc
 import (
 	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/wlavm"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // StartVMArgs is an struct containing arguments to start a VM instance to allow invocation over RPC
@@ -14,7 +16,7 @@ type StartVMArgs struct {
 	DiskSize     string
 }
 
-// StartVMArgs is an struct containing arguments to stop a VM instance to allow invocation over RPC
+// StopVMArgs is an struct containing arguments to stop a VM instance to allow invocation over RPC
 type StopVMArgs struct {
 	InstanceUUID string
 	ImageUUID    string
@@ -29,6 +31,7 @@ type VirtualMachine struct {
 // Start forwards the RPC request to wlavm.Start
 func (vm *VirtualMachine) Start(args *StartVMArgs, reply *int) error {
 	// pass in vm.Watcher to get the instance to the File System Watcher
+	log.Info("vm start server calling WLA start")
 	*reply = wlavm.Start(args.InstanceUUID, args.ImageUUID, args.ImagePath, args.InstancePath, args.DiskSize, vm.Watcher)
 	return nil
 }

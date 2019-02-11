@@ -4,9 +4,10 @@ import (
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/filewatch"
 	wlrpc "intel/isecl/wlagent/rpc"
-	"log"
 	"net"
 	"net/rpc"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -28,6 +29,7 @@ func main() {
 			// block and loop, daemon doesnt need to run on go routine
 			l, err := net.Listen("unix", RPCSocketFilePath)
 			if err != nil {
+				log.Error(err)
 				return
 			}
 			r := rpc.NewServer()
@@ -36,6 +38,7 @@ func main() {
 			}
 			err = r.Register(vm)
 			if err != nil {
+				log.Error(err)
 				return
 			}
 			r.Accept(l)

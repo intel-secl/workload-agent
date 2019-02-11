@@ -68,8 +68,6 @@ func main() {
 		printUsage()
 		return
 	}
-	// Save log configurations
-	config.LogConfiguration()
 
 	switch arg := strings.ToLower(args[0]); arg {
 	case "--version", "-v", "version":
@@ -113,6 +111,12 @@ func main() {
 		start()
 	case "stop":
 		stop()
+	case "status":
+		if s := status(); s == Running {
+			fmt.Println("Workload Agent is running")
+		} else {
+			fmt.Println("Workload Agent is stopped")
+		}
 
 	case "start-vm":
 		if len(args[1:]) < 5 {
@@ -137,13 +141,17 @@ func main() {
 			InstancePath: args[4],
 			DiskSize:     args[5],
 		}
-		client.Call("VirtualMachine.Start", &args, &returnCode)
+		err = client.Call("VirtualMachine.Start", &args, &returnCode)
+		if err != nil {
+			log.Error("client call failed")
+		}
+
 		if returnCode == 1 {
 			os.Exit(1)
 		} else {
 			os.Exit(0)
 		}
-		fmt.Println("Return code from VM start :", returnCode)
+		log.Info("Return code from VM start :", returnCode)
 	case "stop-vm":
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
@@ -165,11 +173,13 @@ func main() {
 		fmt.Println("Return code from VM stop :", returnCode)
 
 	case "uninstall":
+		stop()
 		deleteFile("/usr/local/bin/wlagent")
 		deleteFile(consts.OptDirPath)
 		deleteFile(consts.LibvirtHookFilePath)
 		deleteFile(consts.ConfigDirPath)
 		deleteFile(consts.LogDirPath)
+		deleteFile(consts.RunDirPath)
 
 	default:
 		fmt.Printf("Unrecognized option : %s\n", arg)
@@ -178,6 +188,10 @@ func main() {
 	case "help", "-help", "--help":
 		printUsage()
 	}
+}
+func init() {
+	// Save log configurations
+	config.LogConfiguration()
 }
 
 func deleteFile(path string) {
