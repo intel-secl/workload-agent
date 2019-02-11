@@ -4,13 +4,15 @@ package wlavm
 
 import (
 	//"log"
+	"crypto"
 	"encoding/base64"
 	"encoding/json"
+	"intel/isecl/lib/common/crypt"
 	"intel/isecl/lib/common/exec"
 	osutil "intel/isecl/lib/common/os"
 	pinfo "intel/isecl/lib/platform-info"
-	"intel/isecl/lib/verifier"
 	"intel/isecl/lib/tpm"
+	"intel/isecl/lib/verifier"
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
@@ -23,6 +25,7 @@ import (
 	"os"
 	"os/user"
 	"fmt"
+
 	log "github.com/sirupsen/logrus"
 	xmlpath "gopkg.in/xmlpath.v2"
 )
@@ -31,14 +34,15 @@ import (
 
 var vmstartTpm tpm.Tpm
 
-func GetTpmInstance()(tpm.Tpm, error){
+// Return : Returns an int value to the libvirt hook.
+func GetTpmInstance() (tpm.Tpm, error) {
 	if vmstartTpm == nil {
 		return tpm.Open()
 	}
 	return vmstartTpm, nil
 }
 
-func CloseTpmInstance(){
+func CloseTpmInstance() {
 	if vmstartTpm != nil {
 		vmstartTpm.Close()
 	}
@@ -249,7 +253,7 @@ func Start(domainXMLContent string) int {
 				return 1
 			}
 
-			// change the image symlink file ownership to qemu 
+			// change the image symlink file ownership to qemu
 			log.Info("Changing image symlink ownership to qemu")
 			err = os.Lchown(imagePath, userID, groupID)
 			if err != nil {
@@ -355,14 +359,14 @@ func Start(domainXMLContent string) int {
 		log.Infof("Error :%s", err)
 		return 1
 	}
-	
+
 	//post VM Trust Report on to workload service
 	log.Info("Posting VM Trust Report on WLS")
 	report, _ := json.Marshal(*signedVMTrustReport)
 
 	log.Infof("Report: %s", string(report))
 	err = wlsclient.PostVMReport(report)
-	if err!= nil {
+	if err != nil {
 		log.Info("Failed to post the VM Trust Report on to workload service")
 		log.Info("Error: ", err)
 		return 1
@@ -381,15 +385,15 @@ func Start(domainXMLContent string) int {
 	return 0
 }
 
-func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error){
-	
+func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error) {
+
 	var signedreport crypt.SignedData
 
 	jsonVMTrustReport, err := json.Marshal(*report)
 	if err != nil {
 		return nil, fmt.Errorf("Error : could not marshal VM Trust Report - %s", err)
 	}
-	
+
 	signedreport.Data = jsonVMTrustReport
 	signedreport.Alg = crypt.GetHashingAlgorithmName(config.HashingAlgorithm)
 	log.Info("Getting Signing Key Certificate from disk")
@@ -408,7 +412,7 @@ func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error
 }
 
 func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
-	
+
 	var signingKey tpm.CertifiedKey
 
 	// Get the Signing Key that is stored on disk
@@ -418,17 +422,17 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	}
 
 	err = json.Unmarshal(signingKeyJson, &signingKey)
-	if  err != nil {
+	if err != nil {
 		return nil, err
 	}
 
-	// Get the secret associated when the SigningKey was created. 
+	// Get the secret associated when the SigningKey was created.
 	keyAuth, err := base64.StdEncoding.DecodeString(config.Configuration.SigningKeySecret)
-	if err != nil{
+	if err != nil {
 		return nil, fmt.Errorf("Error - Could not retrieve Secret Associated with SigningKey")
 	}
 
-    // Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
+	// Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
 	t, err := GetTpmInstance()
 	if err != nil {
 		log.Info("Could not open TPM, Error :", err)
