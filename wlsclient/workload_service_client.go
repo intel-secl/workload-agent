@@ -10,6 +10,8 @@ import (
 	"intel/isecl/wlagent/config"
 	"net/http"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 //FlavorKey is a representation of flavor-key information
@@ -20,6 +22,7 @@ type FlavorKey struct {
 
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
 func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error) {
+	var flavorKeyInfo FlavorKey
 	requestURL := config.Configuration.Wls.APIURL + "images/" + imageUUID + "/flavor-key?hardware_uuid=" + hardwareUUID
 
 	var flavorKeyInfo FlavorKey
