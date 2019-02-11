@@ -2,7 +2,6 @@ module intel/isecl/wlagent
 
 require (
 	github.com/sirupsen/logrus v1.3.0
-	github.com/stretchr/testify v1.2.2
 	golang.org/x/net v0.0.0-20190206173232-65e2d4e15006 // indirect
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
 

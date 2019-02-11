@@ -6,10 +6,12 @@ import (
 	"intel/isecl/lib/common/exec"
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/util"
+	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 	xmlpath "gopkg.in/xmlpath.v2"
@@ -123,8 +125,77 @@ func isInstanceVolumeEncrypted(instanceUUID string) bool {
 	}
 
 	if err != nil {
-		log.Error(err)
+		log.Error("Error occured while executing cryptsetup status command.", err)
 	}
 	log.Debug("The device mapper is encrypted and active.")
 	return true
+}
+
+var fileMutex sync.Mutex
+
+func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
+	var imagePath = ""
+	imageInstanceAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
+
+	// Read from a file and store it in a string
+	// FORMAT OF THE FILE:
+	// <image UUID> <instances running of that image>
+	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
+	log.Info("Reading image instance association file.")
+	str, err := ioutil.ReadFile(imageInstanceAssociationFile)
+	if err != nil {
+		log.Error("Error occured while reading a file.", err)
+	}
+
+	log.Info("Recursively checking if imageid exists in file. If it does, reduce the instance count by 1.")
+	lines := strings.Split(string(str), "\n")
+	for i, line := range lines {
+		log.Debug("line: ", line)
+		if strings.TrimSpace(line) == "" {
+			break
+		}
+		// Split words of each line by space character into an array
+		words := strings.Fields(line)
+		imagePath = words[1]
+		// To check the if this is the last instance running of that image
+		// check if the first part of the line matches given image uuid and
+		// then check if there is only 1 instance running of that image (which is the current one)
+		count := strings.Split(words[2], ":")
+		// Reduce the number of instance by 1 and if it is zero; delete that entry
+		if strings.Contains(words[0], imageUUID) {
+			log.Debug("Image ID found in image instance association file. Reducing instance count by 1.")
+			cnt, _ := strconv.Atoi(count[1])
+			replaceLine := strings.Replace(string(line), "count:"+count[1], "count:"+strconv.Itoa(cnt-1), 1)
+			lines[i] = replaceLine
+		}
+		if strings.Contains(words[0], imageUUID) && count[1] == "1" {
+			log.Debugf("Deleting image entry %s as this was last instance to use the image.", imageUUID)
+			lines[i] = lines[len(lines)-1]
+
+			// After modifying contents, store it back to the file
+			log.Debug("Outputting modified text back to file.")
+
+			// Add mutex lock so that at one time only one process can write to a file
+			fileMutex.Lock()
+			// Release the mutext lock
+			defer fileMutex.Unlock()
+			outputToFile := strings.Join(lines[:len(lines)-1], "\n")
+			err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(outputToFile), 0644)
+			if err != nil {
+				log.Error("Error occured while writing to a file.", err)
+			}
+			return true, imagePath
+		}
+	}
+	log.Debug("Image ID not found in image instance association file.")
+	// Add mutex lock so that at one time only one process can write to a file
+	fileMutex.Lock()
+	// Release the mutext lock
+	defer fileMutex.Unlock()
+	outputToFile := strings.Join(lines, "\n")
+	err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(outputToFile), 0644)
+	if err != nil {
+		log.Error("Error occured while writing to a file.", err)
+	}
+	return false, imagePath
 }
