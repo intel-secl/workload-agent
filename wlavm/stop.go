@@ -6,6 +6,7 @@ import (
 	"intel/isecl/lib/common/exec"
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/consts"
+	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/util"
 	"os"
 	"strings"
@@ -23,7 +24,7 @@ import (
 // 	iunstanceUUID – Instace uuid or VM uuid
 //  imageUUID - Image uuid
 //  instancePath - Absolute path of the instance
-func Stop(domainXMLContent string) int {
+func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 	log.Info("Stop call intercepted.")
 
 	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))

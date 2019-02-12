@@ -8,14 +8,19 @@ import (
 	"intel/isecl/wlagent/consts"
 	wlrpc "intel/isecl/wlagent/rpc"
 	"intel/isecl/wlagent/setup"
-	"intel/isecl/wlagent/wlavm"
-	log "github.com/sirupsen/logrus"
+	"io/ioutil"
+	"net"
+	"net/rpc"
+
+	// "intel/isecl/wlagent/wlavm"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -60,7 +65,7 @@ func main() {
 
 	// Save log configurations
 	config.LogConfiguration()
-	
+
 	args := os.Args[1:]
 	if len(args) <= 0 {
 		fmt.Println("Command not found. Usage below")
@@ -114,21 +119,43 @@ func main() {
 		}
 
 		log.Info("workload-agent start called")
-		returnCode := wlavm.Start(args[1])
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			log.Fatal("start-vm: failed to dial wlagent.sock, is wlagent running?")
+		}
+		client := rpc.NewClient(conn)
+		var returnCode int
+		var args = wlrpc.DomainXML{
+			XML: args[1],
+		}
+		err = client.Call("VirtualMachine.Start", &args, &returnCode)
+		if err != nil {
+			log.Error("client call failed")
+		}
+
 		if returnCode == 1 {
 			os.Exit(1)
 		} else {
 			os.Exit(0)
 		}
-
-	case "stop":
+		log.Info("Return code from VM start :", returnCode)
+	case "stop-vm":
 		if len(args[1:]) < 1 {
 			log.Info("Invalid number of parameters")
 			os.Exit(1)
 		}
-
 		log.Info("workload-agent stop called")
-		returnCode := wlavm.Stop(args[1])
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			log.Fatal("stop-vm: failed to dial wlagent.sock, is wlagent running?")
+			os.Exit(1)
+		}
+		client := rpc.NewClient(conn)
+		var returnCode int
+		var args = wlrpc.DomainXML{
+			XML: args[1],
+		}
+		client.Call("VirtualMachine.Stop", &args, &returnCode)
 		if returnCode == 1 {
 			os.Exit(1)
 		} else {

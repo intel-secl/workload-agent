@@ -7,6 +7,7 @@ import (
 	"crypto"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"intel/isecl/lib/common/crypt"
 	"intel/isecl/lib/common/exec"
 	osutil "intel/isecl/lib/common/os"
@@ -16,16 +17,16 @@ import (
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
-	"intel/isecl/lib/common/exec"
-	osutil "intel/isecl/lib/common/os"
-	"intel/isecl/lib/common/crypt"
-	"crypto"
-	"encoding/base64"
+	"intel/isecl/wlagent/filewatch"
+	"intel/isecl/wlagent/util"
+	"intel/isecl/wlagent/wlsclient"
 	"io/ioutil"
 	"os"
 	"os/user"
-	"fmt"
+	"strconv"
+	"strings"
 
+	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	xmlpath "gopkg.in/xmlpath.v2"
 )
@@ -52,7 +53,7 @@ func CloseTpmInstance() {
 // Input Parameters: domainXML content string
 // Return : Returns an int value to the libvirt hook.
 // 0 if the instance is launched sucessfully, else return 1.
-func Start(domainXMLContent string) int {
+func Start(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 
 	var skipImageVolumeCreation = false
 	var err error
@@ -282,6 +283,13 @@ func Start(domainXMLContent string) int {
 			return 1
 		}
 
+		// Watch the symlink for deletion, and remove the _sparseFile if it is
+		filewatcher.HandleEvent(imagePath, func(e fsnotify.Event) {
+			if e.Op&fsnotify.Remove == fsnotify.Remove {
+				os.Remove(instanceSparseFilePath)
+			}
+		})
+
 		// mount the instance dmcrypt volume on to a mount path
 		instanceDeviceMapperMountPath := consts.MountPath + instanceUUID
 		err = util.CheckMountPathExistsAndMountVolume(instanceDeviceMapperMountPath, instanceDeviceMapperPath)
@@ -395,14 +403,14 @@ func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error
 	}
 
 	signedreport.Data = jsonVMTrustReport
-	signedreport.Alg = crypt.GetHashingAlgorithmName(config.HashingAlgorithm)
+	signedreport.Alg = crypt.GetHashingAlgorithmName(consts.HashingAlgorithm)
 	log.Info("Getting Signing Key Certificate from disk")
 	signedreport.Cert, err = config.GetSigningCertFromFile()
 	if err != nil {
 		return nil, err
 	}
 	log.Info("Using TPM to create signature")
-	signature, err := createSignatureWithTPM([]byte(signedreport.Data), config.HashingAlgorithm)
+	signature, err := createSignatureWithTPM([]byte(signedreport.Data), consts.HashingAlgorithm)
 	if err != nil {
 		return nil, err
 	}
