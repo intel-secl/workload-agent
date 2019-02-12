@@ -23,8 +23,8 @@ type KeyInfo struct {
 	KeyName        string `json:"KeyName"`
 }
 
-func CreateRequest(keyfilePath string) (mtwilson.RegisterKeyInfo, error) {
-	var httpRequestBody mtwilson.RegisterKeyInfo
+func CreateRequest(keyfilePath string) (*mtwilson.RegisterKeyInfo, error) {
+	var httpRequestBody *mtwilson.RegisterKeyInfo
 	var keyInfo KeyInfo
 	var tpmVersion string
 	var originalNameDigest []byte
@@ -53,21 +53,27 @@ func CreateRequest(keyfilePath string) (mtwilson.RegisterKeyInfo, error) {
 		return httpRequestBody, errors.New("error unmarshalling. " + err.Error())
 	}
 
+	// TODO remove hack below. This hack was added since key stored on disk needs to be modified
+	// so that HVS can register the key.
+	// ISECL - 3506 opened to address this issue later
+
 	// remove first two bytes from KeyAttestation. These are extra bytes written.
-	tpmCertifyKeyBytes, _ := b.StdEncoding.DecodeString(keyInfo.KeyAttestation)
+	tpmCertifyKeyBytes, err := b.StdEncoding.DecodeString(keyInfo.KeyAttestation)
+	if err != nil {
+		return httpRequestBody, errors.New("errror decoding name digest. " + err.Error())
+	}
 	tpmCertifyKey := b.StdEncoding.EncodeToString(tpmCertifyKeyBytes[2:])
 
 	// remove first byte from the value written to KeyName. This is an extra byte written.
 	originalNameDigest, err = b.StdEncoding.DecodeString(keyInfo.KeyName)
 	if err != nil {
-		return httpRequestBody, errors.New("errror decoding name digest. " + err.Error())
+		return httpRequestBody, errors.New("errror decoding key name. " + err.Error())
 	}
 	originalNameDigest = originalNameDigest[1:]
 
-	//append 0 added as padding
-	for i := 0; i < 34; i++ {
-		originalNameDigest = append(originalNameDigest, 0)
-	}
+	//pad zeroes
+	zeroes := make([]byte, 34)
+	originalNameDigest = append(originalNameDigest, zeroes[:]...)
 
 	nameDigest := b.StdEncoding.EncodeToString(originalNameDigest)
 
@@ -94,7 +100,7 @@ func CreateRequest(keyfilePath string) (mtwilson.RegisterKeyInfo, error) {
 	}
 
 	//construct request body
-	httpRequestBody = mtwilson.RegisterKeyInfo{
+	httpRequestBody = &mtwilson.RegisterKeyInfo{
 		PublicKeyModulus:       keyInfo.PublicKey,
 		TpmCertifyKey:          tpmCertifyKey,
 		TpmCertifyKeySignature: keyInfo.KeySignature,
@@ -106,14 +112,13 @@ func CreateRequest(keyfilePath string) (mtwilson.RegisterKeyInfo, error) {
 
 	return httpRequestBody, nil
 }
-func WriteKeyCertToDisk(keyCertPath string, aikPem string) error {
+func WriteKeyCertToDisk(keyCertPath string, aikPem []byte) error {
 	file, err := os.Create(keyCertPath)
 	if err != nil {
 		return errors.New("error creating file. " + err.Error())
 	}
-	_, err = file.Write([]byte(aikPem))
-	if err != nil {
-		return errors.New("error writing to file. " + err.Error())
+	if err = pem.Encode(file, &pem.Block{Type: consts.PemPublicKeyHeader, Bytes: aikPem}); err != nil {
+		return errors.New("error writing certificate to file")
 	}
 	return nil
 

@@ -15,8 +15,6 @@ type RegisterSigningKey struct {
 }
 
 func (rs RegisterSigningKey) Run(c csetup.Context) error {
-	const beginCert string = "-----BEGIN CERTIFICATE-----"
-	const endCert string = "-----END CERTIFICATE-----"
 
 	if rs.Validate(c) == nil {
 		log.Info("Signing key already registered. Skipping this setup task.")
@@ -45,10 +43,11 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 		return errors.New("error while updating the KBS user with envelope public key. " + err.Error())
 	}
 
-	aikPem := beginCert + "\n" + registerKey.SigningKeyCertificate + "\n" + endCert + "\n"
-
 	keyCertFilePath := consts.ConfigDirPath + consts.SigningKeyPemFileName
-	_ = common.WriteKeyCertToDisk(keyCertFilePath, aikPem)
+	err = common.WriteKeyCertToDisk(keyCertFilePath, registerKey.SigningKeyCertificate)
+	if err != nil {
+		return errors.New("error writing signing key certificate to file.")
+	}
 	return nil
 }
 

@@ -15,13 +15,11 @@ import (
 	"os"
 )
 
-const beginCert string = "-----BEGIN CERTIFICATE-----"
-const endCert string = "-----END CERTIFICATE-----"
-
 type RegisterBindingKey struct {
 }
 
 func (rb RegisterBindingKey) Run(c csetup.Context) error {
+	
 	if rb.Validate(c) == nil {
 		log.Info("Binding key already registered. Skipping this setup task.")
 		return nil
@@ -48,10 +46,12 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	if err != nil {
 		return errors.New("error while updating the KBS user with envelope public key. " + err.Error())
 	}
-	aikPem := beginCert + "\n" + registerKey.BindingKeyCertificate + "\n" + endCert + "\n"
 
 	keyCertFilePath := consts.ConfigDirPath + consts.BindingKeyPemFileName
-	_ = common.WriteKeyCertToDisk(keyCertFilePath, aikPem)
+	err = common.WriteKeyCertToDisk(keyCertFilePath, registerKey.BindingKeyCertificate)
+	if err != nil {
+		return errors.New("error writing binding key certificate to file.")
+	}
 	return nil
 }
 

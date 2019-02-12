@@ -27,4 +27,4 @@ replace intel/isecl/lib/verifier => gitlab.devtools.intel.com/sst/isecl/lib/veri
 
 replace intel/isecl/lib/platform-info => gitlab.devtools.intel.com/sst/isecl/lib/platform-info v0.0.0-20181206180455-b2908f06aa05
 
-replace intel/isecl/lib/mtwilson-client => gitlab.devtools.intel.com/sst/isecl/lib/mtwilson-client v0.0.0-20190210045813-8e0890707ce3
+replace intel/isecl/lib/mtwilson-client => gitlab.devtools.intel.com/sst/isecl/lib/mtwilson-client v0.0.0-20190212224605-988ee2e0f5a6
