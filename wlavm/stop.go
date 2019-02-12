@@ -7,11 +7,15 @@ import (
 	"intel/isecl/lib/common/exec"
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/util"
+	"intel/isecl/wlagent/libvirt"
+	"io/ioutil"
+	"strconv"
+	"sync"
 	"os"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"intel/isecl/lib/common/exec"
 	xmlpath "gopkg.in/xmlpath.v2"
 )
 
@@ -39,21 +43,21 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 	}
 
 	// get instance UUID from domain XML
-	instanceUUID, err := util.GetInstanceUUID(domainXML)
+	instanceUUID, err := libvirt.GetVMUUID(domainXML)
 	if err != nil {
 		log.Infof("%s", err)
 		return 1
 	}
 
 	// get instance path from domain XML
-	instancePath, err := util.GetInstancePath(domainXML)
+	instancePath, err := libvirt.GetVMPath(domainXML)
 	if err != nil {
 		log.Infof("%s", err)
 		return 1
 	}
 
 	// get image UUID from domain XML
-	imageUUID, err := util.GetImageUUID(domainXML)
+	imageUUID, err := libvirt.GetImageUUID(domainXML)
 	if err != nil {
 		log.Infof("%s", err)
 		return 1
@@ -209,4 +213,8 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string, error) {
 		return false, imagePath, fmt.Errorf("Error occured while writing to a file. %s" + err.Error())
 	}
 	return false, imagePath, nil
+}
+
+func CleanUp() {
+	
 }
