@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"io/ioutil"
 	"testing"
-
-	xmlpath "gopkg.in/xmlpath.v1"
+	"github.com/stretchr/testify/assert"
+	xmlpath "gopkg.in/xmlpath.v2"
 )
 
 func TestGetItemFromDomainXML(t *testing.T) {
@@ -16,12 +16,12 @@ func TestGetItemFromDomainXML(t *testing.T) {
 	assert.NoError(t, err)
 
 	// get vm UUID from domain XML
-	vmUUID, err := GetVmUUID(domainXML)
+	vmUUID, err := GetVMUUID(domainXML)
 	assert.NoError(t, err)
 	assert.Equal(t, vmUUID, "412ea302-1759-440b-894a-bfef290d7a63")
 
 	// get vm path from domain XML
-	vmPath, err := GetVmPath(domainXML)
+	vmPath, err := GetVMPath(domainXML)
 	assert.NoError(t, err)
 	assert.Equal(t, vmPath, "/var/lib/nova/instances/412ea302-1759-440b-894a-bfef290d7a63/disk")
 

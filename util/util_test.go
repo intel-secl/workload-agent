@@ -3,9 +3,6 @@ package util
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
-	xmlpath "gopkg.in/xmlpath.v2"
-	"io/ioutil"
-	"bytes"
 )
 
 func TestIsImageEncryptedTrue(t *testing.T) {
