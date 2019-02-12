@@ -1,6 +1,7 @@
 package main
 
 import (
+	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/filewatch"
 	wlrpc "intel/isecl/wlagent/rpc"
@@ -11,6 +12,9 @@ import (
 )
 
 func main() {
+	// Save log configurations
+	config.LogConfiguration(consts.LogDirPath + consts.DaemonLogFileName)
+
 	fileWatcher, err := filewatch.NewWatcher()
 	if err != nil {
 		log.Fatal(err)

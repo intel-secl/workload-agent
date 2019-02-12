@@ -3,8 +3,8 @@ package config
 import (
 	"encoding/hex"
 	"fmt"
-	"intel/isecl/wlagent/consts"
 	"intel/isecl/lib/common/exec"
+	"intel/isecl/wlagent/consts"
 	"io"
 	"io/ioutil"
 	"os"
@@ -160,16 +160,14 @@ func SaveConfiguration(c csetup.Context) error {
 }
 
 // LogConfiguration is used to save log configurations
-func LogConfiguration() {
+func LogConfiguration(logFilePath string) {
 	var succ bool
 	Configuration.LogLevel, succ = os.LookupEnv("LOG_LEVEL")
 	if !succ {
 		fmt.Printf("Log level configuration variable not set.")
 		Configuration.LogLevel = "debug"
 	}
-	// creating the log file if not preset
-	LogFilePath := consts.LogDirPath + consts.LogFileName
-	logFile, err := os.OpenFile(LogFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, os.ModeAppend)
+	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		fmt.Printf("unable to write file on filehook %v\n", err)
 		return

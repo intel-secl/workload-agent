@@ -62,9 +62,8 @@ func printUsage() {
 
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
-
 	// Save log configurations
-	config.LogConfiguration()
+	config.LogConfiguration(consts.LogDirPath + consts.LogFileName)
 
 	args := os.Args[1:]
 	if len(args) <= 0 {
@@ -178,10 +177,6 @@ func main() {
 	case "help", "-help", "--help":
 		printUsage()
 	}
-}
-func init() {
-	// Save log configurations
-	config.LogConfiguration()
 }
 
 func deleteFile(path string) {

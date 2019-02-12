@@ -5,12 +5,12 @@ domainxml="-"
 if [ $2 == "start" ] || [ $2 == "stopped" ]; then
 	domainXmlContents=$( cat $domainxml )
 	if [ $2 == "start" ]; then
-			wlagent start "'$domainXmlContents'"
+			wlagent start-vm "'$domainXmlContents'"
 			if [ $? -ne 0 ]; then
 					exit 1
 			fi
 	elif [ $2 == "stopped" ] ; then
-			wlagent stop "'$domainXmlContents'"
+			wlagent stop-vm "'$domainXmlContents'"
 			if [ $? -ne 0 ]; then
 					exit 1
 			fi
