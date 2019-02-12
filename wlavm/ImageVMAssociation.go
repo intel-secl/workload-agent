@@ -1,6 +1,7 @@
 package wlavm
 
 import (
+	"fmt"
 	"intel/isecl/wlagent/util"
 	"strings"
 
@@ -20,8 +21,7 @@ func (IAssoc ImageVMAssocociation) Create() error {
 	log.Debug("Loading yaml file to instance image association structure.")
 	err := util.LoadImageVMAssociation()
 	if err != nil {
-		log.Error("Failed to unmarshal.")
-		return err
+		return fmt.Errorf("Error occured while loading image VM association from a file. %s" + err.Error())
 	}
 	for i, item := range util.ImageVMAssociations {
 		if strings.Contains(item.ImageID, IAssoc.ImageUUID) {
@@ -48,20 +48,19 @@ func (IAssoc ImageVMAssocociation) Create() error {
 	}
 	err = util.SaveImageVMAssociation()
 	if err != nil {
-		log.Error("Failed to marshal.")
-		return err
+		return fmt.Errorf("Error occured while saving image VM association to a file. %s" + err.Error())
 	}
 	return nil
 }
 
 // Delete method is used to check if an entry exists with the image ID. If it does, decrement the instance count.
 // Check if the instance count is zero, then delete the image entry from the file.
-func (IAssoc ImageVMAssocociation) Delete() (bool, string) {
+func (IAssoc ImageVMAssocociation) Delete() (bool, string, error) {
 	imagePath := ""
 	isLastVM := false
 	err := util.LoadImageVMAssociation()
 	if err != nil {
-		log.Error("Failed to unmarshal.", err)
+		return isLastVM, imagePath, fmt.Errorf("Error occured while loading image VM association from a file. %s" + err.Error())
 	}
 	for i, item := range util.ImageVMAssociations {
 		imagePath = item.ImagePath
@@ -84,7 +83,7 @@ func (IAssoc ImageVMAssocociation) Delete() (bool, string) {
 	}
 	err = util.SaveImageVMAssociation()
 	if err != nil {
-		log.Error("Failed to marshal.", err)
+		return isLastVM, imagePath, fmt.Errorf("Error occured while saving image VM association to a file. %s" + err.Error())
 	}
-	return isLastVM, imagePath
+	return isLastVM, imagePath, nil
 }

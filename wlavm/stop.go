@@ -8,11 +8,8 @@ import (
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/util"
-	"io/ioutil"
 	"os"
-	"strconv"
 	"strings"
-	"sync"
 
 	log "github.com/sirupsen/logrus"
 	xmlpath "gopkg.in/xmlpath.v2"
@@ -92,7 +89,8 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 
 	// check if this is the last instance associated with the image
 	log.Info("Checking if this is the last instance using the image.")
-	isLastInstance, imagePath, err = isLastInstanceAssociatedWithImage(imageUUID)
+	iAssoc := ImageVMAssocociation{imageUUID, ""}
+	isLastInstance, imagePath, err = iAssoc.Delete()
 	if err != nil {
 		log.Error(err)
 		return 1
