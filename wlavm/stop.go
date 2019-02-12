@@ -3,6 +3,7 @@
 package wlavm
 
 import (
+	"fmt"
 	"intel/isecl/lib/common/exec"
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/consts"
@@ -15,6 +16,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	xmlpath "gopkg.in/xmlpath.v2"
+)
+
+var (
+	isInstanceVolume bool
+	isLastInstance   bool
+	imagePath        string
 )
 
 // Stop is called from the libvirt hook. Everytime stop cycle is called
@@ -64,7 +71,11 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 
 	// check if the instance volume is encrypted
 	log.Info("Checking if instance volume is encrypted.")
-	var isInstanceVolume = isInstanceVolumeEncrypted(instanceUUID)
+	isInstanceVolume, err = isInstanceVolumeEncrypted(instanceUUID)
+	if err != nil {
+		log.Error(err)
+		return 1
+	}
 	// if instance volume is encrypted, close the volume
 	if isInstanceVolume {
 		var instanceMountPath = consts.MountPath + instanceUUID
@@ -81,8 +92,11 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 
 	// check if this is the last instance associated with the image
 	log.Info("Checking if this is the last instance using the image.")
-	iAssoc := ImageVMAssocociation{imageUUID, ""}
-	var isLastInstance, imagePath = iAssoc.Delete()
+	isLastInstance, imagePath, err = isLastInstanceAssociatedWithImage(imageUUID)
+	if err != nil {
+		log.Error(err)
+		return 1
+	}
 	// as the original image is deleted during the VM start process, there is no way
 	// to check if original image is encrypted. Instead we check if sparse file of image
 	// exists at given path, if it does that means the image was enrypted and volumes were created
@@ -112,7 +126,7 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 	return 0
 }
 
-func isInstanceVolumeEncrypted(instanceUUID string) bool {
+func isInstanceVolumeEncrypted(instanceUUID string) (bool, error) {
 	// check the status of the device mapper
 	log.Info("Checking the status of the device mapper.")
 	deviceMapperLocation := consts.DevMapperDirPath + instanceUUID
@@ -121,19 +135,19 @@ func isInstanceVolumeEncrypted(instanceUUID string) bool {
 
 	if cmdOutput != "" && strings.Contains(cmdOutput, "inactive") {
 		log.Debug("The device mapper is inactive.")
-		return false
+		return false, nil
 	}
 
 	if err != nil {
-		log.Error("Error occured while executing cryptsetup status command.", err)
+		return false, fmt.Errorf("Error occured while executing cryptsetup status command. %s" + err.Error())
 	}
 	log.Debug("The device mapper is encrypted and active.")
-	return true
+	return true, nil
 }
 
 var fileMutex sync.Mutex
 
-func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
+func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string, error) {
 	var imagePath = ""
 	imageInstanceAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
 
@@ -144,7 +158,7 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 	log.Info("Reading image instance association file.")
 	str, err := ioutil.ReadFile(imageInstanceAssociationFile)
 	if err != nil {
-		log.Error("Error occured while reading a file.", err)
+		return false, imagePath, fmt.Errorf("Error occured while reading a file. %s" + err.Error())
 	}
 
 	log.Info("Recursively checking if imageid exists in file. If it does, reduce the instance count by 1.")
@@ -182,9 +196,9 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 			outputToFile := strings.Join(lines[:len(lines)-1], "\n")
 			err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(outputToFile), 0644)
 			if err != nil {
-				log.Error("Error occured while writing to a file.", err)
+				return false, imagePath, fmt.Errorf("Error occured while writing to a file. %s" + err.Error())
 			}
-			return true, imagePath
+			return true, imagePath, nil
 		}
 	}
 	log.Debug("Image ID not found in image instance association file.")
@@ -195,7 +209,7 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string) {
 	outputToFile := strings.Join(lines, "\n")
 	err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(outputToFile), 0644)
 	if err != nil {
-		log.Error("Error occured while writing to a file.", err)
+		return false, imagePath, fmt.Errorf("Error occured while writing to a file. %s" + err.Error())
 	}
-	return false, imagePath
+	return false, imagePath, nil
 }
