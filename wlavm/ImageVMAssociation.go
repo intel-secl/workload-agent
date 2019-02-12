@@ -21,7 +21,7 @@ func (IAssoc ImageVMAssocociation) Create() error {
 	log.Debug("Loading yaml file to instance image association structure.")
 	err := util.LoadImageVMAssociation()
 	if err != nil {
-		return fmt.Errorf("Error occured while loading image VM association from a file. %s" + err.Error())
+		return fmt.Errorf("error occured while loading image VM association from a file. %s" + err.Error())
 	}
 	for i, item := range util.ImageVMAssociations {
 		if strings.Contains(item.ImageID, IAssoc.ImageUUID) {
@@ -48,7 +48,7 @@ func (IAssoc ImageVMAssocociation) Create() error {
 	}
 	err = util.SaveImageVMAssociation()
 	if err != nil {
-		return fmt.Errorf("Error occured while saving image VM association to a file. %s" + err.Error())
+		return fmt.Errorf("error occured while saving image VM association to a file. %s" + err.Error())
 	}
 	return nil
 }
@@ -60,7 +60,7 @@ func (IAssoc ImageVMAssocociation) Delete() (bool, string, error) {
 	isLastVM := false
 	err := util.LoadImageVMAssociation()
 	if err != nil {
-		return isLastVM, imagePath, fmt.Errorf("Error occured while loading image VM association from a file. %s" + err.Error())
+		return isLastVM, imagePath, fmt.Errorf("error occured while loading image VM association from a file. %s" + err.Error())
 	}
 	for i, item := range util.ImageVMAssociations {
 		imagePath = item.ImagePath
@@ -83,7 +83,7 @@ func (IAssoc ImageVMAssocociation) Delete() (bool, string, error) {
 	}
 	err = util.SaveImageVMAssociation()
 	if err != nil {
-		return isLastVM, imagePath, fmt.Errorf("Error occured while saving image VM association to a file. %s" + err.Error())
+		return isLastVM, imagePath, fmt.Errorf("error occured while saving image VM association to a file. %s" + err.Error())
 	}
 	return isLastVM, imagePath, nil
 }
