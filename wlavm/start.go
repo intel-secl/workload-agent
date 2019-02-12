@@ -124,7 +124,7 @@ func Start(domainXMLContent string) bool {
 	log.Debugf("The host hardware UUID is :%s", hardwareUUID)
 
 	//get flavor-key from workload service
-	log.Info("Retrieving image-flavor-key for image %s from WLS", imageUUID)
+	log.Infof("Retrieving image-flavor-key for image %s from WLS", imageUUID)
 	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID, keyID)
 	if err != nil {
 		log.Errorf("Error retrieving the image flavor and key: %s", err.Error())
@@ -165,7 +165,7 @@ func Start(domainXMLContent string) bool {
 			log.Info("Creating and mounting image dm-crypt volume")
 			err = imageVolumeManager(imageUUID, imagePath, size, key)
 			if err != nil {
-				log.Error(err.Error)
+				log.Error(err.Error())
 				return false
 			}
 		}
@@ -246,7 +246,7 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte) error {
 	}
 
 	// copy the files from vm path
-	log.Debug("Copying all the files from %s to vm mount path", vmPath)
+	log.Debugf("Copying all the files from %s to vm mount path", vmPath)
 	args := []string{vmPath, vmDeviceMapperMountPath}
 	_, err = exec.ExecuteCommand("cp", args)
 	if err != nil {
@@ -257,7 +257,7 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte) error {
 	log.Debugf("Deleting change disk %s:", vmPath)
 	err = os.RemoveAll(vmPath)
 	if err != nil {
-		return fmt.Errorf("error deleting the change disk: ", vmPath)
+		return fmt.Errorf("error deleting the change disk: %s", vmPath)
 	}
 
 	log.Debug("Creating a symlink between the vm and the volume")
@@ -272,13 +272,13 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte) error {
 
 func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte) error {
 	// create image dm-crypt volume
-	log.Debug("Creating a dm-crypt volume for the image %s", imageUUID)
+	log.Debugf("Creating a dm-crypt volume for the image %s", imageUUID)
 	var err error
 	imageDeviceMapperPath := consts.DevMapperDirPath + imageUUID
 	sparseFilePath := imagePath + "_sparseFile"
 	err = vml.CreateVolume(sparseFilePath, imageDeviceMapperPath, key, size)
 	if err != nil {
-		return fmt.Errorf("error while creating image dm-crypt volume for image: ", err.Error())
+		return fmt.Errorf("error while creating image dm-crypt volume for image: %s", err.Error())
 	}
 
 	//check if the image device mapper is mount path exists, if not create it
@@ -334,10 +334,10 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 	log.Debugf("Deleting the enc image file from :%s", sourceFile)
 	rmErr := os.RemoveAll(sourceFile)
 	if rmErr != nil {
-		return fmt.Errorf("error deleting the change disk: ", sourceFile)
+		return fmt.Errorf("error deleting the change disk: %s", sourceFile)
 	}
 
-	log.Debug("Creating a symlink between %s and %s", sourceFile, targetFile)
+	log.Debugf("Creating a symlink between %s and %s", sourceFile, targetFile)
 	// create symlink between the image and the dm-crypt volume
 	err = os.Symlink(targetFile, sourceFile)
 	if err != nil {
