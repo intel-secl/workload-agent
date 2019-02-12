@@ -28,91 +28,83 @@ var (
 // Stop is called from the libvirt hook. Everytime stop cycle is called
 // in any of the VM lifecycle events, this method will be called.
 // e.g. shutdown, reboot, stop etc.
-//
-// Input Parameter:
-//
-// 	iunstanceUUID – Instace uuid or VM uuid
-//  imageUUID - Image uuid
-//  instancePath - Absolute path of the instance
-func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
-	log.Info("Stop call intercepted.")
+// Input Parameters: domainXML content string
+// Return : Returns a boolean value to the main method.
+// true if the vm is launched sucessfully, else returns false. 
+func Stop(domainXMLContent string) bool {
+
+	log.Info("Stop call intercepted")
+	log.Info("Parsing domain XML to get image UUID, VM UUId and VM path")
 	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
 	if err != nil {
-		log.Infof("Error while parsing domaXML: %s", err)
-		return 1
+		log.Errorf("Error while parsing domaXML: %s", err)
+		return false
 	}
 
-	// get instance UUID from domain XML
-	instanceUUID, err := libvirt.GetVMUUID(domainXML)
+	// get vm UUID from domain XML
+	vmUUID, err := libvirt.GetVMUUID(domainXML)
 	if err != nil {
-		log.Infof("%s", err)
-		return 1
+		log.Errorf(err.Error())
+		return false
 	}
 
-	// get instance path from domain XML
-	instancePath, err := libvirt.GetVMPath(domainXML)
+	// get vm path from domain XML
+	vmPath, err := libvirt.GetVMPath(domainXML)
 	if err != nil {
-		log.Infof("%s", err)
-		return 1
+		log.Errorf(err.Error())
+		return false
 	}
 
 	// get image UUID from domain XML
 	imageUUID, err := libvirt.GetImageUUID(domainXML)
 	if err != nil {
-		log.Infof("%s", err)
-		return 1
+		log.Errorf(err.Error())
+		return false
 	}
 
-	// check if instance exists at given path
-	log.Info("Checking if instance exists at given instance path.")
-	if _, err := os.Stat(instancePath); os.IsNotExist(err) {
-		return 1
+	// check if vm exists at given path
+	log.Infof("Checking if VM exists in %s", vmPath)
+	if _, err := os.Stat(vmPath); os.IsNotExist(err) {
+		log.Error("VM does not exist")
+		return false
 	}
 
-	// check if the instance volume is encrypted
-	log.Info("Checking if instance volume is encrypted.")
-	isInstanceVolume, err = isInstanceVolumeEncrypted(instanceUUID)
-	if err != nil {
-		log.Error(err)
-		return 1
-	}
-	// if instance volume is encrypted, close the volume
-	if isInstanceVolume {
-		var instanceMountPath = consts.MountPath + instanceUUID
+	// check if the vm volume is encrypted
+	log.Info("Checking if vm volume is encrypted.")
+	var isvmVolume = isvmVolumeEncrypted(vmUUID)
+	// if vm volume is encrypted, close the volume
+	if isvmVolume {
+		var vmMountPath = consts.MountPath + vmUUID
 		// Unmount the image
-		log.Info("Instance volume is encrypted, deleting the instance volume.")
-		vml.Unmount(instanceMountPath)
-		vml.DeleteVolume(instanceUUID)
-		err := os.RemoveAll(instanceMountPath)
+		log.Info("vm volume is encrypted, deleting the vm volume.")
+		vml.Unmount(vmMountPath)
+		vml.DeleteVolume(vmUUID)
+		err := os.RemoveAll(vmMountPath)
 		if err != nil {
-			log.Error("Error while deleting the instance mount point")
-			return 1
+			log.Error("Error while deleting the vm mount point")
+			return false
 		}
 	}
 
-	// check if this is the last instance associated with the image
-	log.Info("Checking if this is the last instance using the image.")
-	iAssoc := ImageVMAssociation{imageUUID, ""}
-	isLastInstance, imagePath, err = iAssoc.Delete()
-	if err != nil {
-		log.Error(err)
-		return 1
-	}
+	// check if this is the last vm associated with the image
+	log.Info("Checking if this is the last vm using the image...")
+	var isLastvm, imagePath = isLastvmAssociatedWithImage(imageUUID)
 	// as the original image is deleted during the VM start process, there is no way
 	// to check if original image is encrypted. Instead we check if sparse file of image
 	// exists at given path, if it does that means the image was enrypted and volumes were created
 	if _, err := os.Stat(imagePath + "_sparseFile"); os.IsNotExist(err) {
 		log.Info("The base image is not ecrypted. Exiting with success.")
-		return 0
+		return true
 	}
 
-	// check if this is the last instance associated with the image
-	if !isLastInstance {
-		log.Info("Not deleting the image volume as this is not the last instance using the image. Exiting with success.")
-		return 0
+	// check if this is the last vm associated with the image
+	if !isLastvm {
+		log.Infof("VM % stopped", vmUUID)
+		log.Info("Not deleting the image volume as this is not the last vm using the image. Exiting with success.")
+		return true
 	}
 
-	log.Info("Unmounting and deleting the image volume as this is the last instance using the image.")
+	log.Info("Unmounting and deleting the image volume as this is the last vm using the image")
 	var imageMountPath = consts.MountPath + imageUUID
 	// Unmount the image
 	vml.Unmount(imageMountPath)
@@ -121,16 +113,18 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 	vml.DeleteVolume(imageUUID)
 	err = os.RemoveAll(imageMountPath)
 	if err != nil {
-		log.Info("Error while deleting the instance mount point")
-		return 1
+		log.Error("Error while deleting the vm mount point")
+		return false
 	}
-	return 0
+
+	log.Infof("VM % stopped", vmUUID)
+	return true
 }
 
-func isInstanceVolumeEncrypted(instanceUUID string) (bool, error) {
+func isvmVolumeEncrypted(vmUUID string) bool {
 	// check the status of the device mapper
-	log.Info("Checking the status of the device mapper.")
-	deviceMapperLocation := consts.DevMapperDirPath + instanceUUID
+	log.Debug("Checking the status of the device mapper.")
+	deviceMapperLocation := consts.DevMapperDirPath + vmUUID
 	args := []string{"status", deviceMapperLocation}
 	cmdOutput, err := exec.ExecuteCommand("cryptsetup", args)
 
@@ -140,7 +134,7 @@ func isInstanceVolumeEncrypted(instanceUUID string) (bool, error) {
 	}
 
 	if err != nil {
-		return false, fmt.Errorf("Error occured while executing cryptsetup status command. %s" + err.Error())
+		log.Error(err.Error())
 	}
 	log.Debug("The device mapper is encrypted and active.")
 	return true, nil
@@ -148,43 +142,42 @@ func isInstanceVolumeEncrypted(instanceUUID string) (bool, error) {
 
 var fileMutex sync.Mutex
 
-func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string, error) {
+func isLastvmAssociatedWithImage(imageUUID string) (bool, string) {
 	var imagePath = ""
-	imageInstanceAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
+	imagevmAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
 
 	// Read from a file and store it in a string
 	// FORMAT OF THE FILE:
-	// <image UUID> <instances running of that image>
-	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
-	log.Info("Reading image instance association file.")
-	str, err := ioutil.ReadFile(imageInstanceAssociationFile)
+	// <image UUID> <vms running of that image>
+	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/vms/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
+	log.Debug("Reading image vm association file.")
+	str, err := ioutil.ReadFile(imagevmAssociationFile)
 	if err != nil {
-		return false, imagePath, fmt.Errorf("Error occured while reading a file. %s" + err.Error())
+		log.Error(err.Error())
 	}
 
-	log.Info("Recursively checking if imageid exists in file. If it does, reduce the instance count by 1.")
+	log.Info("Recursively checking if image uuid exists in file. If it does, reduce the vm count by 1.")
 	lines := strings.Split(string(str), "\n")
 	for i, line := range lines {
-		log.Debug("line: ", line)
 		if strings.TrimSpace(line) == "" {
 			break
 		}
 		// Split words of each line by space character into an array
 		words := strings.Fields(line)
 		imagePath = words[1]
-		// To check the if this is the last instance running of that image
+		// To check the if this is the last vm running of that image
 		// check if the first part of the line matches given image uuid and
-		// then check if there is only 1 instance running of that image (which is the current one)
+		// then check if there is only 1 vm running of that image (which is the current one)
 		count := strings.Split(words[2], ":")
-		// Reduce the number of instance by 1 and if it is zero; delete that entry
+		// Reduce the number of vm by 1 and if it is zero; delete that entry
 		if strings.Contains(words[0], imageUUID) {
-			log.Debug("Image ID found in image instance association file. Reducing instance count by 1.")
+			log.Debug("Image ID found in image vm association file. Reducing vm count by 1.")
 			cnt, _ := strconv.Atoi(count[1])
 			replaceLine := strings.Replace(string(line), "count:"+count[1], "count:"+strconv.Itoa(cnt-1), 1)
 			lines[i] = replaceLine
 		}
 		if strings.Contains(words[0], imageUUID) && count[1] == "1" {
-			log.Debugf("Deleting image entry %s as this was last instance to use the image.", imageUUID)
+			log.Debugf("Deleting image entry %s as this was last vm to use the image.", imageUUID)
 			lines[i] = lines[len(lines)-1]
 
 			// After modifying contents, store it back to the file
@@ -195,20 +188,19 @@ func isLastInstanceAssociatedWithImage(imageUUID string) (bool, string, error) {
 			// Release the mutext lock
 			defer fileMutex.Unlock()
 			outputToFile := strings.Join(lines[:len(lines)-1], "\n")
-			err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(outputToFile), 0644)
+			err = ioutil.WriteFile(imagevmAssociationFile, []byte(outputToFile), 0644)
 			if err != nil {
 				return false, imagePath, fmt.Errorf("Error occured while writing to a file. %s" + err.Error())
 			}
 			return true, imagePath, nil
 		}
 	}
-	log.Debug("Image ID not found in image instance association file.")
 	// Add mutex lock so that at one time only one process can write to a file
 	fileMutex.Lock()
 	// Release the mutext lock
 	defer fileMutex.Unlock()
 	outputToFile := strings.Join(lines, "\n")
-	err = ioutil.WriteFile(imageInstanceAssociationFile, []byte(outputToFile), 0644)
+	err = ioutil.WriteFile(imagevmAssociationFile, []byte(outputToFile), 0644)
 	if err != nil {
 		return false, imagePath, fmt.Errorf("Error occured while writing to a file. %s" + err.Error())
 	}

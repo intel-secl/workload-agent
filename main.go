@@ -117,32 +117,22 @@ func main() {
 			os.Exit(1)
 		}
 
-		log.Info("workload-agent start called")
 		startState := wlavm.Start(args[1])
 		if !startState {
 			wlavm.CleanUp()
 			os.Exit(1)
+		} else {
+			os.Exit(0)
 		}
-		os.Exit(0)
 
 	case "stop":
 		if len(args[1:]) < 1 {
 			log.Info("Invalid number of parameters")
 			os.Exit(1)
 		}
-		log.Info("workload-agent stop called")
-		conn, err := net.Dial("unix", rpcSocketFilePath)
-		if err != nil {
-			log.Fatal("stop-vm: failed to dial wlagent.sock, is wlagent running?")
-			os.Exit(1)
-		}
-		client := rpc.NewClient(conn)
-		var returnCode int
-		var args = wlrpc.DomainXML{
-			XML: args[1],
-		}
-		client.Call("VirtualMachine.Stop", &args, &returnCode)
-		if returnCode == 1 {
+
+		stopState := wlavm.Stop(args[1])
+		if !stopState {
 			os.Exit(1)
 		} else {
 			os.Exit(0)

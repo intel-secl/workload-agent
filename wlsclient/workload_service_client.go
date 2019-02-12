@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	log "github.com/sirupsen/logrus"
+	"net/url"
 )
 
 //FlavorKey is a representation of flavor-key information
@@ -20,19 +21,26 @@ type FlavorKey struct {
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
 func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error) {
 	var flavorKeyInfo FlavorKey
-	requestURL := config.Configuration.Wls.APIURL + "images/" + imageUUID +"/flavor-key?hardware_uuid=" + hardwareUUID
-
-	var flavorKeyInfo FlavorKey
-	if len(strings.TrimSpace(keyID)) > 0 {
-		requestURL = requestURL + "&&keyId=" + keyID
-	}
-
-	httpRequest, err := http.NewRequest("GET", requestURL, nil)
+	
+	requestURL, err := url.Parse(config.Configuration.Wls.APIURL + "images/" + imageUUID + "/flavor-key?hardware_uuid=" + hardwareUUID)
 	if err != nil {
 		return flavorKeyInfo, err
 	}
 
-	log.Debugf("WLS image-flavor-key retrieval GET request URL: %s", requestURL)
+	var flavorKeyInfo FlavorKey
+	if len(strings.TrimSpace(keyID)) > 0 {
+		requestURL, err = url.Parse("&&keyId=" + keyID)
+		if err != nil {
+			return flavorKeyInfo, err
+		}
+	}
+
+	httpRequest, err := http.NewRequest("GET", requestURL.String(), nil)
+	if err != nil {
+		return flavorKeyInfo, err
+	}
+
+	log.Debugf("WLS image-flavor-key retrieval GET request URL: %s", requestURL.String())
 	httpRequest.Header.Set("Accept", "application/json")
 	httpRequest.Header.Set("Content-Type", "application/json")
 	//httpRequest.SetBasicAuth(config.WlaConfig.WlsAPIUsername, config.WlaConfig.WlsAPIPassword)
@@ -57,14 +65,16 @@ func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error)
 //PostVMReport method is used to upload the VM trust report to workload service
 func PostVMReport(report []byte) error {
 	var err error
-	var requestURL string
 
 	//Add client here
-	requestURL = config.Configuration.Wls.APIURL + "reports"
+	requestURL, err := url.Parse(config.Configuration.Wls.APIURL + "reports")
+	if err != nil {
+		return err
+	}
 
-	log.Debugf("WLS VM reports POST Request URL: %s", requestURL)
+	log.Debugf("WLS VM reports POST Request URL: %s", requestURL.String())
 	// set POST request Accept and Content-Type headers
-	httpRequest, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(report))
+	httpRequest, err := http.NewRequest("POST", requestURL.String(), bytes.NewBuffer(report))
 	httpRequest.Header.Set("Accept", "application/json")
 	httpRequest.Header.Set("Content-Type", "application/json")
 	//httpRequest.SetBasicAuth(config.WlaConfig.WlsAPIUsername, config.WlaConfig.WlsAPIPassword)

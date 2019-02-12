@@ -50,13 +50,15 @@ func CloseTpmInstance()(){
 
 // Start method is used perform the VM confidentiality check before lunching the VM
 // Input Parameters: domainXML content string
-// Return : Returns an int value to the libvirt hook.
-// 0 if the vm is launched sucessfully, else return 1. 
+// Return : Returns a boolean value to the main method.
+// true if the vm is launched sucessfully, else returns false. 
 func Start(domainXMLContent string) bool {
 
+	log.Info("VM start call intercepted")
 	var skipImageVolumeCreation = false
 	var err error
 
+	log.Info("Parsing domain XML to get image UUID, image path, VM UUId, VM path and disk size")
 	parsedValues, err := getValuesFromDomainXML(domainXMLContent)
 	if err != nil {
 		log.Error(err.Error())
@@ -282,7 +284,6 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	}
 
 	//check if the image device mapper is mount path exists, if not create it
-	log.Debug("Mounting the image volume on a mount path")
 	imageDeviceMapperMountPath := consts.MountPath + imageUUID
 	err = checkMountPathExistsAndMountVolume(imageDeviceMapperMountPath, imageDeviceMapperPath)
 	if err != nil {
@@ -306,7 +307,7 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	// write the decrypted data into a file in image mount path
 	log.Debug("Writting decrypted data in to a file")
 	decryptedImagePath := imageDeviceMapperMountPath + "/" + imageUUID
-	ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0655)
+	ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0644)
 	if ioWriteErr != nil {
 		return errors.New("error writing the decrypted data to file")
 	}
@@ -438,7 +439,6 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 
 func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	
-	log.Debug("Unwrapping the TPM wrapped key")
 	var certifiedKey tpm.CertifiedKey
 	t, err := GetTpmvm()
 
@@ -566,42 +566,48 @@ func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) erro
 }
 
 // this method is used to parse domain XML and fetch VM uuid, VM path, image UUID, image path and disk size
-func getValuesFromDomainXML(domainXMLContent string) ([]string, error) {
+func getValuesFromDomainXML(domainXMLContent string) ([5]string, error) {
 	
-	var parsedValues []string
+	var parsedValues [5]string
 	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
 	if err != nil {
 		return parsedValues, fmt.Errorf("error while trying to parse the domain XML: %s", err.Error())
 	}
 
 	// get vm UUID from domain XML
-	parsedValues[0], err = libvirt.GetVMUUID(domainXML)
+	vmUUID, err := libvirt.GetVMUUID(domainXML)
 	if err != nil {
 		return parsedValues, err
 	}
+	parsedValues[0] = vmUUID
 
 	// get vm path from domain XML
-	parsedValues[1], err = libvirt.GetVMPath(domainXML)
+	vmPath, err := libvirt.GetVMPath(domainXML)
 	if err != nil {
 		return parsedValues, err
 	}
+	parsedValues[1] = vmPath
 
 	// get image UUID from domain XML
-	parsedValues[2], err = libvirt.GetImageUUID(domainXML)
+	imageUUID, err := libvirt.GetImageUUID(domainXML)
 	if err != nil {
 		return parsedValues, err
 	}
+	parsedValues[2] = imageUUID
 
 	// get image path from domain XML
-	parsedValues[3], err = libvirt.GetImagePath(domainXML)
+	imagePath, err := libvirt.GetImagePath(domainXML)
 	if err != nil {
 		return parsedValues, err
 	}
+	parsedValues[3] = imagePath
 
 	// get disk size from domain XML
-	parsedValues[4], err = libvirt.GetDiskSize(domainXML)
+	diskSize, err := libvirt.GetDiskSize(domainXML)
 	if err != nil {
 		return parsedValues, err
 	}
+	parsedValues[4] = diskSize
+
 	return parsedValues, nil
 }

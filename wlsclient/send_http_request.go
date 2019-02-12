@@ -7,9 +7,6 @@ import (
 	"intel/isecl/wlagent/config"
 	"io/ioutil"
 	"net/http"
-	"strconv"
-
-	log "github.com/sirupsen/logrus"
 )
 
 //SendRequest method is used to create an http client object and send the request to the server
@@ -55,6 +52,5 @@ func SendRequest(req *http.Request, insecureConnection bool) ([]byte, error) {
 		return nil, err
 	}
 
-	log.Info("status code returned : ", strconv.Itoa(response.StatusCode))
 	return body, nil
 }
