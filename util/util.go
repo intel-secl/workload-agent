@@ -35,7 +35,14 @@ func LoadImageVMAssociation() error {
 	log.Info("Reading image instance association file.")
 	data, err := ioutil.ReadFile(imageVMAssociationFile)
 	if err != nil {
-		return err
+		if os.IsNotExist(err) {
+			// error is that the config doesnt yet exist, create it
+			_, err = os.Create(imageVMAssociationFile)
+			data = []byte{}
+			if err != nil {
+				return err
+			}
+		}
 	}
 	err = yaml.Unmarshal([]byte(data), &ImageVMAssociations)
 	if err != nil {

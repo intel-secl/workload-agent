@@ -23,10 +23,15 @@ func (IAssoc ImageVMAssocociation) Create() error {
 		log.Error("Failed to unmarshal.")
 		return err
 	}
-	for _, item := range util.ImageVMAssociations {
+	for i, item := range util.ImageVMAssociations {
 		if strings.Contains(item.ImageID, IAssoc.ImageUUID) {
 			log.Debug("Image ID already exist in file, increasing the count of instance by 1.")
 			item.VMCount = item.VMCount + 1
+			util.ImageVMAssociations[i] = util.ImageVMAssociation{
+				ImageID:   item.ImageID,
+				ImagePath: item.ImagePath,
+				VMCount:   item.VMCount,
+			}
 			imageUUIDFound = true
 			break
 		}
@@ -63,6 +68,11 @@ func (IAssoc ImageVMAssocociation) Delete() (bool, string) {
 		if strings.Contains(item.ImageID, IAssoc.ImageUUID) {
 			log.Debug("Image ID already exist in file, decreasing the count of instance by 1.")
 			item.VMCount = item.VMCount - 1
+			util.ImageVMAssociations[i] = util.ImageVMAssociation{
+				ImageID:   item.ImageID,
+				ImagePath: item.ImagePath,
+				VMCount:   item.VMCount,
+			}
 			if item.VMCount == 0 {
 				log.Debug("VM count is 0, hence deleting the entry with image id ", IAssoc.ImageUUID)
 				util.ImageVMAssociations[i] = util.ImageVMAssociations[0]

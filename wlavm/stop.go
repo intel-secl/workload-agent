@@ -72,7 +72,7 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 		vml.DeleteVolume(instanceUUID)
 		err := os.RemoveAll(instanceMountPath)
 		if err != nil {
-			log.Info("Error while deleting the instance mount point")
+			log.Error("Error while deleting the instance mount point")
 			return 1
 		}
 	}
