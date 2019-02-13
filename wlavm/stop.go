@@ -8,9 +8,6 @@ import (
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/libvirt"
-	"io/ioutil"
-	"strconv"
-	"sync"
 	"os"
 	"strings"
 
@@ -205,6 +202,10 @@ func isLastvmAssociatedWithImage(imageUUID string) (bool, string) {
 		return false, imagePath, fmt.Errorf("Error occured while writing to a file. %s" + err.Error())
 	}
 	return false, imagePath, nil
+}
+
+func CleanUp() {
+	
 }
 
 func CleanUp() {

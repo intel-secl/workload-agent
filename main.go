@@ -121,9 +121,8 @@ func main() {
 		if !startState {
 			wlavm.CleanUp()
 			os.Exit(1)
-		} else {
-			os.Exit(0)
 		}
+		os.Exit(0)
 
 	case "stop":
 		if len(args[1:]) < 1 {
@@ -134,10 +133,8 @@ func main() {
 		stopState := wlavm.Stop(args[1])
 		if !stopState {
 			os.Exit(1)
-		} else {
-			os.Exit(0)
 		}
-		fmt.Println("Return code from VM stop :", returnCode)
+		os.Exit(0)
 
 	case "uninstall":
 		deleteFile(consts.WLABinFilePath)

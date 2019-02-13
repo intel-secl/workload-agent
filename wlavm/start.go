@@ -88,7 +88,7 @@ func Start(domainXMLContent string) bool {
 	} else {
 		// check if image is encrypted
 		log.Info("Image is not a symlink, so checking is image is encrypted...")
-		isImageEncrypted, err := util.IsImageEncrypted(imagePath)
+		isImageEncrypted, err := util.IsFileEncrypted(imagePath)
 		if !isImageEncrypted {
 			log.Info("Image is not encrypted, returning to the hook")
 			return true
@@ -468,70 +468,6 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 
 	log.Debug("Unbinding TPM wrapped key was successful, return the key")
 	return key, nil
-}
-
-func imagevmCountAssociation(imageUUID, imagePath string) error {
-
-	imageUUIDFound := false
-	imagevmCountAssociationFilePath := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
-	
-	// creating the image-vm file if not preset
-	_, err := os.Stat(imagevmCountAssociationFilePath)
-	if os.IsNotExist(err) {
-		log.Info("Image-vm count file doesnot exists. Creating the file")
-		args := []string{imagevmCountAssociationFilePath}
-		_, touchErr := exec.ExecuteCommand("touch", args)
-		if touchErr != nil {
-			log.Info("Error while trying to create the image-vm count association file")
-			return touchErr
-		}
-	}
-	
-	// read the contents of the file
-	args := []string{imagevmCountAssociationFilePath}
-	output, err := exec.ExecuteCommand("cat", args)
-	if err != nil {
-		log.Info("Error while reading the contents of the file")
-		return err
-	}
-
-	fileContents := strings.Split(string(output), "\n")
-	for i, lineContent := range fileContents {
-		if strings.Contains(lineContent, imageUUID) {
-			// increment the count and replace the count in the string
-			contentArray := strings.Split(lineContent, "\t")
-			countSection := contentArray[len(contentArray)-1]
-			splitCountSection := strings.Split(countSection, ":")
-			currentCount, _ := strconv.Atoi(splitCountSection[len(splitCountSection)-1])
-			replaceString := strconv.Itoa(i+1) + " s/count:" + strconv.Itoa(currentCount) + "/count:" + strconv.Itoa(currentCount+1) + "/"
-			args := []string{ "-i", replaceString, imagevmCountAssociationFilePath}
-			_, sedErr := exec.ExecuteCommand("sed", args)
-			if sedErr != nil {
-				log.Info("Error while replacing the count of the vm for an image")
-				return err
-			}
-			imageUUIDFound = true
-			break
-		}
-
-	}
-
-	if !imageUUIDFound {
-		data := imageUUID + "\t" + imagePath + "\t" + "count:" + strconv.Itoa(1) + "\n"
-
-		f, err := os.OpenFile(imagevmCountAssociationFilePath, os.O_WRONLY|os.O_APPEND, 0600)
-		if err != nil {
-			log.Info("Error while opening image-vm information")
-			return err
-		}
-
-		defer f.Close()
-		if _, err = f.WriteString(data); err != nil {
-			log.Info("Error while writing image-vm information")
-			return err
-		}
-	}
-	return nil
 }
 
 // This method is used to check if the key for an image file is cached.

@@ -1,10 +1,14 @@
 package util
 
 import (
-	"fmt"
 	"intel/isecl/lib/common/crypt"
-	"strings"
+	"intel/isecl/wlagent/consts"
 	"io/ioutil"
+	"strings"
+	"sync"
+
+	log "github.com/sirupsen/logrus"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // ImageVMAssociations is variable that consists of array of ImageVMAssociation struct
@@ -19,7 +23,7 @@ type ImageVMAssociation struct {
 
 // LoadImageVMAssociation method loads image instance association from yaml file
 func LoadImageVMAssociation() error {
-	imageVMAssociationFilePath := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
+	imageVMAssociationFile := consts.ConfigDirPath + consts.ImageVmCountAssociationFileName
 	// Read from a file and store it in a string
 	// FORMAT OF THE FILE:
 	// <image UUID> <instances running of that image>
@@ -40,7 +44,7 @@ func LoadImageVMAssociation() error {
 
 // SaveImageVMAssociation method saves instance image association to yaml file
 func SaveImageVMAssociation() error {
-	imageVMAssociationFilePath := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
+	imageVMAssociationFile := consts.ConfigDirPath + consts.ImageVmCountAssociationFileName
 	// FORMAT OF THE FILE:
 	// <image UUID> <instances running of that image>
 	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
