@@ -33,12 +33,12 @@ func LoadImageVMAssociation() error {
 	// <image UUID> <instances running of that image>
 	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
 	log.Info("Reading image instance association file.")
-	imageVMAssociationFileContent, err := os.OpenFile(imageVMAssociationFile, os.O_RDONLY|os.O_CREATE, 0644)
+	imageVMAssociationFile, err := os.OpenFile(imageVMAssociationFilePath, os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	associations, err := ioutil.ReadAll(imageVMAssociationFileContent)
+	defer imageVMAssociationFile.Close()
+	associations, err := ioutil.ReadAll(imageVMAssociationFile)
 	err = yaml.Unmarshal([]byte(associations), &ImageVMAssociations)
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func SaveImageVMAssociation() error {
 	fileMutex.Lock()
 	// Release the mutext lock
 	defer fileMutex.Unlock()
-	err = ioutil.WriteFile(imageVMAssociationFile, []byte(string(associations)), 0644)
+	err = ioutil.WriteFile(imageVMAssociationFilePath, []byte(string(associations)), 0644)
 	if err != nil {
 		return err
 	}
