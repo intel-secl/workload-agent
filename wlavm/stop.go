@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	isInstanceVolume bool
-	isLastInstance   bool
+	isVmVolume bool
+	isLastVm   bool
 	imagePath        string
 )
 
@@ -68,9 +68,13 @@ func Stop(domainXMLContent string) bool {
 
 	// check if the vm volume is encrypted
 	log.Info("Checking if vm volume is encrypted.")
-	var isvmVolume = isvmVolumeEncrypted(vmUUID)
+	isVmVolume, err := isVmVolumeEncrypted(vmUUID)
+	if err != nil {
+		log.Error("Error while checking if a dm-crypt volume is created for the VM and is active")
+		return false
+	}
 	// if vm volume is encrypted, close the volume
-	if isvmVolume {
+	if isVmVolume {
 		var vmMountPath = consts.MountPath + vmUUID
 		// Unmount the image
 		log.Info("vm volume is encrypted, deleting the vm volume.")
@@ -85,7 +89,12 @@ func Stop(domainXMLContent string) bool {
 
 	// check if this is the last vm associated with the image
 	log.Info("Checking if this is the last vm using the image...")
-	var isLastvm, imagePath = isLastvmAssociatedWithImage(imageUUID)
+	iAssoc := ImageVMAssocociation{imageUUID, ""}
+	isLastVm, imagePath, err = iAssoc.Delete()
+	if err != nil {
+		log.Error(err)
+		return false
+	}
 	// as the original image is deleted during the VM start process, there is no way
 	// to check if original image is encrypted. Instead we check if sparse file of image
 	// exists at given path, if it does that means the image was enrypted and volumes were created
@@ -118,7 +127,7 @@ func Stop(domainXMLContent string) bool {
 	return true
 }
 
-func isvmVolumeEncrypted(vmUUID string) bool {
+func isVmVolumeEncrypted(vmUUID string) (bool, error) {
 	// check the status of the device mapper
 	log.Debug("Checking the status of the device mapper.")
 	deviceMapperLocation := consts.DevMapperDirPath + vmUUID

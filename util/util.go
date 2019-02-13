@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"strings"
 	"sync"
-
+	"os"
 	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -14,22 +14,18 @@ import (
 // ImageVMAssociations is variable that consists of array of ImageVMAssociation struct
 var ImageVMAssociations []ImageVMAssociation
 
-// ImageVMAssociation is the global struct that is used to store the image instance count to yaml file
+// ImageVMAssociation is the global struct that is used to store the image vm count to yaml file
 type ImageVMAssociation struct {
 	ImageID   string
 	ImagePath string
 	VMCount   int
 }
 
-// LoadImageVMAssociation method loads image instance association from yaml file
+// LoadImageVMAssociation method loads image vm association from yaml file
 func LoadImageVMAssociation() error {
 	imageVMAssociationFile := consts.ConfigDirPath + consts.ImageVmCountAssociationFileName
-	// Read from a file and store it in a string
-	// FORMAT OF THE FILE:
-	// <image UUID> <instances running of that image>
-	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
-	log.Info("Reading image instance association file.")
-	imageVMAssociationFile, err := os.OpenFile(imageVMAssociationFilePath, os.O_RDONLY|os.O_CREATE, 0644)
+	log.Info("Reading image vm association file.")
+	file, err := os.OpenFile(imageVMAssociationFile, os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
@@ -42,14 +38,13 @@ func LoadImageVMAssociation() error {
 	return nil
 }
 
-// SaveImageVMAssociation method saves instance image association to yaml file
+var fileMutex sync.Mutex
+
+// SaveImageVMAssociation method saves vm image association to yaml file
 func SaveImageVMAssociation() error {
 	imageVMAssociationFile := consts.ConfigDirPath + consts.ImageVmCountAssociationFileName
-	// FORMAT OF THE FILE:
-	// <image UUID> <instances running of that image>
-	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
-	log.Info("Writing to image instance association file.")
-	associations, err := yaml.Marshal(&ImageVMAssociations)
+	log.Info("Writing to image vm association file.")
+	data, err := yaml.Marshal(&ImageVMAssociations)
 	if err != nil {
 		return err
 	}
@@ -60,8 +55,8 @@ func SaveImageVMAssociation() error {
 	return nil
 }
 
-//IsImageEncrypted method is used to check if the image is encryped and returns a boolean value.
-func IsImageEncrypted(encImagePath string) (bool, error) {
+//IsFileEncrypted method is used to check if the image is encryped and returns a boolean value.
+func IsFileEncrypted(encFilePath string) (bool, error) {
 
 	var encryptionHeader crypt.EncryptionHeader
 	//check if image is encrypted

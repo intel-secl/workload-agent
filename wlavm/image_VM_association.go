@@ -15,24 +15,18 @@ type ImageVMAssociation struct {
 	ImagePath string
 }
 
-var fileMutex sync.Mutex
-
-// Create method is used to check if an entry exists with the image ID. If it does, increment the instance count,
-// else create an entry with image instance association and append it.
-func (IAssoc ImageVMAssociation) Create() error {
+// Create method is used to check if an entry exists with the image ID. If it does, increment the vm count,
+// else create an entry with image vm association and append it.
+func (IAssoc ImageVMAssocociation) Create() error {
 	imageUUIDFound := false
-	log.Debug("Loading yaml file to instance image association structure.")
-
-	fileMutex.Lock()
-	defer fileMutex.Unlock()
-
+	log.Debug("Loading yaml file to vm image association structure.")
 	err := util.LoadImageVMAssociation()
 	if err != nil {
 		return fmt.Errorf("error occured while loading image VM association from a file. %s" + err.Error())
 	}
 	for i, item := range util.ImageVMAssociations {
 		if strings.Contains(item.ImageID, IAssoc.ImageUUID) {
-			log.Debug("Image ID already exist in file, increasing the count of instance by 1.")
+			log.Debug("Image ID already exist in file, increasing the count of vm by 1.")
 			util.ImageVMAssociations[i].VMCount = item.VMCount + 1
 			imageUUIDFound = true
 			break
@@ -55,9 +49,9 @@ func (IAssoc ImageVMAssociation) Create() error {
 	return nil
 }
 
-// Delete method is used to check if an entry exists with the image ID. If it does, decrement the instance count.
-// Check if the instance count is zero, then delete the image entry from the file.
-func (IAssoc ImageVMAssociation) Delete() (bool, string, error) {
+// Delete method is used to check if an entry exists with the image ID. If it does, decrement the vm count.
+// Check if the vm count is zero, then delete the image entry from the file.
+func (IAssoc ImageVMAssocociation) Delete() (bool, string, error) {
 	imagePath := ""
 	isLastVM := false
 
@@ -71,7 +65,7 @@ func (IAssoc ImageVMAssociation) Delete() (bool, string, error) {
 	for i, item := range util.ImageVMAssociations {
 		imagePath = item.ImagePath
 		if strings.Contains(item.ImageID, IAssoc.ImageUUID) {
-			log.Debug("Image ID already exist in file, decreasing the count of instance by 1.")
+			log.Debug("Image ID already exist in file, decreasing the count of vm by 1.")
 			util.ImageVMAssociations[i].VMCount = item.VMCount - 1
 			if util.ImageVMAssociations[i].VMCount == 0 {
 				log.Debug("VM count is 0, hence deleting the entry with image id ", IAssoc.ImageUUID)
