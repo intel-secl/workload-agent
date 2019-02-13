@@ -33,13 +33,13 @@ func LoadImageVMAssociation() error {
 	// <image UUID> <instances running of that image>
 	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
 	log.Info("Reading image instance association file.")
-	file, err := os.OpenFile(imageVMAssociationFile, os.O_RDONLY|os.O_CREATE, 0666)
+	imageVMAssociationFileContent, err := os.OpenFile(imageVMAssociationFile, os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-	data, err := ioutil.ReadAll(file)
-	err = yaml.Unmarshal([]byte(data), &ImageVMAssociations)
+	associations, err := ioutil.ReadAll(imageVMAssociationFileContent)
+	err = yaml.Unmarshal([]byte(associations), &ImageVMAssociations)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func SaveImageVMAssociation() error {
 	// <image UUID> <instances running of that image>
 	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
 	log.Info("Writing to image instance association file.")
-	data, err := yaml.Marshal(&ImageVMAssociations)
+	associations, err := yaml.Marshal(&ImageVMAssociations)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func SaveImageVMAssociation() error {
 	fileMutex.Lock()
 	// Release the mutext lock
 	defer fileMutex.Unlock()
-	err = ioutil.WriteFile(imageVMAssociationFile, []byte(string(data)), 0644)
+	err = ioutil.WriteFile(imageVMAssociationFile, []byte(string(associations)), 0644)
 	if err != nil {
 		return err
 	}
