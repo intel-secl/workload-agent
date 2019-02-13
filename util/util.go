@@ -33,17 +33,12 @@ func LoadImageVMAssociation() error {
 	// <image UUID> <instances running of that image>
 	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/instances/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
 	log.Info("Reading image instance association file.")
-	data, err := ioutil.ReadFile(imageVMAssociationFile)
+	file, err := os.OpenFile(imageVMAssociationFile, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
-		if os.IsNotExist(err) {
-			// if the error is that the file doesn't yet exist, create it
-			_, err = os.Create(imageVMAssociationFile)
-			data = []byte{}
-			if err != nil {
-				return err
-			}
-		}
+		return err
 	}
+	defer file.Close()
+	data, err := ioutil.ReadAll(file)
 	err = yaml.Unmarshal([]byte(data), &ImageVMAssociations)
 	if err != nil {
 		return err
