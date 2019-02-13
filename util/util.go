@@ -36,7 +36,7 @@ func LoadImageVMAssociation() error {
 	data, err := ioutil.ReadFile(imageVMAssociationFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// error is that the config doesnt yet exist, create it
+			// if the error is that the file doesn't yet exist, create it
 			_, err = os.Create(imageVMAssociationFile)
 			data = []byte{}
 			if err != nil {
