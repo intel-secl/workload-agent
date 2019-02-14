@@ -117,9 +117,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		startState := wlavm.Start(args[1])
-		if !startState {
-			wlavm.CleanUp()
+		if startState := wlavm.Start(args[1]); !startState {
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -130,8 +128,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		stopState := wlavm.Stop(args[1])
-		if !stopState {
+		if stopState := wlavm.Stop(args[1]); !stopState {
 			os.Exit(1)
 		}
 		os.Exit(0)
