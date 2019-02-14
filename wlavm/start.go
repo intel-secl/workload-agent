@@ -16,7 +16,6 @@ import (
 	"intel/isecl/lib/verifier"
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/config"
-	"intel/isecl/wlagent/util"
 	"intel/isecl/wlagent/libvirt"
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/filewatch"
@@ -33,18 +32,18 @@ import (
 
 // Todo: ISECL-3352 Move the TPM initialization to deamon start
 
-var vmstartTpm tpm.Tpm
+var vmStartTpm tpm.Tpm
 
-func GetTpmvm()(tpm.Tpm, error){
-	if vmstartTpm == nil {
+func GetTpmInstance()(tpm.Tpm, error){
+	if vmStartTpm == nil {
 		return tpm.Open()
 	}
-	return vmstartTpm, nil
+	return vmStartTpm, nil
 }
 
-func CloseTpmInstance()(){
-	if vmstartTpm != nil {
-		vmstartTpm.Close()
+func CloseTpmInstance(){
+	if vmStartTpm != nil {
+		vmStartTpm.Close()
 	}
 }
 
@@ -59,20 +58,26 @@ func Start(domainXMLContent string) bool {
 	var err error
 
 	log.Info("Parsing domain XML to get image UUID, image path, VM UUId, VM path and disk size")
-	parsedValues, err := getValuesFromDomainXML(domainXMLContent)
+	var parser *libvirt.DomainParser
+
+	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
 	if err != nil {
-		log.Error(err.Error())
+		log.Error("Error trying to parse domain xml")
 		return false
 	}
-	 
-	vmUUID := parsedValues[0]
-	vmPath := parsedValues[1]
-	imageUUID := parsedValues[2]
-	imagePath := parsedValues[3]
-	size, _ := strconv.Atoi(parsedValues[4])
+	parser = &libvirt.DomainParser{
+		XML : domainXML,      
+		QemuInterceptCall : libvirt.Start,
+	}
+	
+	parsedValue, err := libvirt.NewDomainParser(parser)
+	
+	vmUUID := parsedValue.VMUUID
+	vmPath := parsedValue.VMPath
+	imageUUID := parsedValue.ImageUUID
+	imagePath := parsedValue.ImagePath
+	size := parsedValue.Size
 
-	//log := log.WithField("VmUUID", vmUUID)
-	//check if image exists in the given location
 	_, err = os.Stat(imagePath)
 	if os.IsNotExist(err) {
 		log.Errorf("Image does not exist in location %s", imagePath)
@@ -88,7 +93,7 @@ func Start(domainXMLContent string) bool {
 	} else {
 		// check if image is encrypted
 		log.Info("Image is not a symlink, so checking is image is encrypted...")
-		isImageEncrypted, err := util.IsFileEncrypted(imagePath)
+		isImageEncrypted, err := osutil.IsFileEncrypted(imagePath)
 		if !isImageEncrypted {
 			log.Info("Image is not encrypted, returning to the hook")
 			return true
@@ -412,7 +417,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	}
 
     // Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
-	t, err := GetTpmvm()
+	t, err := GetTpmInstance()
 	if err != nil {
 		return nil, fmt.Errorf("error attempting to create signature - could not open TPM")
 	}
@@ -440,7 +445,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	
 	var certifiedKey tpm.CertifiedKey
-	t, err := GetTpmvm()
+	t, err := GetTpmInstance()
 
 	if err != nil {
 		return nil, fmt.Errorf("could not establish connection to TPM: %s", err)
@@ -499,51 +504,4 @@ func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) erro
 		}
 	}
 	return nil
-}
-
-// this method is used to parse domain XML and fetch VM uuid, VM path, image UUID, image path and disk size
-func getValuesFromDomainXML(domainXMLContent string) ([5]string, error) {
-	
-	var parsedValues [5]string
-	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
-	if err != nil {
-		return parsedValues, fmt.Errorf("error while trying to parse the domain XML: %s", err.Error())
-	}
-
-	// get vm UUID from domain XML
-	vmUUID, err := libvirt.GetVMUUID(domainXML)
-	if err != nil {
-		return parsedValues, err
-	}
-	parsedValues[0] = vmUUID
-
-	// get vm path from domain XML
-	vmPath, err := libvirt.GetVMPath(domainXML)
-	if err != nil {
-		return parsedValues, err
-	}
-	parsedValues[1] = vmPath
-
-	// get image UUID from domain XML
-	imageUUID, err := libvirt.GetImageUUID(domainXML)
-	if err != nil {
-		return parsedValues, err
-	}
-	parsedValues[2] = imageUUID
-
-	// get image path from domain XML
-	imagePath, err := libvirt.GetImagePath(domainXML)
-	if err != nil {
-		return parsedValues, err
-	}
-	parsedValues[3] = imagePath
-
-	// get disk size from domain XML
-	diskSize, err := libvirt.GetDiskSize(domainXML)
-	if err != nil {
-		return parsedValues, err
-	}
-	parsedValues[4] = diskSize
-
-	return parsedValues, nil
 }

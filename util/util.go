@@ -1,10 +1,8 @@
 package util
 
 import (
-	"intel/isecl/lib/common/crypt"
 	"intel/isecl/wlagent/consts"
 	"io/ioutil"
-	"strings"
 	"sync"
 	"os"
 	log "github.com/sirupsen/logrus"
@@ -53,22 +51,4 @@ func SaveImageVMAssociation() error {
 		return err
 	}
 	return nil
-}
-
-//IsFileEncrypted method is used to check if the image is encryped and returns a boolean value.
-func IsFileEncrypted(encFilePath string) (bool, error) {
-
-	var encryptionHeader crypt.EncryptionHeader
-	//check if image is encrypted
-	encImageContent, err := ioutil.ReadFile(encImagePath)
-	if err != nil {
-		return false, err
-	}
-
-	magicText := encImageContent[:len(encryptionHeader.MagicText)]
-	if !strings.Contains(string(magicText), crypt.EncryptionHeaderMagicText) {
-		return false, nil
-	}
-
-	return true, nil
 }

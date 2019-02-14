@@ -31,33 +31,25 @@ var (
 func Stop(domainXMLContent string) bool {
 
 	log.Info("Stop call intercepted")
-	log.Info("Parsing domain XML to get image UUID, VM UUId and VM path")
+	log.Info("Parsing domain XML to get image UUID, VM UUID and VM path")
+
+	var parser *libvirt.DomainParser
+
 	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
 	if err != nil {
-		log.Errorf("Error while parsing domaXML: %s", err)
+		log.Error("Error trying to parse domain xml")
 		return false
 	}
-
-	// get vm UUID from domain XML
-	vmUUID, err := libvirt.GetVMUUID(domainXML)
-	if err != nil {
-		log.Errorf(err.Error())
-		return false
+	parser = &libvirt.DomainParser{
+		XML : domainXML,      
+		QemuInterceptCall : libvirt.Stop,
 	}
-
-	// get vm path from domain XML
-	vmPath, err := libvirt.GetVMPath(domainXML)
-	if err != nil {
-		log.Errorf(err.Error())
-		return false
-	}
-
-	// get image UUID from domain XML
-	imageUUID, err := libvirt.GetImageUUID(domainXML)
-	if err != nil {
-		log.Errorf(err.Error())
-		return false
-	}
+	
+	parsedValue, err := libvirt.NewDomainParser(parser)
+	
+	vmUUID := parsedValue.VMUUID
+	vmPath := parsedValue.VMPath
+	imageUUID := parsedValue.ImageUUID
 
 	// check if vm exists at given path
 	log.Infof("Checking if VM exists in %s", vmPath)
@@ -67,7 +59,7 @@ func Stop(domainXMLContent string) bool {
 	}
 
 	// check if the vm volume is encrypted
-	log.Info("Checking if vm volume is encrypted.")
+	log.Info("Checking if a dm-crypt volume for the image is created")
 	isVmVolume, err := isVmVolumeEncrypted(vmUUID)
 	if err != nil {
 		log.Error("Error while checking if a dm-crypt volume is created for the VM and is active")
@@ -77,7 +69,7 @@ func Stop(domainXMLContent string) bool {
 	if isVmVolume {
 		var vmMountPath = consts.MountPath + vmUUID
 		// Unmount the image
-		log.Info("vm volume is encrypted, deleting the vm volume.")
+		log.Info("A dm-crypt volume for the image is created, deleting the vm volume.")
 		vml.Unmount(vmMountPath)
 		vml.DeleteVolume(vmUUID)
 		err := os.RemoveAll(vmMountPath)
@@ -135,14 +127,14 @@ func isVmVolumeEncrypted(vmUUID string) (bool, error) {
 	cmdOutput, err := exec.ExecuteCommand("cryptsetup", args)
 
 	if cmdOutput != "" && strings.Contains(cmdOutput, "inactive") {
-		log.Debug("The device mapper is inactive.")
+		log.Debug("The device mapper is inactive")
 		return false, nil
 	}
 
 	if err != nil {
-		log.Error(err.Error())
+		return false, fmt.Errorf("error occured while executing cryptsetup status command: %s" + err.Error())
 	}
-	log.Debug("The device mapper is encrypted and active.")
+	log.Debug("The device mapper is encrypted and active")
 	return true, nil
 }
 

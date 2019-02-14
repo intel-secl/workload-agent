@@ -10,6 +10,7 @@ import (
 	"strings"
 	log "github.com/sirupsen/logrus"
 	"net/url"
+	"errors"
 )
 
 //FlavorKey is a representation of flavor-key information
@@ -22,16 +23,21 @@ type FlavorKey struct {
 func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error) {
 	var flavorKeyInfo FlavorKey
 	
-	requestURL, err := url.Parse(config.Configuration.Wls.APIURL + "images/" + imageUUID + "/flavor-key?hardware_uuid=" + hardwareUUID)
+	requestURL, err := url.Parse(config.Configuration.Wls.APIURL)
 	if err != nil {
-		return flavorKeyInfo, err
+		return flavorKeyInfo, errors.New("error retrieving WLS API URL")
+	}
+
+	requestURL, err = url.Parse(requestURL.String() + "images/" + imageUUID + "/flavor-key?hardware_uuid=" + hardwareUUID)
+	if err != nil {
+		return flavorKeyInfo, errors.New("error forming GET flavor-key for image API URL")
 	}
 
 	var flavorKeyInfo FlavorKey
 	if len(strings.TrimSpace(keyID)) > 0 {
-		requestURL, err = url.Parse("&&keyId=" + keyID)
+		requestURL, err = url.Parse(requestURL.String() + "&&keyId=" + keyID)
 		if err != nil {
-			return flavorKeyInfo, err
+			return flavorKeyInfo, errors.New("error forming GET flavor-key for image API URL")
 		}
 	}
 
@@ -55,11 +61,8 @@ func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error)
 	if err != nil {
 		return flavorKeyInfo, err
 	}
-
 	log.Debugf("response from API: %s", string(httpResponse))
-
 	return flavorKeyInfo, nil
-
 }
 
 //PostVMReport method is used to upload the VM trust report to workload service
@@ -67,9 +70,14 @@ func PostVMReport(report []byte) error {
 	var err error
 
 	//Add client here
-	requestURL, err := url.Parse(config.Configuration.Wls.APIURL + "reports")
+	requestURL, err := url.Parse(config.Configuration.Wls.APIURL)
 	if err != nil {
-		return err
+		return errors.New("error retrieving WLS API URL")
+	}
+
+	requestURL, err = url.Parse(requestURL.String() + "reports")
+	if err != nil {
+		return errors.New("error forming reports POST API URL")
 	}
 
 	log.Debugf("WLS VM reports POST Request URL: %s", requestURL.String())
