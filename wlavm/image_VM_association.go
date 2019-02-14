@@ -62,7 +62,7 @@ func (IAssoc ImageVMAssocociation) Delete() (bool, string, error) {
 		if strings.Contains(item.ImageID, IAssoc.ImageUUID) {
 			log.Debug("Image ID already exist in file, decreasing the count of instance by 1.")
 			util.ImageVMAssociations[i].VMCount = item.VMCount - 1
-			if item.VMCount == 0 {
+			if util.ImageVMAssociations[i].VMCount == 0 {
 				log.Debug("VM count is 0, hence deleting the entry with image id ", IAssoc.ImageUUID)
 				util.ImageVMAssociations[i] = util.ImageVMAssociations[0]
 				util.ImageVMAssociations = util.ImageVMAssociations[1:]
