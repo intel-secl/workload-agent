@@ -57,7 +57,7 @@ func Start(domainXMLContent string) bool {
 	var skipImageVolumeCreation = false
 	var err error
 
-	log.Info("Parsing domain XML to get image UUID, image path, VM UUId, VM path and disk size")
+	log.Info("Parsing domain XML to get image UUID, image path, VM UUID, VM path and disk size")
 	var parser *libvirt.DomainParser
 
 	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
@@ -93,7 +93,7 @@ func Start(domainXMLContent string) bool {
 	} else {
 		// check if image is encrypted
 		log.Info("Image is not a symlink, so checking is image is encrypted...")
-		isImageEncrypted, err := osutil.IsFileEncrypted(imagePath)
+		isImageEncrypted, err := crypt.EncryptionHeaderExists(imagePath)
 		if !isImageEncrypted {
 			log.Info("Image is not encrypted, returning to the hook")
 			return true

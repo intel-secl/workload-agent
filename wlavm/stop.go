@@ -69,7 +69,7 @@ func Stop(domainXMLContent string) bool {
 	if isVmVolume {
 		var vmMountPath = consts.MountPath + vmUUID
 		// Unmount the image
-		log.Info("A dm-crypt volume for the image is created, deleting the vm volume.")
+		log.Info("A dm-crypt volume for the image is created, deleting the vm volume")
 		vml.Unmount(vmMountPath)
 		vml.DeleteVolume(vmUUID)
 		err := os.RemoveAll(vmMountPath)
@@ -121,7 +121,7 @@ func Stop(domainXMLContent string) bool {
 
 func isVmVolumeEncrypted(vmUUID string) (bool, error) {
 	// check the status of the device mapper
-	log.Debug("Checking the status of the device mapper.")
+	log.Debug("Checking the status of the device mapper")
 	deviceMapperLocation := consts.DevMapperDirPath + vmUUID
 	args := []string{"status", deviceMapperLocation}
 	cmdOutput, err := exec.ExecuteCommand("cryptsetup", args)
@@ -136,79 +136,4 @@ func isVmVolumeEncrypted(vmUUID string) (bool, error) {
 	}
 	log.Debug("The device mapper is encrypted and active")
 	return true, nil
-}
-
-var fileMutex sync.Mutex
-
-func isLastvmAssociatedWithImage(imageUUID string) (bool, string) {
-	var imagePath = ""
-	imagevmAssociationFile := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
-
-	// Read from a file and store it in a string
-	// FORMAT OF THE FILE:
-	// <image UUID> <vms running of that image>
-	// eg: 6c55cf8fe339a52a798796d9ba0e765daharshitha	/var/lib/nova/vms/_base/6c55cf8fe339a52a798796d9ba0e765dac55aef7	count:2
-	log.Debug("Reading image vm association file.")
-	str, err := ioutil.ReadFile(imagevmAssociationFile)
-	if err != nil {
-		log.Error(err.Error())
-	}
-
-	log.Info("Recursively checking if image uuid exists in file. If it does, reduce the vm count by 1.")
-	lines := strings.Split(string(str), "\n")
-	for i, line := range lines {
-		if strings.TrimSpace(line) == "" {
-			break
-		}
-		// Split words of each line by space character into an array
-		words := strings.Fields(line)
-		imagePath = words[1]
-		// To check the if this is the last vm running of that image
-		// check if the first part of the line matches given image uuid and
-		// then check if there is only 1 vm running of that image (which is the current one)
-		count := strings.Split(words[2], ":")
-		// Reduce the number of vm by 1 and if it is zero; delete that entry
-		if strings.Contains(words[0], imageUUID) {
-			log.Debug("Image ID found in image vm association file. Reducing vm count by 1.")
-			cnt, _ := strconv.Atoi(count[1])
-			replaceLine := strings.Replace(string(line), "count:"+count[1], "count:"+strconv.Itoa(cnt-1), 1)
-			lines[i] = replaceLine
-		}
-		if strings.Contains(words[0], imageUUID) && count[1] == "1" {
-			log.Debugf("Deleting image entry %s as this was last vm to use the image.", imageUUID)
-			lines[i] = lines[len(lines)-1]
-
-			// After modifying contents, store it back to the file
-			log.Debug("Outputting modified text back to file.")
-
-			// Add mutex lock so that at one time only one process can write to a file
-			fileMutex.Lock()
-			// Release the mutext lock
-			defer fileMutex.Unlock()
-			outputToFile := strings.Join(lines[:len(lines)-1], "\n")
-			err = ioutil.WriteFile(imagevmAssociationFile, []byte(outputToFile), 0644)
-			if err != nil {
-				return false, imagePath, fmt.Errorf("Error occured while writing to a file. %s" + err.Error())
-			}
-			return true, imagePath, nil
-		}
-	}
-	// Add mutex lock so that at one time only one process can write to a file
-	fileMutex.Lock()
-	// Release the mutext lock
-	defer fileMutex.Unlock()
-	outputToFile := strings.Join(lines, "\n")
-	err = ioutil.WriteFile(imagevmAssociationFile, []byte(outputToFile), 0644)
-	if err != nil {
-		return false, imagePath, fmt.Errorf("Error occured while writing to a file. %s" + err.Error())
-	}
-	return false, imagePath, nil
-}
-
-func CleanUp() {
-	
-}
-
-func CleanUp() {
-	
 }
