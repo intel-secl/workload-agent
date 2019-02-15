@@ -3,8 +3,8 @@ package util
 import (
 	"intel/isecl/wlagent/consts"
 	"io/ioutil"
-	"sync"
 	"os"
+	"sync"
 	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -21,9 +21,10 @@ type ImageVMAssociation struct {
 
 // LoadImageVMAssociation method loads image vm association from yaml file
 func LoadImageVMAssociation() error {
-	imageVMAssociationFile := consts.ConfigDirPath + consts.ImageVmCountAssociationFileName
+	imageVMAssociationFilePath := consts.ConfigDirPath + consts.ImageVmCountAssociationFileName
+	// Read from a file and store it in a string
 	log.Info("Reading image vm association file.")
-	file, err := os.OpenFile(imageVMAssociationFile, os.O_RDONLY|os.O_CREATE, 0644)
+	imageVMAssociationFile, err := os.OpenFile(imageVMAssociationFilePath, os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
@@ -40,7 +41,7 @@ var fileMutex sync.Mutex
 
 // SaveImageVMAssociation method saves vm image association to yaml file
 func SaveImageVMAssociation() error {
-	imageVMAssociationFile := consts.ConfigDirPath + consts.ImageVmCountAssociationFileName
+	imageVMAssociationFilePath := consts.ConfigDirPath + consts.ImageVmCountAssociationFileName
 	log.Info("Writing to image vm association file.")
 	data, err := yaml.Marshal(&ImageVMAssociations)
 	if err != nil {
