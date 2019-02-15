@@ -31,9 +31,13 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 		return e
 	}
 	log.Info("Registering binding key with host verification service.")
-	keyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
 
-	httpRequestBody, err := common.CreateRequest(keyFilePath)
+	bindingKey, err := config.GetBindingKeyFromFile()
+	if err != nil {
+		return errors.New("error reading binding key from  file. " + err.Error())
+	}
+
+	httpRequestBody, err := common.CreateRequest(bindingKey)
 	if err != nil {
 		return errors.New("error registering binding key. " + err.Error())
 	}
@@ -47,8 +51,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 		return errors.New("error while updating the KBS user with envelope public key. " + err.Error())
 	}
 
-	keyCertFilePath := consts.ConfigDirPath + consts.BindingKeyPemFileName
-	err = common.WriteKeyCertToDisk(keyCertFilePath, registerKey.BindingKeyCertificate)
+	err = common.WriteKeyCertToDisk(consts.ConfigDirPath+consts.BindingKeyPemFileName, registerKey.BindingKeyCertificate)
 	if err != nil {
 		return errors.New("error writing binding key certificate to file.")
 	}

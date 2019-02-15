@@ -2,12 +2,12 @@ package common
 
 import (
 	"crypto/x509"
-	b "encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
 	exec "intel/isecl/lib/common/exec"
 	mtwilson "intel/isecl/lib/mtwilson-client"
+	tpm "intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/consts"
 	"io/ioutil"
 	"os"
@@ -15,19 +15,10 @@ import (
 	"strings"
 )
 
-type KeyInfo struct {
-	Version        int    `json:"Version"`
-	KeyAttestation string `json:"KeyAttestation"`
-	PublicKey      string `json:"PublicKey"`
-	KeySignature   string `json:"KeySignature"`
-	KeyName        string `json:"KeyName"`
-}
-
-func CreateRequest(keyfilePath string) (*mtwilson.RegisterKeyInfo, error) {
+func CreateRequest(key []byte) (*mtwilson.RegisterKeyInfo, error) {
 	var httpRequestBody *mtwilson.RegisterKeyInfo
-	var keyInfo KeyInfo
+	var keyInfo tpm.CertifiedKey
 	var tpmVersion string
-	var originalNameDigest []byte
 	var err error
 
 	// check if binding key file exists
@@ -53,30 +44,6 @@ func CreateRequest(keyfilePath string) (*mtwilson.RegisterKeyInfo, error) {
 		return httpRequestBody, errors.New("error unmarshalling. " + err.Error())
 	}
 
-	// TODO remove hack below. This hack was added since key stored on disk needs to be modified
-	// so that HVS can register the key.
-	// ISECL - 3506 opened to address this issue later
-
-	// remove first two bytes from KeyAttestation. These are extra bytes written.
-	tpmCertifyKeyBytes, err := b.StdEncoding.DecodeString(keyInfo.KeyAttestation)
-	if err != nil {
-		return httpRequestBody, errors.New("errror decoding name digest. " + err.Error())
-	}
-	tpmCertifyKey := b.StdEncoding.EncodeToString(tpmCertifyKeyBytes[2:])
-
-	// remove first byte from the value written to KeyName. This is an extra byte written.
-	originalNameDigest, err = b.StdEncoding.DecodeString(keyInfo.KeyName)
-	if err != nil {
-		return httpRequestBody, errors.New("errror decoding key name. " + err.Error())
-	}
-	originalNameDigest = originalNameDigest[1:]
-
-	//pad zeroes
-	zeroes := make([]byte, 34)
-	originalNameDigest = append(originalNameDigest, zeroes[:]...)
-
-	nameDigest := b.StdEncoding.EncodeToString(originalNameDigest)
-
 	//get trustagent aik cert location
 	//TODO Vinil
 	aikCertName, _ := exec.MkDirFilePathFromEnvVariable(consts.TrustAgentConfigDirEnv, "aik.pem", true)
@@ -99,13 +66,16 @@ func CreateRequest(keyfilePath string) (*mtwilson.RegisterKeyInfo, error) {
 		return httpRequestBody, errors.New("error parsing certificate file. " + err.Error())
 	}
 
+	// TODO remove hack below. This hack was added since key stored on disk needs to be modified
+	// so that HVS can register the key.
+	// ISECL - 3506 opened to address this issue later
 	//construct request body
 	httpRequestBody = &mtwilson.RegisterKeyInfo{
 		PublicKeyModulus:       keyInfo.PublicKey,
-		TpmCertifyKey:          tpmCertifyKey,
+		TpmCertifyKey:          keyInfo.KeyAttestation[2:],
 		TpmCertifyKeySignature: keyInfo.KeySignature,
 		AikDerCertificate:      aikDer.Bytes,
-		NameDigest:             nameDigest,
+		NameDigest:             append(keyInfo.KeyName[1:], make([]byte, 34)...),
 		TpmVersion:             tpmVersion,
 		OsType:                 strings.Title(runtime.GOOS),
 	}

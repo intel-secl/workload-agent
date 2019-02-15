@@ -27,9 +27,12 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 		return e
 	}
 	log.Info("Registering signing key with host verification service.")
-	keyFilePath := consts.ConfigDirPath + consts.SigningKeyFileName
+	signingKey, err := config.GetSigningKeyFromFile()
+	if err != nil {
+		return errors.New("error reading signing key from  file. " + err.Error())
+	}
 
-	httpRequestBody, err := common.CreateRequest(keyFilePath)
+	httpRequestBody, err := common.CreateRequest(signingKey)
 	if err != nil {
 		return errors.New("error registering signing key. " + err.Error())
 	}
@@ -43,8 +46,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 		return errors.New("error while updating the KBS user with envelope public key. " + err.Error())
 	}
 
-	keyCertFilePath := consts.ConfigDirPath + consts.SigningKeyPemFileName
-	err = common.WriteKeyCertToDisk(keyCertFilePath, registerKey.SigningKeyCertificate)
+	err = common.WriteKeyCertToDisk(consts.ConfigDirPath + consts.SigningKeyPemFileName, registerKey.SigningKeyCertificate)
 	if err != nil {
 		return errors.New("error writing signing key certificate to file.")
 	}
