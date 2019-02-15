@@ -206,6 +206,13 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 				return 1
 			}
 
+			// Watch the symlink for deletion, and remove the _sparseFile if image is deleted
+			filewatcher.HandleEvent(imagePath, func(e fsnotify.Event) {
+				if e.Op&fsnotify.Remove == fsnotify.Remove {
+					os.Remove(sparseFilePath)
+				}
+			})
+
 			//check if the image device mapper is mount path exists, if not create it
 			imageDeviceMapperMountPath := consts.MountPath + imageUUID
 			err := util.CheckMountPathExistsAndMountVolume(imageDeviceMapperMountPath, imageDeviceMapperPath)
@@ -283,7 +290,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 			return 1
 		}
 
-		// Watch the symlink for deletion, and remove the _sparseFile if it is
+		// Watch the symlink for deletion, and remove the _sparseFile if image is deleted
 		filewatcher.HandleEvent(imagePath, func(e fsnotify.Event) {
 			if e.Op&fsnotify.Remove == fsnotify.Remove {
 				os.Remove(instanceSparseFilePath)
