@@ -46,7 +46,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 		return errors.New("error while updating the KBS user with envelope public key. " + err.Error())
 	}
 
-	err = common.WriteKeyCertToDisk(consts.ConfigDirPath + consts.SigningKeyPemFileName, registerKey.SigningKeyCertificate)
+	err = common.WriteKeyCertToDisk(consts.ConfigDirPath+consts.SigningKeyPemFileName, registerKey.SigningKeyCertificate)
 	if err != nil {
 		return errors.New("error writing signing key certificate to file.")
 	}
