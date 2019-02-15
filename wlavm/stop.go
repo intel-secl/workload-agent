@@ -32,7 +32,6 @@ var (
 //  instancePath - Absolute path of the instance
 func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 	log.Info("Stop call intercepted.")
-	log.Info("*************** Purva *****************")
 	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
 	if err != nil {
 		log.Infof("Error while parsing domaXML: %s", err)
