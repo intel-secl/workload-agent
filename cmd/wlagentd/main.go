@@ -27,15 +27,17 @@ func main() {
 			fileWatcher.Watch()
 		}
 	}()
+
 	go func() {
+		RPCSocketFilePath := consts.RunDirPath + consts.RPCSocketFileName
+		// block and loop, daemon doesnt need to run on go routine
+		l, err := net.Listen("unix", RPCSocketFilePath)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		defer l.Close()
 		for {
-			RPCSocketFilePath := consts.RunDirPath + consts.RPCSocketFileName
-			// block and loop, daemon doesnt need to run on go routine
-			l, err := net.Listen("unix", RPCSocketFilePath)
-			if err != nil {
-				log.Error(err)
-				return
-			}
 			r := rpc.NewServer()
 			vm := &wlrpc.VirtualMachine{
 				Watcher: fileWatcher,

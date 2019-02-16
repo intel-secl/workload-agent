@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"intel/isecl/lib/common/exec"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
@@ -231,7 +230,7 @@ func start() {
 	if status() == Stopped {
 		// exec wlagentd
 		cmd := exec.Command(consts.BinDirPath + consts.DaemonFileName)
-		err := cmd.Start()
+		err = cmd.Start()
 		if err != nil {
 			log.WithError(err).Fatal("Failed to start wlagentd")
 		}
@@ -259,12 +258,7 @@ func stop() {
 			fmt.Println("Failed to stop Workload Agent")
 			return
 		}
-		_, err = exec.ExecuteCommand("unlink", rpcSocketFilePath)
-		if err != nil {
-			log.WithError(err).Fatal("Failed to unlink wlagent socket file")
-			return
-		}
-		fmt.Println("Workloa Agent stopped")
+		fmt.Println("Workload Agent stopped")
 	} else {
 		fmt.Println("Workload Agent is already stopped")
 	}
