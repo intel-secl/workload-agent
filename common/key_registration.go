@@ -46,7 +46,7 @@ func CreateRequest(key []byte) (*mtwilson.RegisterKeyInfo, error) {
 
 	//get trustagent aik cert location
 	//TODO Vinil
-	aikCertName, _ := exec.MkDirFilePathFromEnvVariable(consts.TrustAgentConfigDirEnv, "aik.pem", true)
+	aikCertName, _ := exec.MkDirFilePathFromEnvVariable(consts.TAConfigDirEnvVar, "aik.pem", true)
 
 	//set tpm version
 	//TODO Vinil

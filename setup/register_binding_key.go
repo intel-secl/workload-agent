@@ -6,32 +6,32 @@ package setup
 
 import (
 	"errors"
-	log "github.com/sirupsen/logrus"
+	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/mtwilsonclient"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type RegisterBindingKey struct {
 }
 
 func (rb RegisterBindingKey) Run(c csetup.Context) error {
-	
+
+	if config.Configuration.ConfigComplete == false {
+		return fmt.Errorf("configuration is not complete - setup tasks can be completed only after configuration")
+	}
+
 	if rb.Validate(c) == nil {
 		log.Info("Binding key already registered. Skipping this setup task.")
 		return nil
 	}
-	// save configuration from config.yml
-	e := config.SaveConfiguration(c)
-	if e != nil {
-		log.Error(e.Error())
-		return e
-	}
-	log.Info("Registering binding key with host verification service.")
 
+	log.Info("Registering binding key with host verification service.")
 	bindingKey, err := config.GetBindingKeyFromFile()
 	if err != nil {
 		return errors.New("error reading binding key from  file. " + err.Error())

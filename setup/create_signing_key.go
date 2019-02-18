@@ -1,9 +1,12 @@
 package setup
 
 import (
+	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
+	"intel/isecl/wlagent/config"
+
 
 	log "github.com/sirupsen/logrus"
 )
@@ -13,6 +16,9 @@ type SigningKey struct {
 }
 
 func (sk SigningKey) Run(c csetup.Context) error {
+	if config.Configuration.ConfigComplete == false {
+		return fmt.Errorf("configuration is not complete - setup tasks can be completed only after configuration")
+	}
 	if sk.Validate(c) == nil {
 		log.Info("Signing key already created, skipping ...")
 		return nil

@@ -14,8 +14,6 @@ import (
 
 	// "intel/isecl/wlagent/wlavm"
 	"os"
-	"os/exec"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -77,40 +75,56 @@ func main() {
 		printVersion()
 
 	case "setup":
-		// Check if nosetup environment variable is true, if yes then skip the setup tasks
-		if nosetup, err := strconv.ParseBool(os.Getenv("WORKLOAD_AGENT_NOSETUP")); err != nil && nosetup == false {
-			// Workaround for tpm2-abrmd bug in RHEL 7.5
-			t, err := tpm.Open()
-			if err != nil {
-				log.Error("Error while opening a connection to TPM.")
-				os.Exit(1)
-			}
-
-			// Run list of setup tasks one by one
-			setupRunner := &csetup.Runner{
-				Tasks: []csetup.Task{
-					setup.SigningKey{
-						T: t,
-					},
-					setup.BindingKey{
-						T: t,
-					},
-					setup.RegisterBindingKey{},
-					setup.RegisterSigningKey{},
-				},
-				AskInput: false,
-			}
-			defer t.Close()
-			err = setupRunner.RunTasks(args[1:]...)
-			if err != nil {
-				fmt.Println("Error running setup: ", err)
-				os.Exit(1)
-			}
-		} else {
-			fmt.Println("WORKLOAD_AGENT_NOSETUP is set, skipping setup")
-			os.Exit(0)
+		// Everytime, we run setup, need to make sure that the configuration is complete
+		// So lets run the Configurer as a seperate runner. We could have made a single runner
+		// with the first task as the Configurer. However, the logic in the common setup task
+		// runner runs only the tasks passed in the argument if there are 1 or more tasks. 
+		// This means that with current logic, if there are no specific tasks passed in the 
+		// argument, we will only run the confugurer but the intention was to run all of them
+		
+		// TODO : The right way to address this is to pass the arguments from the commandline 
+		// to a functon in the workload agent setup package and have it build a slice of tasks
+		// to run. 
+		installRunner := &csetup.Runner{
+			Tasks: []csetup.Task{
+				setup.Configurer{},
+			},
+			AskInput: false,
+		}
+		err := installRunner.RunTasks("Configurer")
+		if err != nil {
+			fmt.Println("Error running setup: ", err)
+			os.Exit(1)
 		}
 
+		// Workaround for tpm2-abrmd bug in RHEL 7.5
+		t, err := tpm.Open()
+		if err != nil {
+			fmt.Println("Error while opening a connection to TPM.")
+			os.Exit(1)
+		}
+
+		// Run list of setup tasks one by one
+		setupRunner := &csetup.Runner{
+			Tasks: []csetup.Task{
+				setup.SigningKey{
+					T: t,
+				},
+				setup.BindingKey{
+					T: t,
+				},
+				setup.RegisterBindingKey{},
+				setup.RegisterSigningKey{},
+			},
+			AskInput: false,
+		}
+		defer t.Close()
+		err = setupRunner.RunTasks(args[1:]...)
+		if err != nil {
+			fmt.Println("Error running setup: ", err)
+			os.Exit(1)
+		}
+		
 	case "start":
 		if len(args[1:]) < 1 {
 			log.Info("Invalid number of parameters")
@@ -134,12 +148,14 @@ func main() {
 		os.Exit(0)
 
 	case "uninstall":
-		deleteFile(consts.WLABinFilePath)
+		deleteFile(consts.WlagentSymLink)
 		deleteFile(consts.OptDirPath)
 		deleteFile(consts.LibvirtHookFilePath)
-		deleteFile(consts.ConfigDirPath)
 		deleteFile(consts.LogDirPath)
-		deleteFile(consts.RunDirPath)
+		if len(args) > 1 && strings.ToLower(args[1]) == "--purge" {
+			deleteFile(consts.ConfigDirPath)
+		}
+
 
 	default:
 		fmt.Printf("Unrecognized option : %s\n", arg)
@@ -151,7 +167,7 @@ func main() {
 }
 
 func deleteFile(path string) {
-	log.Info("Deleting file: ", path)
+	log.Info("Deleting : ", path)
 	// delete file
 	var err = os.RemoveAll(path)
 	if err != nil {

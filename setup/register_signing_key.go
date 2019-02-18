@@ -2,6 +2,7 @@ package setup
 
 import (
 	"errors"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/wlagent/common"
@@ -16,16 +17,15 @@ type RegisterSigningKey struct {
 
 func (rs RegisterSigningKey) Run(c csetup.Context) error {
 
+	if config.Configuration.ConfigComplete == false {
+		return fmt.Errorf("configuration is not complete - setup tasks can be completed only after configuration")
+	}
+	
 	if rs.Validate(c) == nil {
 		log.Info("Signing key already registered. Skipping this setup task.")
 		return nil
 	}
-	// save configuration from config.yml
-	e := config.SaveConfiguration(c)
-	if e != nil {
-		log.Error(e.Error())
-		return e
-	}
+
 	log.Info("Registering signing key with host verification service.")
 	signingKey, err := config.GetSigningKeyFromFile()
 	if err != nil {
@@ -52,6 +52,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	}
 	return nil
 }
+
 
 // Validate checks whether or not the Register Signing Key task was completed successfully
 func (rs RegisterSigningKey) Validate(c csetup.Context) error {

@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -32,7 +33,13 @@ var Configuration struct {
 		APIPassword string
 		TLSSha256   string
 	}
-	LogLevel string
+	TrustAgent struct {
+		ConfigDir  string
+		AikPemFile string
+		User       string
+	}
+	LogLevel       string
+	ConfigComplete bool
 }
 
 const HashingAlgorithm crypto.Hash = crypto.SHA256
@@ -45,11 +52,7 @@ func getFileContentFromConfigDir(fileName string) ([]byte, error) {
 		return nil, fmt.Errorf("File does not exist - %s", filePath)
 	}
 
-	// read contents of file
-	file, _ := os.Open(filePath)
-	defer file.Close()
-	byteValue, _ := ioutil.ReadAll(file)
-	return byteValue, nil
+	return ioutil.ReadFile(filePath)
 }
 
 func GetSigningKeyFromFile() ([]byte, error) {
@@ -117,39 +120,100 @@ func init() {
 // This is called when setup tasks are called
 func SaveConfiguration(c csetup.Context) error {
 	var err error
-	Configuration.Mtwilson.APIURL, err = c.GetenvString(consts.MTWILSON_API_URL, "Mtwilson URL")
+
+	//clear the ConfigComplete flag and save the file. We will mark it complete on at the end.
+	// we can use the ConfigComplete field to check if the configuration is complete before
+	// running the other tasks.
+	Configuration.ConfigComplete = false
+	err = Save()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to save configuration file")
 	}
-	Configuration.Mtwilson.APIUsername, err = c.GetenvString(consts.MTWILSON_API_USERNAME, "Mtwilson Username")
-	if err != nil {
-		return err
+
+	// we are going to check and set the required configuration variables
+	// however, we do not want to error out after each one. We want to provide
+	// entries in the log file indicating which ones are missing. At the
+	// end of this section we will error out. Will use a flag to keep track
+
+	requiredConfigsPresent := true
+
+	requiredConfigs := [...]csetup.EnvVars{
+		{
+			consts.MTWILSON_API_URL,
+			&Configuration.Mtwilson.APIURL,
+			"Mtwilson URL",
+			false,
+		},
+		{
+			consts.MTWILSON_API_USERNAME,
+			&Configuration.Mtwilson.APIUsername,
+			"Mtwilson Username",
+			false,
+		},
+		{
+			consts.MTWILSON_API_PASSWORD,
+			&Configuration.Mtwilson.APIPassword,
+			"Mtwilson Password",
+			false,
+		},
+		{
+			consts.MTWILSON_TLS_SHA256,
+			&Configuration.Mtwilson.TLSSha256,
+			"Mtwilson TLS SHA256",
+			false,
+		},
+		{
+			consts.WLS_API_URL,
+			&Configuration.Wls.APIURL,
+			"Workload Service URL",
+			false,
+		},
+		{
+			consts.WLS_API_USERNAME,
+			&Configuration.Wls.APIUsername,
+			"Workload Service API Username",
+			false,
+		},
+		{
+			consts.WLS_API_PASSWORD,
+			&Configuration.Wls.APIPassword,
+			"Workload Service API Password",
+			false,
+		},
+		//{
+		//	consts.WLS_TLS_SHA256,
+		//	&Configuration.Wls.TLSSha256,
+		//	"Workload Service TLS SHA256",
+		//	false,
+		//},
+		{
+			consts.TAUserNameEnvVar,
+			&Configuration.TrustAgent.User,
+			"Trust Agent User Name",
+			false,
+		},
+		{
+			consts.TAConfigDirEnvVar,
+			&Configuration.TrustAgent.ConfigDir,
+			"Trust Agent Configuration Directory",
+			false,
+		},
 	}
-	Configuration.Mtwilson.APIPassword, err = c.GetenvString(consts.MTWILSON_API_PASSWORD, "Mtwilson Password")
-	if err != nil {
-		return err
+
+	for _, cv := range requiredConfigs {
+		_, _, err = c.OverrideValueFromEnvVar(cv.Name, cv.ConfigVar, cv.Description, cv.EmptyOkay)
+		if err != nil {
+			requiredConfigsPresent = false
+			log.Errorf("environment variable %s required - but not set", cv.Name)
+		}
 	}
-	Configuration.Mtwilson.TLSSha256, err = c.GetenvString(consts.MTWILSON_TLS_SHA256, "Mtwilson TLS SHA256")
-	if err != nil {
-		return err
+
+	if requiredConfigsPresent {
+		Configuration.TrustAgent.AikPemFile = filepath.Join(Configuration.TrustAgent.ConfigDir, consts.TAAikPemFileName)
+		Configuration.ConfigComplete = true
+		return Save()
 	}
-	Configuration.Wls.APIURL, err = c.GetenvString(consts.WLS_API_URL, "Workload Service URL")
-	if err != nil {
-		return err
-	}
-	Configuration.Wls.APIUsername, err = c.GetenvString(consts.WLS_API_USERNAME, "Workload Service API Username")
-	if err != nil {
-		return err
-	}
-	Configuration.Wls.APIPassword, err = c.GetenvString(consts.WLS_API_PASSWORD, "Workload Service API Password")
-	if err != nil {
-		return err
-	}
-	// Configuration.Wls.TLSSha256, err = c.GetenvString(WLS_TLS_SHA256, "Workload Service TLS SHA256")
-	// if err != nil {
-	// 	return err
-	// }
-	return Save()
+	return fmt.Errorf("one or more required environment variables for setup not present. log file has details")
 }
 
 // LogConfiguration is used to save log configurations
