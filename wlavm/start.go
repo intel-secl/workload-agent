@@ -141,7 +141,7 @@ func Start(domainXMLContent string) bool {
 		return true
 	}
 
-	if (flavorKeyInfo.Image.Encryption.EncryptionRequired) {
+	if flavorKeyInfo.Image.EncryptionRequired {
 		// if key not cached, cache the key
 		keyURLSplit := strings.Split(flavorKeyInfo.Image.Encryption.KeyURL, "/")
 		keyID = keyURLSplit[len(keyURLSplit)-2]
