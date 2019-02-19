@@ -2,45 +2,26 @@ package main
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
 	wlrpc "intel/isecl/wlagent/rpc"
 	"intel/isecl/wlagent/setup"
-	"io/ioutil"
-	"net"
-	"net/rpc"
-
-	// "intel/isecl/wlagent/wlavm"
+	"intel/isecl/wlagent/wlavm"
 	"os"
 	"strings"
-	"syscall"
-	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 var (
-	component         string = "workload-agent"
-	version           string = ""
-	buildid           string = ""
-	buildtype         string = "dev"
-	rpcSocketFilePath string = consts.RunDirPath + consts.RPCSocketFileName
-	pidFilePath              = consts.RunDirPath + consts.PIDFileName
+	Version string = ""
+	Time    string = ""
+	Branch  string = ""
 )
 
 func printVersion() {
-	if version == "" {
-		fmt.Println("Version information not set")
-		fmt.Println("Have to be set at build time using -ldflags -X options")
-		return
-	}
-	if buildid == "" {
-		buildid = time.Now().Format("2006-01-02 15:04")
-	}
-	fmt.Printf("%s Version : %s\nBuild : %s-%s\n", component, version, buildid, buildtype)
-
+	fmt.Printf("Version %s\nBuild : %s at %s\n", Version, Branch, Time)
 }
 
 func printUsage() {
@@ -61,7 +42,7 @@ func printUsage() {
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
 	// Save log configurations
-	config.LogConfiguration(consts.LogDirPath + consts.LogFileName)
+	config.LogConfiguration()
 
 	args := os.Args[1:]
 	if len(args) <= 0 {
@@ -69,7 +50,6 @@ func main() {
 		printUsage()
 		return
 	}
-
 	switch arg := strings.ToLower(args[0]); arg {
 	case "--version", "-v", "version":
 		printVersion()
@@ -172,81 +152,5 @@ func deleteFile(path string) {
 	var err = os.RemoveAll(path)
 	if err != nil {
 		log.Error(err)
-	}
-}
-
-type state bool
-
-const (
-	Stopped state = false
-	Running state = true
-)
-
-func readPidFile() (int, error) {
-	pidData, err := ioutil.ReadFile(pidFilePath)
-	if err != nil {
-		log.WithError(err).Debug("Failed to read wlagent.pid")
-		return 0, err
-	}
-	pid, err := strconv.Atoi(string(pidData))
-	if err != nil {
-		log.WithError(err).WithField("pid", pidData).Debug("Failed to convert pid data string to int")
-		return 0, err
-	}
-	return pid, nil
-}
-
-func status() state {
-	pid, err := readPidFile()
-	if err != nil {
-		// failure reading pid file
-		os.Remove(pidFilePath)
-		return Stopped
-	}
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		return Stopped
-	}
-	if err := p.Signal(syscall.Signal(0)); err != nil {
-		return Stopped
-	}
-	return Running
-}
-
-func start() {
-	if status() == Stopped {
-		// exec wlagentd
-		cmd := exec.Command(consts.BinDirPath + consts.DaemonFileName)
-		err := cmd.Start()
-		if err != nil {
-			log.WithError(err).Fatal("Failed to start wlagentd")
-		}
-		file, err := os.Create(pidFilePath)
-		if err != nil {
-			log.WithError(err).Fatal("Failed to create wlagentd pid file")
-		}
-		file.WriteString(strconv.Itoa(cmd.Process.Pid))
-		cmd.Process.Release()
-	} else {
-		fmt.Println("Workload Agent is already running")
-	}
-}
-
-func stop() {
-	if status() == Running {
-		pid, err := readPidFile()
-		if err != nil {
-			log.WithError(err).Error("Could not read PID file")
-			fmt.Println("Failed to stop Workload Agent")
-			return
-		}
-		if err := syscall.Kill(pid, syscall.SIGQUIT); err != nil {
-			log.WithError(err).Error("Failed to kill Workload Agent with signal SIGQUIT")
-			fmt.Println("Failed to stop Workload Agent")
-			return
-		}
-		fmt.Println("Workload Agent stopped")
-	} else {
-		fmt.Println("Workload Agent is already stopped")
 	}
 }

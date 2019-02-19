@@ -1,13 +1,12 @@
-GITTAG := $(shell git describe --tags --abbrev=0 2> /dev/null)
+VERSION := v0.0.0
 GITCOMMIT := $(shell git describe --always)
-GITCOMMITDATE := $(shell git log -1 --date=short --pretty=format:%cd)
-VERSION := $(or ${GITTAG}, v0.0.0)
+GITBRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+TIMESTAMP := $(shell date --iso=seconds)
 
 .PHONY: wlagent, installer, all, clean
 
 wlagent:
-	env GOOS=linux go build -ldflags "-X intel/isecl/wlagent/version.Version=$(VERSION)-$(GITCOMMIT)" -o out/wlagent main.go
-	env GOOS=linux go build -ldflags "-X intel/isecl/wlagent/version.Version=$(VERSION)-$(GITCOMMIT)" -o out/wlagentd cmd/wlagentd/main.go
+	env GOOS=linux go build -ldflags "-X main.Version=$(VERSION)-$(GITCOMMIT) -X main.Branch=$(GITBRANCH) -X main.Time=$(TIMESTAMP)"  -o out/wlagent
 
 installer: wlagent
 	mkdir -p out/wla

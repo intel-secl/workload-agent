@@ -221,7 +221,6 @@ func LogConfiguration(logFilePath string) {
 	var succ bool
 	Configuration.LogLevel, succ = os.LookupEnv("LOG_LEVEL")
 	if !succ {
-		fmt.Printf("Log level configuration variable not set.")
 		Configuration.LogLevel = "debug"
 	}
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, os.ModeAppend)
