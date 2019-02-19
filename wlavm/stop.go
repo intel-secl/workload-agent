@@ -29,49 +29,41 @@ var (
 // Return : Returns a boolean value to the main method.
 // true if the vm is launched sucessfully, else returns false. 
 func Stop(domainXMLContent string) bool {
-
 	log.Info("Stop call intercepted")
 	log.Info("Parsing domain XML to get image UUID, VM UUID and VM path")
-
-	var parser *libvirt.DomainParser
-
 	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
 	if err != nil {
 		log.Error("Error trying to parse domain xml")
 		return false
 	}
-	parser = &libvirt.DomainParser{
-		XML : domainXML,      
-		QemuInterceptCall : libvirt.Stop,
+
+	d, err := libvirt.NewDomainParser(domainXML,libvirt.Stop)
+	if err != nil {
+		log.Error("Parsing error")
+		return false
 	}
 	
-	parsedValue, err := libvirt.NewDomainParser(parser)
-	
-	vmUUID := parsedValue.VMUUID
-	vmPath := parsedValue.VMPath
-	imageUUID := parsedValue.ImageUUID
-
 	// check if vm exists at given path
-	log.Infof("Checking if VM exists in %s", vmPath)
-	if _, err := os.Stat(vmPath); os.IsNotExist(err) {
+	log.Infof("Checking if VM exists in %s", d.GetVMPath())
+	if _, err := os.Stat(d.GetVMPath()); os.IsNotExist(err) {
 		log.Error("VM does not exist")
 		return false
 	}
 
 	// check if the vm volume is encrypted
 	log.Info("Checking if a dm-crypt volume for the image is created")
-	isVmVolume, err := isVmVolumeEncrypted(vmUUID)
+	isVmVolume, err := isVmVolumeEncrypted(d.GetVMUUID())
 	if err != nil {
 		log.Error("Error while checking if a dm-crypt volume is created for the VM and is active")
 		return false
 	}
 	// if vm volume is encrypted, close the volume
 	if isVmVolume {
-		var vmMountPath = consts.MountPath + vmUUID
+		var vmMountPath = consts.MountPath + d.GetVMUUID()
 		// Unmount the image
 		log.Info("A dm-crypt volume for the image is created, deleting the vm volume")
 		vml.Unmount(vmMountPath)
-		vml.DeleteVolume(vmUUID)
+		vml.DeleteVolume(d.GetVMUUID())
 		err := os.RemoveAll(vmMountPath)
 		if err != nil {
 			log.Error("Error while deleting the vm mount point")
@@ -81,7 +73,7 @@ func Stop(domainXMLContent string) bool {
 
 	// check if this is the last vm associated with the image
 	log.Info("Checking if this is the last vm using the image...")
-	iAssoc := ImageVMAssocociation{imageUUID, ""}
+	iAssoc := ImageVMAssocociation{d.GetImageUUID(), ""}
 	isLastVm, imagePath, err = iAssoc.Delete()
 	if err != nil {
 		log.Error(err)
@@ -96,26 +88,25 @@ func Stop(domainXMLContent string) bool {
 	}
 
 	// check if this is the last vm associated with the image
-	if !isLastvm {
-		log.Infof("VM % stopped", vmUUID)
-		log.Info("Not deleting the image volume as this is not the last vm using the image. Exiting with success.")
+	if !isLastVm {
+		log.Infof("Not deleting the image volume as this is not the last vm using the image, VM %s stopped", d.GetVMUUID())
 		return true
 	}
 
 	log.Info("Unmounting and deleting the image volume as this is the last vm using the image")
-	var imageMountPath = consts.MountPath + imageUUID
+	var imageMountPath = consts.MountPath + d.GetImageUUID()
 	// Unmount the image
 	vml.Unmount(imageMountPath)
 
 	// Close the image volume
-	vml.DeleteVolume(imageUUID)
+	vml.DeleteVolume(d.GetImageUUID())
 	err = os.RemoveAll(imageMountPath)
 	if err != nil {
 		log.Error("Error while deleting the vm mount point")
 		return false
 	}
 
-	log.Infof("VM % stopped", vmUUID)
+	log.Infof("VM % stopped", d.GetVMUUID())
 	return true
 }
 

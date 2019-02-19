@@ -58,25 +58,22 @@ func Start(domainXMLContent string) bool {
 	var err error
 
 	log.Info("Parsing domain XML to get image UUID, image path, VM UUID, VM path and disk size")
-	var parser *libvirt.DomainParser
-
 	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
 	if err != nil {
 		log.Error("Error trying to parse domain xml")
 		return false
 	}
-	parser = &libvirt.DomainParser{
-		XML : domainXML,      
-		QemuInterceptCall : libvirt.Start,
+	d, err := libvirt.NewDomainParser(domainXML,libvirt.Start)
+	if err != nil {
+		log.Error("Parsing error")
+		return false
 	}
-	
-	parsedValue, err := libvirt.NewDomainParser(parser)
-	
-	vmUUID := parsedValue.VMUUID
-	vmPath := parsedValue.VMPath
-	imageUUID := parsedValue.ImageUUID
-	imagePath := parsedValue.ImagePath
-	size := parsedValue.Size
+
+	vmUUID := d.GetVMUUID()
+	vmPath := d.GetVMPath()
+	imageUUID := d.GetImageUUID()
+	imagePath := d.GetImagePath()
+	size := d.GetDiskSize()
 
 	_, err = os.Stat(imagePath)
 	if os.IsNotExist(err) {
