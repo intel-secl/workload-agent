@@ -5,6 +5,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
+	"intel/isecl/lib/common/exec"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/wlagent/consts"
 	"io"
