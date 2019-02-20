@@ -60,7 +60,7 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 	}
 
 	// check if instance exists at given path
-	log.Info("Checking if instance eixsts at given instance path.")
+	log.Info("Checking if instance exists at given instance path.")
 	if _, err := os.Stat(instancePath); os.IsNotExist(err) {
 		return 1
 	}
@@ -88,7 +88,7 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 
 	// check if this is the last instance associated with the image
 	log.Info("Checking if this is the last instance using the image.")
-	iAssoc := ImageVMAssocociation{imageUUID, ""}
+	iAssoc := ImageVMAssociation{imageUUID, ""}
 	isLastInstance, imagePath, err = iAssoc.Delete()
 	if err != nil {
 		log.Error(err)

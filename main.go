@@ -230,7 +230,7 @@ func start() {
 	if status() == Stopped {
 		// exec wlagentd
 		cmd := exec.Command(consts.BinDirPath + consts.DaemonFileName)
-		err = cmd.Start()
+		err := cmd.Start()
 		if err != nil {
 			log.WithError(err).Fatal("Failed to start wlagentd")
 		}

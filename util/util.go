@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"sync"
 
 	log "github.com/sirupsen/logrus"
 	xmlpath "gopkg.in/xmlpath.v2"
@@ -46,8 +45,6 @@ func LoadImageVMAssociation() error {
 	return nil
 }
 
-var fileMutex sync.Mutex
-
 // SaveImageVMAssociation method saves instance image association to yaml file
 func SaveImageVMAssociation() error {
 	imageVMAssociationFilePath := consts.ConfigDirPath + consts.ImageInstanceCountAssociationFileName
@@ -59,10 +56,6 @@ func SaveImageVMAssociation() error {
 	if err != nil {
 		return err
 	}
-	// Apply mutex lock to yaml file
-	fileMutex.Lock()
-	// Release the mutext lock
-	defer fileMutex.Unlock()
 	err = ioutil.WriteFile(imageVMAssociationFilePath, []byte(string(associations)), 0644)
 	if err != nil {
 		return err

@@ -4,21 +4,28 @@ import (
 	"fmt"
 	"intel/isecl/wlagent/util"
 	"strings"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 )
 
-// ImageVMAssocociation structure is used to call create and delete with input parameters
-type ImageVMAssocociation struct {
+// ImageVMAssociation with ID and path
+type ImageVMAssociation struct {
 	ImageUUID string
 	ImagePath string
 }
 
+var fileMutex sync.Mutex
+
 // Create method is used to check if an entry exists with the image ID. If it does, increment the instance count,
 // else create an entry with image instance association and append it.
-func (IAssoc ImageVMAssocociation) Create() error {
+func (IAssoc ImageVMAssociation) Create() error {
 	imageUUIDFound := false
 	log.Debug("Loading yaml file to instance image association structure.")
+
+	fileMutex.Lock()
+	defer fileMutex.Unlock()
+
 	err := util.LoadImageVMAssociation()
 	if err != nil {
 		return fmt.Errorf("error occured while loading image VM association from a file. %s" + err.Error())
@@ -50,9 +57,13 @@ func (IAssoc ImageVMAssocociation) Create() error {
 
 // Delete method is used to check if an entry exists with the image ID. If it does, decrement the instance count.
 // Check if the instance count is zero, then delete the image entry from the file.
-func (IAssoc ImageVMAssocociation) Delete() (bool, string, error) {
+func (IAssoc ImageVMAssociation) Delete() (bool, string, error) {
 	imagePath := ""
 	isLastVM := false
+
+	fileMutex.Lock()
+	defer fileMutex.Unlock()
+
 	err := util.LoadImageVMAssociation()
 	if err != nil {
 		return isLastVM, imagePath, fmt.Errorf("error occured while loading image VM association from a file. %s" + err.Error())

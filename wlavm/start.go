@@ -64,20 +64,6 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 		return 1
 	}
 
-	// get instance UUID from domain XML
-	instanceUUID, err := util.GetInstanceUUID(domainXML)
-	if err != nil {
-		log.Infof("%s", err)
-		return 1
-	}
-
-	// get instance path from domain XML
-	instancePath, err := util.GetInstancePath(domainXML)
-	if err != nil {
-		log.Infof("%s", err)
-		return 1
-	}
-
 	// get image UUID from domain XML
 	imageUUID, err := util.GetImageUUID(domainXML)
 	if err != nil {
@@ -87,6 +73,29 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 
 	// get image path from domain XML
 	imagePath, err := util.GetImagePath(domainXML)
+	if err != nil {
+		log.Infof("%s", err)
+		return 1
+	}
+
+	// Updating image-instance count association
+	log.Info("Updating the image-instance count file")
+	iAssoc := ImageVMAssociation{imageUUID, imagePath}
+	err = iAssoc.Create()
+	if err != nil {
+		log.Infof("Error while updating the image-instance count file. %s", err.Error())
+		return 1
+	}
+
+	// get instance UUID from domain XML
+	instanceUUID, err := util.GetInstanceUUID(domainXML)
+	if err != nil {
+		log.Infof("%s", err)
+		return 1
+	}
+
+	// get instance path from domain XML
+	instancePath, err := util.GetInstancePath(domainXML)
 	if err != nil {
 		log.Infof("%s", err)
 		return 1
@@ -384,15 +393,6 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 	if err != nil {
 		log.Info("Failed to post the VM Trust Report on to workload service")
 		log.Info("Error: ", err)
-		return 1
-	}
-
-	// Updating image-instance count association
-	log.Info("Updating the image-instance count file")
-	iAssoc := ImageVMAssocociation{imageUUID, imagePath}
-	err = iAssoc.Create()
-	if err != nil {
-		log.Infof("Error while updating the image-instance count file. %s", err.Error())
 		return 1
 	}
 
