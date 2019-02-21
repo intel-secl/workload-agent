@@ -7,6 +7,7 @@ import (
 	"intel/isecl/lib/common/exec"
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/consts"
+	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/libvirt"
 	"os"
 	"strings"
@@ -19,7 +20,7 @@ import (
 var (
 	isVmVolume bool
 	isLastVm   bool
-	imagePath        string
+	imagePath  string
 )
 
 // Stop is called from the libvirt hook. Everytime stop cycle is called
@@ -27,8 +28,8 @@ var (
 // e.g. shutdown, reboot, stop etc.
 // Input Parameters: domainXML content string
 // Return : Returns a boolean value to the main method.
-// true if the vm is launched sucessfully, else returns false. 
-func Stop(domainXMLContent string) bool {
+// true if the vm is launched sucessfully, else returns false.
+func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	log.Info("Stop call intercepted")
 	log.Info("Parsing domain XML to get image UUID, VM UUID and VM path")
 	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
@@ -37,12 +38,12 @@ func Stop(domainXMLContent string) bool {
 		return false
 	}
 
-	d, err := libvirt.NewDomainParser(domainXML,libvirt.Stop)
+	d, err := libvirt.NewDomainParser(domainXML, libvirt.Stop)
 	if err != nil {
 		log.Error("Parsing error")
 		return false
 	}
-	
+
 	// check if vm exists at given path
 	log.Infof("Checking if VM exists in %s", d.GetVMPath())
 	if _, err := os.Stat(d.GetVMPath()); os.IsNotExist(err) {
@@ -73,7 +74,7 @@ func Stop(domainXMLContent string) bool {
 
 	// check if this is the last vm associated with the image
 	log.Info("Checking if this is the last vm using the image...")
-	iAssoc := ImageVMAssocociation{d.GetImageUUID(), ""}
+	iAssoc := ImageVMAssociation{d.GetImageUUID(), ""}
 	isLastVm, imagePath, err = iAssoc.Delete()
 	if err != nil {
 		log.Error(err)

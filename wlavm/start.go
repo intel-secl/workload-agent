@@ -219,7 +219,8 @@ func Start(domainXMLContent string) bool {
 
 	// Updating image-vm count association
 	log.Info("Associating VM with image in image-vm-count file")
-	err = imagevmCountAssociation(imageUUID, imagePath)
+	iAssoc := ImageVMAssociation{imageUUID, imagePath}
+	err = iAssoc.Create()
 	if err != nil {
 		log.Errorf("Error while updating the image-vm count file. %s", err.Error())
 		return false
@@ -373,14 +374,14 @@ func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error
 	}
 
 	signedreport.Data = jsonVMTrustReport
-	signedreport.Alg = crypt.GetHashingAlgorithmName(config.HashingAlgorithm)
+	signedreport.Alg = crypt.GetHashingAlgorithmName(consts.HashingAlgorithm)
 	log.Debug("Getting Signing Key Certificate from disk")
 	signedreport.Cert, err = config.GetSigningCertFromFile()
 	if err != nil {
 		return nil, err
 	}
 	log.Debug("Using TPM to create signature")
-	signature, err := createSignatureWithTPM([]byte(signedreport.Data), config.HashingAlgorithm)
+	signature, err := createSignatureWithTPM([]byte(signedreport.Data), consts.HashingAlgorithm)
 	if err != nil {
 		return nil, err
 	}

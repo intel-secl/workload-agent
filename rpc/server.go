@@ -16,14 +16,14 @@ type VirtualMachine struct {
 }
 
 // Start forwards the RPC request to wlavm.Start
-func (vm *VirtualMachine) Start(args *DomainXML, reply *int) error {
+func (vm *VirtualMachine) Start(args *DomainXML, reply *bool) error {
 	// pass in vm.Watcher to get the instance to the File System Watcher
 	*reply = wlavm.Start(args.XML, vm.Watcher)
 	return nil
 }
 
 // Stop forwards the RPC request to wlavm.Stop
-func (vm *VirtualMachine) Stop(args *DomainXML, reply *int) error {
+func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
 	// pass in vm.Watcher to get the instance to the File System Watcher
 	*reply = wlavm.Stop(args.XML, vm.Watcher)
 	return nil

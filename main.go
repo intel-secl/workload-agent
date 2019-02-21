@@ -9,7 +9,9 @@ import (
 	"intel/isecl/wlagent/consts"
 	wlrpc "intel/isecl/wlagent/rpc"
 	"intel/isecl/wlagent/setup"
-	"intel/isecl/wlagent/wlavm"
+	"io/ioutil"
+	"net"
+	"net/rpc"
 	"os"
 	"strings"
 )
@@ -111,7 +113,22 @@ func main() {
 			os.Exit(1)
 		}
 
-		if startState := wlavm.Start(args[1]); !startState {
+		log.Info("workload-agent start called")
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			log.Fatal("start-vm: failed to dial wlagent.sock, is wlagent running?")
+		}
+		client := rpc.NewClient(conn)
+		var args = wlrpc.DomainXML{
+			XML: args[1],
+		}
+		var startState bool
+		err = client.Call("VirtualMachine.Start", &args, &startState)
+		if err != nil {
+			log.Error("client call failed")
+		}
+
+		if !startState {
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -120,6 +137,21 @@ func main() {
 		if len(args[1:]) < 1 {
 			log.Info("Invalid number of parameters")
 			os.Exit(1)
+		}
+		log.Info("workload-agent stop called")
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			log.Fatal("stop-vm: failed to dial wlagent.sock, is wlagent running?")
+			os.Exit(1)
+		}
+		client := rpc.NewClient(conn)
+		var args = wlrpc.DomainXML{
+			XML: args[1],
+		}
+		var stopState bool
+		err = client.Call("VirtualMachine.Stop", &args, &stopState)
+		if err != nil {
+			log.Error("client call failed")
 		}
 
 		if stopState := wlavm.Stop(args[1]); !stopState {
