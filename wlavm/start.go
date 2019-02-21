@@ -26,7 +26,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	xmlpath "gopkg.in/xmlpath.v2"
 )
@@ -215,13 +214,6 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 				return 1
 			}
 
-			// Watch the symlink for deletion, and remove the _sparseFile if image is deleted
-			filewatcher.HandleEvent(imagePath, func(e fsnotify.Event) {
-				if e.Op&fsnotify.Remove == fsnotify.Remove {
-					os.Remove(sparseFilePath)
-				}
-			})
-
 			//check if the image device mapper is mount path exists, if not create it
 			imageDeviceMapperMountPath := consts.MountPath + imageUUID
 			err := util.CheckMountPathExistsAndMountVolume(imageDeviceMapperMountPath, imageDeviceMapperPath)
@@ -254,7 +246,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 				return 1
 			}
 
-			// remove the encrypted image file and create a symlink with the dm-crypt volume
+			// remove the encrypted image file
 			log.Infof("Deleting the enc image file from :%s", imagePath)
 			rmErr := os.RemoveAll(imagePath)
 			if rmErr != nil {
@@ -286,6 +278,13 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 				log.Info("Error while trying to change decrypted image owner to qemu")
 				return 1
 			}
+
+			// Watch the symlink for deletion, and remove the _sparseFile if image is deleted
+			// filewatcher.HandleEvent(imagePath, func(e fsnotify.Event) {
+			// 	if e.Op&fsnotify.Remove == fsnotify.Remove {
+			// 		os.Remove(sparseFilePath)
+			// 	}
+			// })
 		}
 
 		// create instance volume
@@ -298,13 +297,6 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 			log.Infof("Error while creating instance dm-crypt volume. %s", err)
 			return 1
 		}
-
-		// Watch the symlink for deletion, and remove the _sparseFile if image is deleted
-		filewatcher.HandleEvent(imagePath, func(e fsnotify.Event) {
-			if e.Op&fsnotify.Remove == fsnotify.Remove {
-				os.Remove(instanceSparseFilePath)
-			}
-		})
 
 		// mount the instance dmcrypt volume on to a mount path
 		instanceDeviceMapperMountPath := consts.MountPath + instanceUUID

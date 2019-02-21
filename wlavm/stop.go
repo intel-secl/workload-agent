@@ -115,11 +115,11 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) int {
 
 	// Close the image volume
 	vml.DeleteVolume(imageUUID)
-	// err = os.RemoveAll(imageMountPath)
-	// if err != nil {
-	// 	log.Info("Error while deleting the instance mount point")
-	// 	return 1
-	// }
+	err = os.RemoveAll(imageMountPath)
+	if err != nil {
+		log.Info("Error while deleting the instance mount point")
+		return 1
+	}
 	return 0
 }
 
