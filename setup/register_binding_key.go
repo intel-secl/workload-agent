@@ -13,6 +13,8 @@ import (
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/mtwilsonclient"
 	"os"
+	"os/user"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -55,7 +57,8 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	if err != nil {
 		return errors.New("error writing binding key certificate to file.")
 	}
-	return nil
+
+	return rb.setBindingKeyPemFileOwner()
 }
 
 // Validate checks whether or not the register binding key task was completed successfully
@@ -67,4 +70,28 @@ func (rb RegisterBindingKey) Validate(c csetup.Context) error {
 		return errors.New("Binding key certificate file does not exist")
 	}
 	return nil
+}
+
+// setBindingKeyFileOwner sets the owner of the binding key file to the trustagent user
+// This is necessary for the TrustAgent to add the binding key to the manifest.
+func (rb RegisterBindingKey) setBindingKeyPemFileOwner() (err error) {
+
+	var usr *user.User
+	err = nil
+	// get the user id from the configuration variable that we have set
+	if config.Configuration.TrustAgent.User == "" {
+		return fmt.Errorf("trust agent user name cannot be empty in configuration")
+	}
+
+	if usr, err = user.Lookup(config.Configuration.TrustAgent.User); err != nil {
+		return fmt.Errorf("could not lookup up user id of trust agent user : %s", config.Configuration.TrustAgent.User)
+	}
+
+	uid, _ := strconv.Atoi(usr.Uid)
+	gid, _ := strconv.Atoi(usr.Gid)
+	// no need to check errors for the above two call since had just looked up the user
+	// using the user.Lookup call
+	err = os.Chown(consts.ConfigDirPath+consts.BindingKeyPemFileName, uid, gid)
+
+	return err
 }
