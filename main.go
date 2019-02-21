@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
@@ -12,14 +11,22 @@ import (
 	"io/ioutil"
 	"net"
 	"net/rpc"
+
+	log "github.com/sirupsen/logrus"
+
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
+	"syscall"
 )
 
 var (
-	Version string = ""
-	Time    string = ""
-	Branch  string = ""
+	Version           string = ""
+	Time              string = ""
+	Branch            string = ""
+	rpcSocketFilePath string = consts.RunDirPath + consts.RPCSocketFileName
+	pidFilePath              = consts.RunDirPath + consts.PIDFileName
 )
 
 func printVersion() {
@@ -60,13 +67,13 @@ func main() {
 		// Everytime, we run setup, need to make sure that the configuration is complete
 		// So lets run the Configurer as a seperate runner. We could have made a single runner
 		// with the first task as the Configurer. However, the logic in the common setup task
-		// runner runs only the tasks passed in the argument if there are 1 or more tasks. 
-		// This means that with current logic, if there are no specific tasks passed in the 
+		// runner runs only the tasks passed in the argument if there are 1 or more tasks.
+		// This means that with current logic, if there are no specific tasks passed in the
 		// argument, we will only run the confugurer but the intention was to run all of them
-		
-		// TODO : The right way to address this is to pass the arguments from the commandline 
+
+		// TODO : The right way to address this is to pass the arguments from the commandline
 		// to a functon in the workload agent setup package and have it build a slice of tasks
-		// to run. 
+		// to run.
 		installRunner := &csetup.Runner{
 			Tasks: []csetup.Task{
 				setup.Configurer{},
@@ -106,7 +113,7 @@ func main() {
 			fmt.Println("Error running setup: ", err)
 			os.Exit(1)
 		}
-		
+
 	case "start":
 		if len(args[1:]) < 1 {
 			log.Info("Invalid number of parameters")
@@ -158,6 +165,7 @@ func main() {
 			os.Exit(1)
 		}
 		os.Exit(0)
+		fmt.Println("Return code from VM stop :", returnCode)
 
 	case "uninstall":
 		deleteFile(consts.WlagentSymLink)
@@ -167,7 +175,6 @@ func main() {
 		if len(args) > 1 && strings.ToLower(args[1]) == "--purge" {
 			deleteFile(consts.ConfigDirPath)
 		}
-
 
 	default:
 		fmt.Printf("Unrecognized option : %s\n", arg)

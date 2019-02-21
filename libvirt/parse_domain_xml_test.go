@@ -1,11 +1,12 @@
 package libvirt
 
 import (
+	"bytes"
 	"io/ioutil"
 	"testing"
+
 	"github.com/stretchr/testify/assert"
 	xmlpath "gopkg.in/xmlpath.v2"
-	"bytes"
 )
 
 func TestGetItemFromDomainXML(t *testing.T) {

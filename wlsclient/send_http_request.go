@@ -7,7 +7,6 @@ import (
 	"intel/isecl/wlagent/config"
 	"io/ioutil"
 	"net/http"
-
 )
 
 //SendRequest method is used to create an http client object and send the request to the server

@@ -3,14 +3,15 @@ package wlsclient
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	f "intel/isecl/lib/flavor"
 	"intel/isecl/lib/verifier"
 	"intel/isecl/wlagent/config"
 	"net/http"
-	"strings"
-	log "github.com/sirupsen/logrus"
 	"net/url"
-	"errors"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 //FlavorKey is a representation of flavor-key information
@@ -22,7 +23,7 @@ type FlavorKey struct {
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
 func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error) {
 	var flavorKeyInfo FlavorKey
-	
+
 	requestURL, err := url.Parse(config.Configuration.Wls.APIURL)
 	if err != nil {
 		return flavorKeyInfo, errors.New("error retrieving WLS API URL")

@@ -1,16 +1,14 @@
 package setup
 
 import (
-	
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/wlagent/config"
-	log "github.com/sirupsen/logrus"
 
+	log "github.com/sirupsen/logrus"
 )
 
 type Configurer struct {
-
 }
 
 func (cnfr Configurer) Run(c csetup.Context) error {
@@ -29,8 +27,8 @@ func (cnfr Configurer) Run(c csetup.Context) error {
 }
 
 func (cnfr Configurer) Validate(c csetup.Context) error {
-	
-    if config.Configuration.ConfigComplete != true {
+
+	if config.Configuration.ConfigComplete != true {
 		return fmt.Errorf("Configuration is not complete")
 	}
 	return nil

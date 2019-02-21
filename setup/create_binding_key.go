@@ -61,12 +61,12 @@ func (bk BindingKey) setBindingKeyFileOwner() (err error) {
 	if usr, err = user.Lookup(config.Configuration.TrustAgent.User); err != nil {
 		return fmt.Errorf("could not lookup up user id of trust agent user : %s", config.Configuration.TrustAgent.User)
 	}
-	
+
 	uid, _ := strconv.Atoi(usr.Uid)
 	gid, _ := strconv.Atoi(usr.Gid)
 	// no need to check errors for the above two call since had just looked up the user
 	// using the user.Lookup call
 	err = os.Chown(consts.ConfigDirPath+consts.BindingKeyFileName, uid, gid)
-	
+
 	return err
 }
