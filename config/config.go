@@ -3,8 +3,6 @@ package config
 import (
 	"encoding/hex"
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	yaml "gopkg.in/yaml.v2"
 	"intel/isecl/lib/common/exec"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/wlagent/consts"
@@ -14,6 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // Configuration is the global configuration struct that is marshalled/unmarshaled to a persisted yaml file
@@ -223,6 +224,7 @@ func LogConfiguration(logFilePath string) {
 	if !succ {
 		Configuration.LogLevel = "debug"
 	}
+	// creating the log file if not preset
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		fmt.Printf("unable to write file on filehook %v\n", err)

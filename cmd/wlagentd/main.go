@@ -12,6 +12,7 @@ import (
 
 func main() {
 	// Save log configurations
+	//TODO : daemon log configuration - does it need to be passed in?
 	config.LogConfiguration(consts.LogDirPath + consts.DaemonLogFileName)
 
 	// fileWatcher, err := filewatch.NewWatcher()
