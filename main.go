@@ -30,7 +30,7 @@ var (
 )
 
 func printVersion() {
-	fmt.Printf("Version %s\nBuild : %s at %s\n", Version, Branch, Time)
+	fmt.Printf("Version %s\nBuild %s at %s\n", Version, Branch, Time)
 }
 
 func printUsage() {
@@ -38,11 +38,10 @@ func printUsage() {
 	fmt.Printf("===============\n\n")
 	fmt.Printf("usage : %s <command> [<args>]\n\n", os.Args[0])
 	fmt.Printf("Following are the list of commands\n")
-	fmt.Printf("\tsetup|start-vm|stop-vm|--help|--version\n\n")
-	fmt.Printf("setup command is used to run setup tasks\n")
+	fmt.Printf("\tsetup|vmstart|vmstop|--help|--version\n\n")
 	fmt.Printf("\tusage : %s setup [<tasklist>]\n", os.Args[0])
 	fmt.Printf("\t\t<tasklist>-space seperated list of tasks\n")
-	fmt.Printf("\t\t\t-Supported tasks - SigningKey BindingKey\n")
+	fmt.Printf("\t\t\t-Supported tasks - SigningKey BindingKey RegisterSigningKey RegisterBindingKey\n")
 	fmt.Printf("\tExample :-\n")
 	fmt.Printf("\t\t%s setup\n", os.Args[0])
 	fmt.Printf("\t\t%s setup SigningKey\n", os.Args[0])
