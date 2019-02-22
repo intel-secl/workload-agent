@@ -87,7 +87,7 @@ func WriteKeyCertToDisk(keyCertPath string, aikPem []byte) error {
 	if err != nil {
 		return errors.New("error creating file. " + err.Error())
 	}
-	if err = pem.Encode(file, &pem.Block{Type: consts.PemPublicKeyHeader, Bytes: aikPem}); err != nil {
+	if err = pem.Encode(file, &pem.Block{Type: consts.PemCertificateHeader, Bytes: aikPem}); err != nil {
 		return errors.New("error writing certificate to file")
 	}
 	return nil
