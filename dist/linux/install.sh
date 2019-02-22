@@ -10,18 +10,18 @@
 
 # WORKLOAD_AGENT install script 
 # Outline:
-# 1. Check if installer is running as a root
-# 2. Load the environment file
-# 3. Check if WORKLOAD_AGENT_NOSETUP is set in environment file
-# 4. Check if trustagent is intalled
-# 5. Load tagent username to a variable
-# 6. Load local configurations
-# 7. Create application directories
-# 8. Copy workload agent installer to workload-agent bin directory and create a symlink
-# 9. Call workload-agent setup
-# 10. Install and setup libvirt
-# 11. Copy isecl-hook script to libvirt hooks directory
-# 12. Restart the libvirt service after copying qemu hook
+# Check if installer is running as a root
+# Load the environment file
+# Check if WORKLOAD_AGENT_NOSETUP is set in environment file
+# Check if trustagent is intalled
+# Load tagent username to a variable
+# Load local configurations
+# Create application directories
+# Copy workload agent installer to workload-agent bin directory and create a symlink
+# Call workload-agent setup
+# Install and setup libvirt
+# Copy isecl-hook script to libvirt hooks directory
+# Restart the libvirt service after copying qemu hook
 
 # TERM_DISPLAY_MODE can be "plain" or "color"
 TERM_DISPLAY_MODE=color
@@ -74,16 +74,16 @@ echo_info() {
 
 ############################################################################################################
 
-# 1. Product installation is only allowed if we are running as root
+# Product installation is only allowed if we are running as root
 if [ $EUID -ne 0 ];  then
   echo "Workload agent installation has to run as root. Exiting"
   exit 1
 fi
 
-# 2. Make sure that we are running in the same directory as the install script
+# Make sure that we are running in the same directory as the install script
 cd "$( dirname "$0" )"
 
-# 2. load installer environment file, if present
+# load installer environment file, if present
 if [ -f ~/workload-agent.env ]; then
   echo "Loading environment variables from $(cd ~ && pwd)/workload-agent.env"
   . ~/workload-agent.env
@@ -96,7 +96,7 @@ fi
 export LOG_LEVEL=${LOG_LEVEL:-"info"}
 
 
-# 4. Check if trustagent is intalled; if not output error
+# Check if trustagent is intalled; if not output error
 hash tagent 2>/dev/null || 
 {
   echo_failure >&2 "Trust agent is not installed. Exiting."; 
@@ -104,7 +104,7 @@ hash tagent 2>/dev/null ||
 }
 
 
-# 9. Check if yum packages are already installed; if not install them
+# Check if yum packages are already installed; if not install them
 yum_packages=(libvirt cryptsetup)
 for i in ${yum_packages[*]}
 do
@@ -124,7 +124,7 @@ if [ ! -d "/etc/libvirt/hooks" ];  then
   exit 1
 fi
 
-# 5. Use tagent user
+# Use tagent user
 #### Using trustagent user here as trustagent needs permissions to access files from workload agent
 #### for eg signing binding keys. As tagent is a prerequisite for workload-agent, tagent user can be used here
 if [ "$(whoami)" == "root" ]; then
@@ -141,7 +141,7 @@ if [ "$(whoami)" == "root" ]; then
   fi
 fi
 
-# 6. Load local configurations
+# Load local configurations
 directory_layout() {
 export WORKLOAD_AGENT_CONFIGURATION=/etc/workload-agent
 export WORKLOAD_AGENT_LOGS=/var/log/workload-agent
@@ -160,7 +160,7 @@ logfile=$INSTALL_LOG_FILE
 date >> $logfile
 echo "Installing workload agent..." >> $logfile
 
-# 7. Create application directories (chown will be repeated near end of this script, after setup)
+# Create application directories (chown will be repeated near end of this script, after setup)
 for directory in $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_BIN $WORKLOAD_AGENT_LOGS; do
   # mkdir -p will return 0 if directory exists or is a symlink to an existing directory or directory and parents can be created
   mkdir -p $directory 
@@ -172,7 +172,7 @@ for directory in $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_BIN $WORKLOAD_AGE
   chmod 700 $directory
 done
 
-# 8. Copy workload agent installer to workload-agent bin directory and create a symlink
+# Copy workload agent installer to workload-agent bin directory and create a symlink
 cp -f wlagent $WORKLOAD_AGENT_BIN
 chown $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $WORKLOAD_AGENT_BIN/wlagent
 ln -sfT $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/wlagent
@@ -183,10 +183,10 @@ chown $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $WORKLOAD_AGENT_BIN/wlagentd
 # Create PID file directory in /var/run
 mkdir -p /var/run/workload-agent
 
-# 10. Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
+# Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
 cp -f qemu /etc/libvirt/hooks 
 
-# 12. Restart the libvirt service after copying qemu hook and check if it's running
+# Restart the libvirt service after copying qemu hook and check if it's running
 systemctl restart libvirtd
 isactive=$(systemctl is-active libvirtd)
 if [ ! "$isactive" == "active" ]; then
@@ -197,7 +197,7 @@ fi
 ## Maybe we should have a seperate setup.sh that can just do the setup tasks. 
 
 
-# 3. exit workload-agent setup if WORKLOAD_AGENT_NOSETUP is set
+# exit workload-agent setup if WORKLOAD_AGENT_NOSETUP is set
 if [ -n "$WORKLOAD_AGENT_NOSETUP" ]; then
   echo "WORKLOAD_AGENT_NOSETUP is set. So, skipping the workload-agent setup task." | tee -a $logfile
   exit 0
@@ -247,7 +247,7 @@ check_env_var_present(){
 }
 
 
-# 10. Validate the required environment variables for the setup. We are validating this in the 
+# Validate the required environment variables for the setup. We are validating this in the 
 # binary. However, for someone to figure out what are the ones that need to be set, they can 
 # check here
 
@@ -263,7 +263,7 @@ for env_var in $required_vars; do
         check_env_var_present $env_var
 done
 
-# 11. Call workload-agent setup if all the required env variables are set
+# Call workload-agent setup if all the required env variables are set
 if [[ $all_env_vars_present -eq 1 ]]; then
   wlagent setup | tee -a $logfile
 else 
@@ -272,11 +272,7 @@ else
   exit 1
 fi
 
-# Make sure all files created after setup tasks have tagent user ownsership
-## TODO: Commented out for now. Installing everything as root. Uncomment as we address this 
-#for directory in $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_BIN $WORKLOAD_AGENT_LOGS; do
-#  chown -R $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $directory
-#  chmod 700 $directory
-#done
+# Call workloadagent start
+wlagent start | tee -a $logfile
 
 echo_success "Installation completed." | tee -a $logfile
