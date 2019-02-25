@@ -268,6 +268,14 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte) error {
 	log.Debug("Creating a symlink between the vm and the volume")
 	// create symlink between the image and the dm-crypt volume	
 	changeDiskFile := vmDeviceMapperMountPath + "/disk"
+
+	// Giving read write access of changed disk file to group users as well. As we are creating a symlink to this file
+	// and Nova is the accessing the file and Nova user is part of qemu group
+	err = os.Chmod(changeDiskFile, 0660)
+	if err != nil {
+		return fmt.Errorf("error while giving permissions to changed disk path: %s %s", changeDiskFile, err.Error())
+	}
+
 	err = createSymLinkAndChangeOwnership(changeDiskFile, vmPath, vmDeviceMapperMountPath)
 	if err != nil {
 		return fmt.Errorf("error creating a symlink and changing file ownership: %s", err.Error())
@@ -313,6 +321,13 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0644)
 	if ioWriteErr != nil {
 		return errors.New("error writing the decrypted data to file")
+	}
+
+	// Giving read write access of decrypted file to group users as well. As we are creating a symlink to this file
+	// and Nova is the accessing the file and Nova user is part of qemu group
+	err = os.Chmod(decryptedImagePath, 0660)
+	if err != nil {
+		return fmt.Errorf("error while giving permissions to decrypted image path: %s %s", decryptedImagePath, err.Error())
 	}
 
 	log.Debug("Creating a symlink between the image and the volume")
