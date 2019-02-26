@@ -12,7 +12,7 @@ const (
 	WLS_API_USERNAME                            = "WLS_API_USERNAME"
 	WLS_API_PASSWORD                            = "WLS_API_PASSWORD"
 	WLS_TLS_SHA256                              = "WLS_TLS_SHA256"
-	LOG_LEVEL                                   = "LOG_LEVEL"
+	LogLevelEnvVar                              = "LOG_LEVEL"
 	AikSecretKeyName                            = "aik.secret"
 	TAConfigDirEnvVar                           = "TRUSTAGENT_CONFIGURATION"
 	TAConfigAikSecretCmd                        = "tagent config aik.secret"

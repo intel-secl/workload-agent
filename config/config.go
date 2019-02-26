@@ -199,6 +199,12 @@ func SaveConfiguration(c csetup.Context) error {
 			"Trust Agent Configuration Directory",
 			false,
 		},
+		{
+			consts.LogLevelEnvVar,
+			&Configuration.LogLevel,
+			"Log Level",
+			false,
+		},
 	}
 
 	for _, cv := range requiredConfigs {
@@ -219,11 +225,6 @@ func SaveConfiguration(c csetup.Context) error {
 
 // LogConfiguration is used to save log configurations
 func LogConfiguration(logFilePath string) {
-	var succ bool
-	Configuration.LogLevel, succ = os.LookupEnv("LOG_LEVEL")
-	if !succ {
-		Configuration.LogLevel = "debug"
-	}
 	// creating the log file if not preset
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
@@ -233,7 +234,7 @@ func LogConfiguration(logFilePath string) {
 	// parse string, this is built-in feature of logrus
 	logLevel, err := log.ParseLevel(Configuration.LogLevel)
 	if err != nil {
-		logLevel = log.DebugLevel
+		logLevel = log.InfoLevel
 	}
 	// set global log level
 	log.SetLevel(logLevel)
