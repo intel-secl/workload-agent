@@ -9,7 +9,7 @@ import (
 func TestGetAndStore(t *testing.T) {
 	assert := assert.New(t)
 	cache := NewCache()
-	key := []byte{0, 1, 2, 3}
+	key := Key{"keyid", []byte{0, 1, 2, 3}}
 	cache.Store("foobar", key)
 	actual, exists := cache.Get("foobar")
 	assert.True(exists)
@@ -21,14 +21,14 @@ func TestGetNone(t *testing.T) {
 	cache := NewCache()
 	actual, exists := cache.Get("foobar")
 	assert.False(exists)
-	assert.Nil(actual)
+	assert.Zero(actual)
 }
 
 func TestOverwrite(t *testing.T) {
 	assert := assert.New(t)
 	cache := NewCache()
-	key1 := []byte{0, 1, 2, 3}
-	key2 := []byte{4, 5, 6, 7}
+	key1 := Key{"foo", []byte{0, 1, 2, 3}}
+	key2 := Key{"bar", []byte{4, 5, 6, 7}}
 	cache.Store("foobar", key1)
 	cache.Store("foobar", key2)
 	actual, exists := cache.Get("foobar")

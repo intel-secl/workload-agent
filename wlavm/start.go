@@ -19,7 +19,8 @@ import (
 	"intel/isecl/wlagent/libvirt"
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/filewatch"
-	"intel/isecl/wlagent/util"
+	"intel/isecl/wlagent/keycache"
+	"intel/isecl/wlagent/libvirt"
 	"intel/isecl/wlagent/wlsclient"
 	"io/ioutil"
 	"os"
@@ -108,14 +109,16 @@ func Start(domainXMLContent string) bool {
 	defer CloseTpmInstance()
 
 	//check if the key is cached by filtercriteria imageUUID
-	var keyID string
 	var flavorKeyInfo wlsclient.FlavorKey
 	var tpmWrappedKey []byte
+	var keyID string
 
-	keyID, tpmWrappedKey, err = getKeyFromCache(imageUUID)
-	if err != nil {
-		log.Error("Error checking if the key exists in the cache and retrieving the keyID")
-		return false
+	// try to obtain the key from the cache. If the key is not found in the cache,
+	// then it will return and error. In this case, we ignore it and pro
+	if key, err := getKeyFromCache(imageUUID); err == nil {
+		keyID = key.ID
+		tpmWrappedKey = key.Bytes
+		log.Debugf("Retrieved Key from in-memory cache. key ID:%s, imageuuid: %s", keyID, imageUUID)
 	}
 
 	// get host hardware UUID
@@ -127,7 +130,14 @@ func Start(domainXMLContent string) bool {
 	}
 	log.Debugf("The host hardware UUID is :%s", hardwareUUID)
 
-	//get flavor-key from workload service
+	// get flavor-key from workload service
+	// we will be hitting the WLS to retrieve the the flavor irrespective of
+	// whether the key is cached locally. Having a cached key saves the rountrip
+	// that the WLS has to make to the Key Management Server (KMS).
+	// TODO: Investigate if it makes sense to cache the flavor locally as well with
+	// an expiration time. Believe this was discussed and previously ruled out..
+	// but still worth exploring for performance reasons as we want to minimize
+	// making http client calls to external servers.
 	log.Infof("Retrieving image-flavor-key for image %s from WLS", imageUUID)
 	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID, keyID)
 	if err != nil {
@@ -137,7 +147,7 @@ func Start(domainXMLContent string) bool {
 
 	if flavorKeyInfo.ImageFlavor.Image.Meta.ID == "" {
 		log.Infof("Flavor does not exist for the image %s", imageUUID)
-		// check with Ryan
+		// TODO: check with Ryan
 		return true
 	}
 
@@ -490,14 +500,20 @@ func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 
 // This method is used to check if the key for an image file is cached.
 // If the key is cached, the method you return the key ID.
-func getKeyFromCache(imageUUID string) (string, []byte, error) {
-	// checking if key is cached is not implemented yet
-	return "", nil, nil
+func getKeyFromCache(imageUUID string) (keycache.Key, error) {
+	key, exists := keycache.Get(imageUUID)
+	//TODO : Remove debug log
+	log.Debugf("getKeyFromCache cache entry exists : %t, imageuuid : %s", exists, imageUUID)
+	if !exists {
+		return keycache.Key{}, errors.New("key is not cached")
+	}
+	return key, nil
 }
 
 // This method is used add the key to cache and map it with the image UUID
-func cacheKeyInMemory(imageUUID, keyID string, key []byte) error {
-	// method not implemented yet
+func cacheKeyInMemory(imageUUID string, keyID string, key []byte) error {
+	log.Debugf("cacheKeyInMemory imageUUID : %s, keyID : %s", imageUUID, keyID)
+	keycache.Store(imageUUID, keycache.Key{keyID, key})
 	return nil
 }
 

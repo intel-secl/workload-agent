@@ -171,6 +171,7 @@ func main() {
 		deleteFile(consts.OptDirPath)
 		deleteFile(consts.LibvirtHookFilePath)
 		deleteFile(consts.LogDirPath)
+		deleteFile(consts.RunDirPath)
 		if len(args) > 1 && strings.ToLower(args[1]) == "--purge" {
 			deleteFile(consts.ConfigDirPath)
 		}

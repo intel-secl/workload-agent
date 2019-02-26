@@ -2,10 +2,16 @@ package keycache
 
 import "sync"
 
-// Cache is a mutex protected cache for quick storage and retrieval of keys by KeyID
+// Key
+type Key struct {
+	ID    string
+	Bytes []byte
+}
+
+// Cache is a mutex protected cache for quick storage and retrieval of keys by ImageUUID
 // This implements an in-memory store only, and any data is effectively lost on application exit
 type Cache struct {
-	keys map[string][]byte
+	keys map[string]Key
 	mtx  *sync.Mutex
 }
 
@@ -13,7 +19,7 @@ type Cache struct {
 // It returns a pointer to the Cache struct
 func NewCache() *Cache {
 	return &Cache{
-		keys: make(map[string][]byte),
+		keys: make(map[string]Key),
 		mtx:  &sync.Mutex{},
 	}
 }
@@ -21,18 +27,18 @@ func NewCache() *Cache {
 // Get retrieves a key by its keyID
 // It returns a byte slice containing the key data, as well as a bool that indicates
 // if the key exists in the cache
-func (c *Cache) Get(keyID string) (key []byte, exists bool) {
+func (c *Cache) Get(imageUUID string) (key Key, exists bool) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	key, exists = c.keys[keyID]
+	key, exists = c.keys[imageUUID]
 	return
 }
 
 // Store persists a key in the cache by its keyID
-func (c *Cache) Store(keyID string, key []byte) {
+func (c *Cache) Store(imageID string, key Key) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	c.keys[keyID] = key
+	c.keys[imageID] = key
 }
 
 var global *Cache
@@ -41,12 +47,12 @@ func init() {
 	global = NewCache()
 }
 
-// Get retrieves a key by its keyID from the default global keycache
-func Get(keyID string) (key []byte, exists bool) {
-	return global.Get(keyID)
+// Get retrieves a key by its imageID from the default global keycache
+func Get(imageID string) (key Key, exists bool) {
+	return global.Get(imageID)
 }
 
 // Store persists a key by its keyID from the default global keycache
-func Store(keyID string, key []byte) {
-	global.Store(keyID, key)
+func Store(imageID string, key Key) {
+	global.Store(imageID, key)
 }

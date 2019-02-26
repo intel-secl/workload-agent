@@ -272,7 +272,7 @@ else
   exit 1
 fi
 
-# Call workloadagent start
+# Call workload-agent start
 wlagent start | tee -a $logfile
 
 echo_success "Installation completed." | tee -a $logfile
