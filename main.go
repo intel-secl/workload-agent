@@ -193,3 +193,84 @@ func deleteFile(path string) {
 		log.Error(err)
 	}
 }
+
+type state bool
+
+const (
+	Stopped state = false
+	Running state = true
+)
+
+func readPidFile() (int, error) {
+	pidData, err := ioutil.ReadFile(pidFilePath)
+	if err != nil {
+		log.WithError(err).Debug("Failed to read wlagent.pid")
+		return 0, err
+	}
+	pid, err := strconv.Atoi(string(pidData))
+	if err != nil {
+		log.WithError(err).WithField("pid", pidData).Debug("Failed to convert pid data string to int")
+		return 0, err
+	}
+	return pid, nil
+}
+
+func status() state {
+	pid, err := readPidFile()
+	if err != nil {
+		// failure reading pid file
+		os.Remove(pidFilePath)
+		return Stopped
+	}
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return Stopped
+	}
+	if err := p.Signal(syscall.Signal(0)); err != nil {
+		return Stopped
+	}
+	return Running
+}
+
+func start() {
+	if status() == Stopped {
+		// exec wlagentd
+		if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
+			if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
+				log.WithError(err).Fatalf("Could not create directory: %s, err: %s", consts.RunDirPath, err)
+			}
+		}
+		cmd := exec.Command(consts.BinDirPath + consts.DaemonFileName)
+		err := cmd.Start()
+		if err != nil {
+			log.WithError(err).Fatal("Failed to start wlagentd")
+		}
+		file, err := os.Create(pidFilePath)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to create wlagentd pid file")
+		}
+		file.WriteString(strconv.Itoa(cmd.Process.Pid))
+		cmd.Process.Release()
+	} else {
+		fmt.Println("Workload Agent is already running")
+	}
+}
+
+func stop() {
+	if status() == Running {
+		pid, err := readPidFile()
+		if err != nil {
+			log.WithError(err).Error("Could not read PID file")
+			fmt.Println("Failed to stop Workload Agent")
+			return
+		}
+		if err := syscall.Kill(pid, syscall.SIGQUIT); err != nil {
+			log.WithError(err).Error("Failed to kill Workload Agent with signal SIGQUIT")
+			fmt.Println("Failed to stop Workload Agent")
+			return
+		}
+		fmt.Println("Workload Agent stopped")
+	} else {
+		fmt.Println("Workload Agent is already stopped")
+	}
+}
