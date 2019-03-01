@@ -36,7 +36,7 @@ func printUsage() {
 	fmt.Printf("===============\n\n")
 	fmt.Printf("usage : %s <command> [<args>]\n\n", os.Args[0])
 	fmt.Printf("Following are the list of commands\n")
-	fmt.Printf("\tsetup|vmstart|vmstop|--help|--version\n\n")
+	fmt.Printf("\tsetup|start|stop|status|--help|--version\n\n")
 	fmt.Printf("\tusage : %s setup [<tasklist>]\n", os.Args[0])
 	fmt.Printf("\t\t<tasklist>-space seperated list of tasks\n")
 	fmt.Printf("\t\t\t-Supported tasks - SigningKey BindingKey RegisterSigningKey RegisterBindingKey\n")
@@ -219,7 +219,7 @@ func start() {
 		os.Exit(1)
 	}
 	fmt.Println(cmdOutput)
-	fmt.Println("Workload Agent Service Started...")	
+	fmt.Println("Workload Agent Service Started...")
 }
 
 func stop() {
@@ -230,7 +230,7 @@ func stop() {
 		os.Exit(1)
 	}
 	fmt.Println(cmdOutput)
-	fmt.Println("Workload Agent Service Stopped...")	
+	fmt.Println("Workload Agent Service Stopped...")
 }
 
 func removeservice() {
