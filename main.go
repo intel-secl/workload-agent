@@ -2,23 +2,22 @@ package main
 
 import (
 	"fmt"
+	"intel/isecl/lib/common/exec"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
 	wlrpc "intel/isecl/wlagent/rpc"
 	"intel/isecl/wlagent/setup"
-	"io/ioutil"
 	"net"
 	"net/rpc"
 
 	log "github.com/sirupsen/logrus"
 
 	"os"
-	"os/exec"
-	"strconv"
 	"strings"
-	"syscall"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -26,7 +25,6 @@ var (
 	Time              string = ""
 	Branch            string = ""
 	rpcSocketFilePath string = consts.RunDirPath + consts.RPCSocketFileName
-	pidFilePath              = consts.RunDirPath + consts.PIDFileName
 )
 
 func printVersion() {
@@ -113,7 +111,22 @@ func main() {
 			os.Exit(1)
 		}
 
+	case "runservice":
+		runservice()
+
 	case "start":
+		start()
+
+	case "stop":
+		stop()
+
+	case "status":
+		if cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStatusCmd, 2); err == nil {
+			fmt.Println("Workload Agent Status")
+			fmt.Println(cmdOutput)
+		}
+
+	case "start-vm":
 		if len(args[1:]) < 1 {
 			log.Info("Invalid number of parameters")
 			os.Exit(1)
@@ -167,6 +180,9 @@ func main() {
 		fmt.Println("Return code from VM stop :", returnCode)
 
 	case "uninstall":
+		stop()
+		removeservice()
+
 		deleteFile(consts.WlagentSymLink)
 		deleteFile(consts.OptDirPath)
 		deleteFile(consts.LibvirtHookFilePath)
@@ -194,83 +210,83 @@ func deleteFile(path string) {
 	}
 }
 
-type state bool
-
-const (
-	Stopped state = false
-	Running state = true
-)
-
-func readPidFile() (int, error) {
-	pidData, err := ioutil.ReadFile(pidFilePath)
-	if err != nil {
-		log.WithError(err).Debug("Failed to read wlagent.pid")
-		return 0, err
-	}
-	pid, err := strconv.Atoi(string(pidData))
-	if err != nil {
-		log.WithError(err).WithField("pid", pidData).Debug("Failed to convert pid data string to int")
-		return 0, err
-	}
-	return pid, nil
-}
-
-func status() state {
-	pid, err := readPidFile()
-	if err != nil {
-		// failure reading pid file
-		os.Remove(pidFilePath)
-		return Stopped
-	}
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		return Stopped
-	}
-	if err := p.Signal(syscall.Signal(0)); err != nil {
-		return Stopped
-	}
-	return Running
-}
 
 func start() {
-	if status() == Stopped {
-		// exec wlagentd
-		if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
-			if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
-				log.WithError(err).Fatalf("Could not create directory: %s, err: %s", consts.RunDirPath, err)
-			}
-		}
-		cmd := exec.Command(consts.BinDirPath + consts.DaemonFileName)
-		err := cmd.Start()
-		if err != nil {
-			log.WithError(err).Fatal("Failed to start wlagentd")
-		}
-		file, err := os.Create(pidFilePath)
-		if err != nil {
-			log.WithError(err).Fatal("Failed to create wlagentd pid file")
-		}
-		file.WriteString(strconv.Itoa(cmd.Process.Pid))
-		cmd.Process.Release()
-	} else {
-		fmt.Println("Workload Agent is already running")
+	cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStartCmd, 5)
+	if err != nil {
+		fmt.Println("Could not start Workload Agent Service")
+		fmt.Println("Error : ", err)
+		os.Exit(1)
 	}
+	fmt.Println(cmdOutput)
+	fmt.Println("Workload Agent Service Started...")	
 }
 
 func stop() {
-	if status() == Running {
-		pid, err := readPidFile()
-		if err != nil {
-			log.WithError(err).Error("Could not read PID file")
-			fmt.Println("Failed to stop Workload Agent")
-			return
-		}
-		if err := syscall.Kill(pid, syscall.SIGQUIT); err != nil {
-			log.WithError(err).Error("Failed to kill Workload Agent with signal SIGQUIT")
-			fmt.Println("Failed to stop Workload Agent")
-			return
-		}
-		fmt.Println("Workload Agent stopped")
-	} else {
-		fmt.Println("Workload Agent is already stopped")
+	cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStopCmd, 5)
+	if err != nil {
+		fmt.Println("Could not stop Workload Agent Service")
+		fmt.Println("Error : ", err)
+		os.Exit(1)
 	}
+	fmt.Println(cmdOutput)
+	fmt.Println("Workload Agent Service Stopped...")	
+}
+
+func removeservice() {
+	_, _, err := exec.RunCommandWithTimeout(consts.ServiceRemoveCmd, 5)
+	if err != nil {
+		fmt.Println("Could not remove Workload Agent Service")
+		fmt.Println("Error : ", err)
+	}
+	fmt.Println("Workload Agent Service Removed...")
+}
+
+func runservice() {
+	// Save log configurations
+	//TODO : daemon log configuration - does it need to be passed in?
+	config.LogConfiguration(consts.LogDirPath + consts.DaemonLogFileName)
+
+	// fileWatcher, err := filewatch.NewWatcher()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// stop signaler
+	stop := make(chan bool)
+	// defer fileWatcher.Close()
+	// go func() {
+	// 	for {
+	// 		fileWatcher.Watch()
+	// 	}
+	// }()
+    if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
+			log.WithError(err).Fatalf("Could not create directory: %s, err: %s", consts.RunDirPath, err)
+		}
+	}
+	go func() {
+		for {
+			RPCSocketFilePath := consts.RunDirPath + consts.RPCSocketFileName
+			// When the socket is closed, the file handle on the socket file isn't handled.
+			// This code is added to manually remove any stale socket file before the connection
+			// is reopened; prevent error: bind address already in use
+			os.Remove(RPCSocketFilePath)
+			// block and loop, daemon doesnt need to run on go routine
+			l, err := net.Listen("unix", RPCSocketFilePath)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			r := rpc.NewServer()
+			vm := &wlrpc.VirtualMachine{}
+			err = r.Register(vm)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			r.Accept(l)
+		}
+	}()
+	// block until stop channel receives
+	<-stop
 }

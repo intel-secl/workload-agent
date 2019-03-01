@@ -145,7 +145,8 @@ fi
 directory_layout() {
 export WORKLOAD_AGENT_CONFIGURATION=/etc/workload-agent
 export WORKLOAD_AGENT_LOGS=/var/log/workload-agent
-export WORKLOAD_AGENT_BIN=/opt/workload-agent/bin
+export WORKLOAD_AGENT_HOME=/opt/workload-agent
+export WORKLOAD_AGENT_BIN=$WORKLOAD_AGENT_HOME/bin
 export INSTALL_LOG_FILE=$WORKLOAD_AGENT_LOGS/install.log
 }
 directory_layout
@@ -177,11 +178,8 @@ cp -f wlagent $WORKLOAD_AGENT_BIN
 chown $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $WORKLOAD_AGENT_BIN/wlagent
 ln -sfT $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/wlagent
 
-cp -f wlagentd $WORKLOAD_AGENT_BIN
-chown $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $WORKLOAD_AGENT_BIN/wlagentd
-
-# Create PID file directory in /var/run
-mkdir -p /var/run/workload-agent
+cp -f workload-agent.service $WORKLOAD_AGENT_HOME
+systemctl enable $WORKLOAD_AGENT_HOME/workload-agent.service | tee -a $logfile
 
 # Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
 cp -f qemu /etc/libvirt/hooks 
@@ -260,7 +258,7 @@ required_vars="MTWILSON_API_URL MTWILSON_API_USERNAME MTWILSON_API_PASSWORD\
   MTWILSON_TLS_CERT_SHA256 WLS_API_URL WLS_API_USERNAME WLS_API_PASSWORD\
   LOG_LEVEL TRUSTAGENT_CONFIGURATION TRUSTAGENT_USERNAME"
 for env_var in $required_vars; do
-        check_env_var_present $env_var
+  check_env_var_present $env_var
 done
 
 # Call workload-agent setup if all the required env variables are set
@@ -272,7 +270,7 @@ else
   exit 1
 fi
 
-# Call workload-agent start
-wlagent start | tee -a $logfile
+# Enable systemd service and start it
+systemctl start workload-agent | tee -a $logfile
 
 echo_success "Installation completed." | tee -a $logfile
