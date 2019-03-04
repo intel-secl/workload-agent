@@ -105,12 +105,17 @@ hash tagent 2>/dev/null ||
 
 
 # Check if yum packages are already installed; if not install them
+pkg_install_logfile=wlagent_pkg_install.log
 yum_packages=(libvirt cryptsetup)
 for i in ${yum_packages[*]}
 do
   isinstalled=$(rpm -q $i)
   if [ "$isinstalled" == "package $i is not installed" ]; then
-    yum -y install $i 2>>$logfile
+    # put logs of install into a temporary file. We will copy this file and
+    # delete it later.
+    touch $pkg_install_logfile
+    echo "Installing $i" >> $pkg_install_logfile
+    yum -y install $i | tee -a $pkg_install_logfile
   fi
 done
 if [ ! -d "/etc/libvirt" ]; then
@@ -159,6 +164,11 @@ if [ $? -ne 0 ]; then
 fi
 logfile=$INSTALL_LOG_FILE
 date >> $logfile
+if [ -f $pkg_install_logfile ]; then
+  cat $pkg_install_logfile >> $logfile
+  rm -rf $pkg_install_logfile
+fi
+
 echo "Installing workload agent..." >> $logfile
 
 # Create application directories (chown will be repeated near end of this script, after setup)
