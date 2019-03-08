@@ -53,7 +53,7 @@ func NewDomainParser(domainXML *xmlpath.Node, qemuInterceptCall QemuIntercept) (
 	if d.qemuInterceptCall == Start {
 		if d.imagePath, err = d.getItemFromDomainXML("/domain/devices/disk/backingStore/source/@file", "imagePath"); err != nil {
 			if d.imagePath, err = d.getItemFromDomainXML("/domain/devices/disk/backingStore/source/@dev", "imagePath"); err != nil {
-				return nil, err
+				d.imagePath = ""
 			}
 		}
 

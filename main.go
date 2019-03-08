@@ -21,9 +21,9 @@ import (
 )
 
 var (
-	Version           string = ""
-	Time              string = ""
-	Branch            string = ""
+	Version string = ""
+	Time    string = ""
+	Branch  string = ""
 	rpcSocketFilePath string = consts.RunDirPath + consts.RPCSocketFileName
 )
 
@@ -67,7 +67,7 @@ func main() {
 		// runner runs only the tasks passed in the argument if there are 1 or more tasks.
 		// This means that with current logic, if there are no specific tasks passed in the
 		// argument, we will only run the confugurer but the intention was to run all of them
-
+		
 		// TODO : The right way to address this is to pass the arguments from the commandline
 		// to a functon in the workload agent setup package and have it build a slice of tasks
 		// to run.

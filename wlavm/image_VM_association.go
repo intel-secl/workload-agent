@@ -5,7 +5,6 @@ import (
 	"intel/isecl/wlagent/util"
 	"strings"
 	"sync"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -64,13 +63,10 @@ func (IAssoc ImageVMAssocociation) Delete() (bool, string, error) {
 	}
 	for i, item := range util.ImageVMAssociations {
 		imagePath = item.ImagePath
-		if strings.Contains(item.ImageID, IAssoc.ImageUUID) {
+		if strings.Contains(item.ImageID, IAssoc.ImageUUID) && util.ImageVMAssociations[i].VMCount > 0 {
 			log.Debug("Image ID already exist in file, decreasing the count of vm by 1.")
 			util.ImageVMAssociations[i].VMCount = item.VMCount - 1
 			if util.ImageVMAssociations[i].VMCount == 0 {
-				log.Debug("VM count is 0, hence deleting the entry with image id ", IAssoc.ImageUUID)
-				util.ImageVMAssociations[i] = util.ImageVMAssociations[0]
-				util.ImageVMAssociations = util.ImageVMAssociations[1:]
 				isLastVM = true
 				break
 			}
@@ -81,4 +77,19 @@ func (IAssoc ImageVMAssocociation) Delete() (bool, string, error) {
 		return isLastVM, imagePath, fmt.Errorf("error occured while saving image VM association to a file. %s" + err.Error())
 	}
 	return isLastVM, imagePath, nil
+}
+
+func imagePathFromVMAssociationFile(imageUUID string) (string, error) {
+	log.Debug("Checking if the image UUID exists in image-vm asscoiation file")
+	log.Debug("Loading yaml file to vm image association structure.")
+	err := util.LoadImageVMAssociation()
+	if err != nil {
+		return "", fmt.Errorf("error occured while loading image VM association from a file. %s" + err.Error())
+	}
+	for _, item := range util.ImageVMAssociations {
+		if strings.Contains(item.ImageID, imageUUID) {
+			return item.ImagePath, nil
+		}
+	}
+	return "", nil
 }

@@ -57,6 +57,7 @@ func Start(domainXMLContent string) bool {
 	log.Info("VM start call intercepted")
 	var skipImageVolumeCreation = false
 	var err error
+	var skipManifestAndReportCreation = false
 
 	log.Info("Parsing domain XML to get image UUID, image path, VM UUID, VM path and disk size")
 	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
@@ -66,7 +67,7 @@ func Start(domainXMLContent string) bool {
 	}
 	d, err := libvirt.NewDomainParser(domainXML,libvirt.Start)
 	if err != nil {
-		log.Error("Parsing error")
+		log.Error("Parsing error: ", err.Error())
 		return false
 	}
 
@@ -76,20 +77,35 @@ func Start(domainXMLContent string) bool {
 	imagePath := d.GetImagePath()
 	size := d.GetDiskSize()
 
-	_, err = os.Stat(imagePath)
-	if os.IsNotExist(err) {
-		log.Errorf("Image does not exist in location %s", imagePath)
-		return false
+	// In prepare state, the image path returned is nil
+	if len(imagePath) <= 0 {
+		// skip manifest and report creation in prepare state and create them in start state
+		skipManifestAndReportCreation = true
+		imagePath, err = imagePathFromVMAssociationFile(imageUUID)
+		if err != nil {
+			log.Errorf("Error while retrieving image path from image-vm association file: %s", err.Error())
+			return false
+		} else if len(imagePath) <= 0 {
+			// if image path does not exist in image-vm association file, return back to hook
+			log.Infof("There are no VM's launched from %s encrypted image, returning to hook", imageUUID)
+			return true
+		}
 	}
 	
 	// check if the image is a symlink, if it is avoid creating image dm-crypt volume 
 	log.Info("Checking if the image file is a symlink...")
 	symLinkOut, err := os.Readlink(imagePath)
-	if len(strings.TrimSpace(symLinkOut)) > 0 {
-		log.Info("The image is a symlink, so will be skipping the image dm-crypt volume creation")
+	imageFileStat, imageFileStatErr := os.Stat(symLinkOut)
+	if len(strings.TrimSpace(symLinkOut)) > 0 && imageFileStat.Size() > 0 && imageFileStatErr == nil {
+		log.Info("The image is a symlink and the file linked exists, so will be skipping the image dm-crypt volume creation")
 		skipImageVolumeCreation = true
-	} else {
+	} else if err != nil {
 		// check if image is encrypted
+		_, err = os.Stat(imagePath)
+		if os.IsNotExist(err) {
+			log.Errorf("Image does not exist in location %s", imagePath)
+			return false
+		}
 		log.Info("Image is not a symlink, so checking is image is encrypted...")
 		isImageEncrypted, err := crypt.EncryptionHeaderExists(imagePath)
 		if !isImageEncrypted {
@@ -130,7 +146,7 @@ func Start(domainXMLContent string) bool {
 	}
 	log.Debugf("The host hardware UUID is :%s", hardwareUUID)
 
-	// get flavor-key from workload service
+	//get flavor-key from workload service
 	// we will be hitting the WLS to retrieve the the flavor irrespective of
 	// whether the key is cached locally. Having a cached key saves the rountrip
 	// that the WLS has to make to the Key Management Server (KMS).
@@ -147,7 +163,7 @@ func Start(domainXMLContent string) bool {
 
 	if flavorKeyInfo.ImageFlavor.Image.Meta.ID == "" {
 		log.Infof("Flavor does not exist for the image %s", imageUUID)
-		// TODO: check with Ryan
+		// TODO: to be discussed
 		return true
 	}
 
@@ -184,14 +200,22 @@ func Start(domainXMLContent string) bool {
 			}
 		}
 
-		log.Info("Creating and mounting vm dm-crypt volume")
-		err = vmVolumeManager(vmUUID, vmPath, size, key)
-		if err != nil {
-			log.Error(err.Error())
-			return false
+		vmSymLinkOut, _ := os.Readlink(vmPath)
+		vmSymLinkStat, vmSymLinkStatErr := os.Stat(vmSymLinkOut)
+		if len(strings.TrimSpace(vmSymLinkOut)) <= 0 || vmSymLinkStatErr != nil || vmSymLinkStat.Size() <= 0 {
+			log.Info("Creating and mounting vm dm-crypt volume")
+			err = vmVolumeManager(vmUUID, vmPath, size, key)
+			if err != nil {
+				log.Error(err.Error())
+				return false
+			}
 		}
 	}
 
+	if skipManifestAndReportCreation {
+		log.Debug("skipping manifest and report creation in prepare VM state")
+		return true
+	}
 	//create VM manifest
 	log.Info("Creating VM Manifest")
 	manifest, err := vml.CreateVMManifest(vmUUID, hardwareUUID, imageUUID, true)
@@ -244,8 +268,9 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte) error {
 	// create vm volume
 	var err error
 	vmDeviceMapperPath := consts.DevMapperDirPath + vmUUID
-	vmSparseFilePath := strings.Replace(vmPath, "disk", vmUUID + "_sparse", -1)
-
+	vmSparseFilePath := strings.Replace(vmPath, "disk", vmUUID+"_sparse", -1)
+	// check if sparse file exists, if it does, skip copying the change disk file to mount point
+	_, sparseFleStatErr := os.Stat(vmSparseFilePath)
 	log.Debugf("Creating VM dm-crypt volume in %s", vmDeviceMapperPath)
 	err = vml.CreateVolume(vmSparseFilePath, vmDeviceMapperPath, key, size)
 	if err != nil {
@@ -254,15 +279,22 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte) error {
 
 	// mount the vm dmcrypt volume on to a mount path
 	log.Debug("Mounting the vm volume on a mount path")
-	vmDeviceMapperMountPath := consts.MountPath + vmUUID
-	err = checkMountPathExistsAndMountVolume(vmDeviceMapperMountPath, vmDeviceMapperPath)
+	// vmDeviceMapperMountPath := strings.Replace(vmPath, "disk", "", -1) + vmUUID
+	var vmMountPath = consts.MountPath + vmUUID
+	err = checkMountPathExistsAndMountVolume(vmMountPath, vmDeviceMapperPath, "disk")
 	if err != nil {
 		return fmt.Errorf("error checking if mount path exists and mounting the volume: %s", err.Error())
 	}
 
+	// is sparse file exists, the image is already decrypted, so returning back to VM start method
+	if !os.IsNotExist(sparseFleStatErr) {
+		log.Debug("Sparse file of the VM already exists, skipping copying the change disk to mount point...")
+		return nil
+	}
+
 	// copy the files from vm path
 	log.Debugf("Copying all the files from %s to vm mount path", vmPath)
-	args := []string{vmPath, vmDeviceMapperMountPath}
+	args := []string{vmPath, vmMountPath}
 	_, err = exec.ExecuteCommand("cp", args)
 	if err != nil {
 		return fmt.Errorf("error copying the vm %s change disk to mount path", vmUUID)
@@ -275,18 +307,10 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte) error {
 		return fmt.Errorf("error deleting the change disk: %s", vmPath)
 	}
 
+	changeDiskFile := vmMountPath + "/disk"
 	log.Debug("Creating a symlink between the vm and the volume")
-	// create symlink between the image and the dm-crypt volume	
-	changeDiskFile := vmDeviceMapperMountPath + "/disk"
-
-	// Giving read write access of changed disk file to group users as well. As we are creating a symlink to this file
-	// and Nova is the accessing the file and Nova user is part of qemu group
-	err = os.Chmod(changeDiskFile, 0660)
-	if err != nil {
-		return fmt.Errorf("error while giving permissions to changed disk path: %s %s", changeDiskFile, err.Error())
-	}
-
-	err = createSymLinkAndChangeOwnership(changeDiskFile, vmPath, vmDeviceMapperMountPath)
+	// create symlink between the image and the dm-crypt volume
+	err = createSymLinkAndChangeOwnership(changeDiskFile, vmPath, vmMountPath)
 	if err != nil {
 		return fmt.Errorf("error creating a symlink and changing file ownership: %s", err.Error())
 	}
@@ -299,6 +323,8 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	var err error
 	imageDeviceMapperPath := consts.DevMapperDirPath + imageUUID
 	sparseFilePath := imagePath + "_sparseFile"
+	// check if the sprse file already exists, if it does, skip image file decryption
+	_, sparseFileStatErr := os.Stat(sparseFilePath)
 	err = vml.CreateVolume(sparseFilePath, imageDeviceMapperPath, key, size)
 	if err != nil {
 		return fmt.Errorf("error while creating image dm-crypt volume for image: %s", err.Error())
@@ -306,9 +332,15 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 
 	//check if the image device mapper is mount path exists, if not create it
 	imageDeviceMapperMountPath := consts.MountPath + imageUUID
-	err = checkMountPathExistsAndMountVolume(imageDeviceMapperMountPath, imageDeviceMapperPath)
+	err = checkMountPathExistsAndMountVolume(imageDeviceMapperMountPath, imageDeviceMapperPath, imageUUID)
 	if err != nil {
 		return fmt.Errorf("error checking if image mount path exists and mounting the volume: %s", err.Error())
+	}
+
+	// is sparse file exists, the image is already decrypted, so returning back to VM start method
+	if !os.IsNotExist(sparseFileStatErr) {
+		log.Debug("Sparse file of the image already exists, skipping image decryption...")
+		return nil
 	}
 
 	// read image file contents
@@ -328,16 +360,9 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	// write the decrypted data into a file in image mount path
 	log.Debug("Writting decrypted data in to a file")
 	decryptedImagePath := imageDeviceMapperMountPath + "/" + imageUUID
-	ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0644)
+	ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0660)
 	if ioWriteErr != nil {
 		return errors.New("error writing the decrypted data to file")
-	}
-
-	// Giving read write access of decrypted file to group users as well. As we are creating a symlink to this file
-	// and Nova is the accessing the file and Nova user is part of qemu group
-	err = os.Chmod(decryptedImagePath, 0660)
-	if err != nil {
-		return fmt.Errorf("error while giving permissions to decrypted image path: %s %s", decryptedImagePath, err.Error())
 	}
 
 	log.Debug("Creating a symlink between the image and the volume")
@@ -351,13 +376,10 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) error {
 
 	// get the qemu user info and change image and vm file owner to qemu
-	log.Debug("Looking up qemu user information")
-	userInfo, err := user.Lookup("qemu")
+	userID, groupID, err := userInfoLookUp("qemu")
 	if err != nil {
-		return errors.New("error trying to look up qemu userID and groupID")
+		return err
 	}
-	userID, _ := strconv.Atoi(userInfo.Uid)
-	groupID, _ := strconv.Atoi(userInfo.Gid)
 
 	// remove the encrypted image file and create a symlink with the dm-crypt volume
 	log.Debugf("Deleting the enc image file from :%s", sourceFile)
@@ -378,6 +400,12 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 	err = os.Lchown(sourceFile, userID, groupID)
 	if err != nil {
 		return errors.New("error while trying to change symlink owner to qemu")
+	}
+
+	// Giving read write access to the target file
+	err = os.Chmod(targetFile, 0660)
+	if err != nil {
+		return fmt.Errorf("error while giving permissions to changed disk path: %s %s", targetFile, err.Error())
 	}
 
 	// change the image mount path directory ownership to qemu
@@ -519,11 +547,33 @@ func cacheKeyInMemory(imageUUID string, keyID string, key []byte) error {
 
 // checkMountPathExistsAndMountVolume method is used to check if te mount path exists, 
 // if it does not exists, the method creates the mount path and mounts the device mapper.
-func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) error{	
+func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath, emptyFileName string) error {
 	log.Debugf("Mounting the device mapper: %s", deviceMapperPath)
 	mkdirErr := os.MkdirAll(mountPath, 0655)
 	if mkdirErr != nil {
 		return errors.New("error while creating the mount point for the image device mapper")
+	}
+
+	// create an empty image and disk file so that symlinks are not broken after VM stop
+	emptyFilePath := mountPath + "/" + emptyFileName
+	log.Debugf("Creating an empty file in : %s", emptyFilePath)
+	sampleFile, err := os.Create(emptyFilePath)
+	if err != nil {
+		return errors.New("Error creating a sample file")
+	}
+	defer sampleFile.Close()
+
+	// get the qemu user info and change image and vm file owner to qemu
+	userID, groupID, err := userInfoLookUp("qemu")
+	if err != nil {
+		return err
+	}
+
+	// change the image mount path directory ownership to qemu
+	log.Debug("Changing the mount path ownership to qemu")
+	err = osutil.ChownR(mountPath, userID, groupID)
+	if err != nil {
+		return errors.New("error trying to change mount path owner to qemu")
 	}
 
 	mountErr := vml.Mount(deviceMapperPath, mountPath)
@@ -533,4 +583,16 @@ func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath string) erro
 		}
 	}
 	return nil
+}
+
+func userInfoLookUp(userName string) (int, int, error) {
+	log.Debug("Looking up qemu user information")
+	userInfo, err := user.Lookup(userName)
+	if err != nil {
+		return 0, 0, errors.New("error trying to look up qemu userID and groupID")
+	}
+	userID, _ := strconv.Atoi(userInfo.Uid)
+	groupID, _ := strconv.Atoi(userInfo.Gid)
+
+	return userID, groupID, nil
 }

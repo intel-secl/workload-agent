@@ -65,11 +65,6 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 		log.Info("A dm-crypt volume for the image is created, deleting the vm volume")
 		vml.Unmount(vmMountPath)
 		vml.DeleteVolume(d.GetVMUUID())
-		err := os.RemoveAll(vmMountPath)
-		if err != nil {
-			log.Error("Error while deleting the vm mount point")
-			return false
-		}
 	}
 
 	// check if this is the last vm associated with the image
@@ -101,12 +96,6 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 
 	// Close the image volume
 	vml.DeleteVolume(d.GetImageUUID())
-	err = os.RemoveAll(imageMountPath)
-	if err != nil {
-		log.Error("Error while deleting the vm mount point")
-		return false
-	}
-
 	log.Infof("VM % stopped", d.GetVMUUID())
 	return true
 }
