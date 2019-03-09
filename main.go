@@ -9,6 +9,7 @@ import (
 	"intel/isecl/wlagent/consts"
 	wlrpc "intel/isecl/wlagent/rpc"
 	"intel/isecl/wlagent/setup"
+	"intel/isecl/wlagent/filewatch"
 	"net"
 	"net/rpc"
 
@@ -247,18 +248,19 @@ func runservice() {
 	//TODO : daemon log configuration - does it need to be passed in?
 	config.LogConfiguration(consts.LogDirPath + consts.DaemonLogFileName)
 
-	// fileWatcher, err := filewatch.NewWatcher()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	fileWatcher, err := filewatch.NewWatcher()
+	if err != nil {
+		log.Error(err.Error())
+		os.Exit(1)
+	}
 	// stop signaler
 	stop := make(chan bool)
-	// defer fileWatcher.Close()
-	// go func() {
-	// 	for {
-	// 		fileWatcher.Watch()
-	// 	}
-	// }()
+	defer fileWatcher.Close()
+	go func() {
+		for {
+			fileWatcher.Watch()
+		}
+	}()
     if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
 			log.WithError(err).Fatalf("Could not create directory: %s, err: %s", consts.RunDirPath, err)
@@ -278,7 +280,9 @@ func runservice() {
 				return
 			}
 			r := rpc.NewServer()
-			vm := &wlrpc.VirtualMachine{}
+				vm := &wlrpc.VirtualMachine{
+				Watcher : fileWatcher,
+			}
 			err = r.Register(vm)
 			if err != nil {
 				log.Error(err)

@@ -93,10 +93,9 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	var imageMountPath = consts.MountPath + d.GetImageUUID()
 	// Unmount the image
 	vml.Unmount(imageMountPath)
-
 	// Close the image volume
 	vml.DeleteVolume(d.GetImageUUID())
-	log.Infof("VM % stopped", d.GetVMUUID())
+	log.Infof("VM %s stopped", d.GetVMUUID())
 	return true
 }
 

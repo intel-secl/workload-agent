@@ -25,8 +25,9 @@ import (
 	"io/ioutil"
 	"os"
 	"os/user"
-	"fmt"
-	"errors"
+	"strconv"
+	"strings"
+	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	xmlpath "gopkg.in/xmlpath.v2"
 )
@@ -204,7 +205,7 @@ func Start(domainXMLContent string) bool {
 		vmSymLinkStat, vmSymLinkStatErr := os.Stat(vmSymLinkOut)
 		if len(strings.TrimSpace(vmSymLinkOut)) <= 0 || vmSymLinkStatErr != nil || vmSymLinkStat.Size() <= 0 {
 			log.Info("Creating and mounting vm dm-crypt volume")
-			err = vmVolumeManager(vmUUID, vmPath, size, key)
+			err = vmVolumeManager(vmUUID, vmPath, size, key, filewatcher)
 			if err != nil {
 				log.Error(err.Error())
 				return false
@@ -263,7 +264,7 @@ func Start(domainXMLContent string) bool {
 	return true
 }
 
-func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte) error {
+func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewatcher *filewatch.Watcher) error {
 
 	// create vm volume
 	var err error
@@ -314,6 +315,17 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte) error {
 	if err != nil {
 		return fmt.Errorf("error creating a symlink and changing file ownership: %s", err.Error())
 	}
+
+	// trigger a file watcher event to delete VM mount path when disk.info file is deleted on VM delete
+	vmDiskInfoFile := strings.Replace(vmPath, "disk", "disk.info", -1)
+	// Watch the symlink for deletion, and remove the _sparseFile if image is deleted
+	filewatcher.HandleEvent(vmDiskInfoFile, func(e fsnotify.Event) {
+		if e.Op&fsnotify.Remove == fsnotify.Remove {
+			log.Debugf("Removing vm mount path at: %s", vmMountPath)
+			os.RemoveAll(vmMountPath)
+		}
+	})
+
 	return nil
 }
 
