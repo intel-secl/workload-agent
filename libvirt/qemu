@@ -3,7 +3,7 @@
 domainxml="-"
 
 if [ $2 == "prepare" ] || [ $2 == "start" ] || [ $2 == "stopped" ]; then
-   domainXmlContents=$( cat $domainxml )
+    domainXmlContents=$( cat $domainxml )
     if [ $2 == "start" ] || [ $2 == "prepare" ]; then
         wlagent start-vm "'$domainXmlContents'"
         if [ $? -ne 0 ]; then
