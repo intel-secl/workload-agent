@@ -253,9 +253,9 @@ func runservice() {
 		log.Error(err.Error())
 		os.Exit(1)
 	}
+	defer fileWatcher.Close()
 	// stop signaler
 	stop := make(chan bool)
-	defer fileWatcher.Close()
 	go func() {
 		for {
 			fileWatcher.Watch()
