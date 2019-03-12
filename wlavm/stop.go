@@ -11,6 +11,7 @@ import (
 	"intel/isecl/wlagent/libvirt"
 	"os"
 	"strings"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"intel/isecl/lib/common/exec"
@@ -21,6 +22,10 @@ var (
 	isVmVolume bool
 	isLastVm   bool
 	imagePath  string
+)
+
+var (
+	mtx sync.Mutex
 )
 
 // Stop is called from the libvirt hook. Everytime stop cycle is called
@@ -90,6 +95,9 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	}
 
 	log.Info("Unmounting and deleting the image volume as this is the last vm using the image")
+
+	mtx.Lock()
+	defer mtx.Unlock()
 	var imageMountPath = consts.MountPath + d.GetImageUUID()
 	// Unmount the image
 	vml.Unmount(imageMountPath)

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/consts"
 	"io/ioutil"
 	"os"
@@ -52,4 +53,22 @@ func SaveImageVMAssociation() error {
 		return err
 	}
 	return nil
+}
+
+var vmStartTpm tpm.Tpm
+
+func GetTpmInstance() (tpm.Tpm, error) {
+	var err error = nil
+	if vmStartTpm == nil {
+		log.Debug("Opening a new connection to the tpm")
+		vmStartTpm, err = tpm.Open()
+	}
+	return vmStartTpm, err
+}
+
+func CloseTpmInstance() {
+	if vmStartTpm != nil {
+		log.Debug("Closing connection to the tpm")
+		vmStartTpm.Close()
+	}
 }

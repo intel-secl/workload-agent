@@ -10,6 +10,7 @@ import (
 	wlrpc "intel/isecl/wlagent/rpc"
 	"intel/isecl/wlagent/setup"
 	"intel/isecl/wlagent/filewatch"
+	"intel/isecl/wlagent/util"
 	"net"
 	"net/rpc"
 
@@ -22,9 +23,9 @@ import (
 )
 
 var (
-	Version string = ""
-	Time    string = ""
-	Branch  string = ""
+	Version           string = ""
+	Time              string = ""
+	Branch            string = ""
 	rpcSocketFilePath string = consts.RunDirPath + consts.RPCSocketFileName
 )
 
@@ -211,11 +212,16 @@ func deleteFile(path string) {
 	}
 }
 
-
 func start() {
 	cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStartCmd, 5)
 	if err != nil {
 		fmt.Println("Could not start Workload Agent Service")
+		fmt.Println("Error : ", err)
+		os.Exit(1)
+	}
+	_, err = util.GetTpmInstance()
+	if err != nil {
+		fmt.Println("Could not make a connection to Tpm")
 		fmt.Println("Error : ", err)
 		os.Exit(1)
 	}
@@ -230,6 +236,7 @@ func stop() {
 		fmt.Println("Error : ", err)
 		os.Exit(1)
 	}
+	util.CloseTpmInstance()
 	fmt.Println(cmdOutput)
 	fmt.Println("Workload Agent Service Stopped...")
 }
@@ -261,7 +268,7 @@ func runservice() {
 			fileWatcher.Watch()
 		}
 	}()
-    if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
+	if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
 			log.WithError(err).Fatalf("Could not create directory: %s, err: %s", consts.RunDirPath, err)
 		}

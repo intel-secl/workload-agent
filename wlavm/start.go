@@ -21,33 +21,27 @@ import (
 	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/keycache"
 	"intel/isecl/wlagent/libvirt"
+	"intel/isecl/wlagent/util"
 	"intel/isecl/wlagent/wlsclient"
 	"io/ioutil"
 	"os"
 	"os/user"
 	"strconv"
 	"strings"
+	"sync"
+
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	xmlpath "gopkg.in/xmlpath.v2"
 )
 
-// Todo: ISECL-3352 Move the TPM initialization to deamon start
+var (
+	tpmMtx       sync.Mutex
+	imgVolumeMtx sync.Mutex
+	vmVolumeMtx  sync.Mutex
+)
 
-var vmStartTpm tpm.Tpm
-
-func GetTpmInstance()(tpm.Tpm, error){
-	if vmStartTpm == nil {
-		return tpm.Open()
-	}
-	return vmStartTpm, nil
-}
-
-func CloseTpmInstance(){
-	if vmStartTpm != nil {
-		vmStartTpm.Close()
-	}
-}
+// var tpmMtx = &sync.Mutex{}
 
 // Start method is used perform the VM confidentiality check before lunching the VM
 // Input Parameters: domainXML content string
@@ -120,11 +114,6 @@ func Start(domainXMLContent string) bool {
 		log.Info("Image is encrypted")
 	}
 
-	// defer the CloseTpmInstance() to take care of closing the Tpm connection
-	// Todo: ISECL-3352 remove when TPM vm is managed by daemon start and stop
-
-	defer CloseTpmInstance()
-
 	//check if the key is cached by filtercriteria imageUUID
 	var flavorKeyInfo wlsclient.FlavorKey
 	var tpmWrappedKey []byte
@@ -188,13 +177,17 @@ func Start(domainXMLContent string) bool {
 		log.Info("Unwrapping the key...")
 		key, unWrapErr := unwrapKey(tpmWrappedKey)
 		if unWrapErr != nil {
-			log.Error("Error unwrapping the key")
+			log.Errorf("Error unwrapping the key. %s", unWrapErr.Error())
 			return false
 		}
 
 		if !skipImageVolumeCreation {
 			log.Info("Creating and mounting image dm-crypt volume")
+			// Added mutex lock during image volume creation. While launching multiple instances at once,
+			// launch fails as all processes run in parallel and try to create image volume.
+			imgVolumeMtx.Lock()
 			err = imageVolumeManager(imageUUID, imagePath, size, key)
+			imgVolumeMtx.Unlock()
 			if err != nil {
 				log.Error(err.Error())
 				return false
@@ -273,7 +266,9 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	// check if sparse file exists, if it does, skip copying the change disk file to mount point
 	_, sparseFleStatErr := os.Stat(vmSparseFilePath)
 	log.Debugf("Creating VM dm-crypt volume in %s", vmDeviceMapperPath)
+	vmVolumeMtx.Lock()
 	err = vml.CreateVolume(vmSparseFilePath, vmDeviceMapperPath, key, size)
+	vmVolumeMtx.Unlock()
 	if err != nil {
 		return fmt.Errorf("error creating vm dm-crypt volume: %s", err.Error())
 	}
@@ -298,14 +293,14 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	args := []string{vmPath, vmMountPath}
 	_, err = exec.ExecuteCommand("cp", args)
 	if err != nil {
-		return fmt.Errorf("error copying the vm %s change disk to mount path", vmUUID)
+		return fmt.Errorf("error copying the vm %s change disk to mount path. %s", vmUUID, err.Error())
 	}
 
 	// remove the encrypted image file and create a symlink with the dm-crypt volume
 	log.Debugf("Deleting change disk %s:", vmPath)
 	err = os.RemoveAll(vmPath)
 	if err != nil {
-		return fmt.Errorf("error deleting the change disk: %s", vmPath)
+		return fmt.Errorf("error deleting the change disk: %s, %s", vmPath, err.Error())
 	}
 
 	changeDiskFile := vmMountPath + "/disk"
@@ -339,7 +334,12 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	_, sparseFileStatErr := os.Stat(sparseFilePath)
 	err = vml.CreateVolume(sparseFilePath, imageDeviceMapperPath, key, size)
 	if err != nil {
-		return fmt.Errorf("error while creating image dm-crypt volume for image: %s", err.Error())
+		if strings.Contains(err.Error(), "device mapper of the same already exists") {
+			log.Debug("Device mapper of same name already exists. Skipping image volume creation..")
+			return nil
+		} else {
+			return fmt.Errorf("error while creating image dm-crypt volume for image: %s", err.Error())
+		}
 	}
 
 	//check if the image device mapper is mount path exists, if not create it
@@ -456,7 +456,8 @@ func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error
 }
 
 func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
-
+	tpmMtx.Lock()
+	defer tpmMtx.Unlock()
 	var signingKey tpm.CertifiedKey
 
 	// Get the Signing Key that is stored on disk
@@ -475,14 +476,14 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	// Get the secret associated when the SigningKey was created. 
 	log.Debug("Retrieving the signing key secret form WA configuration")
 	keyAuth, err := base64.StdEncoding.DecodeString(config.Configuration.SigningKeySecret)
-	if err != nil{
-		return nil, fmt.Errorf("error retrieving the signing key secret from configuration")
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving the signing key secret from configuration. %s", err.Error())
 	}
 
-    // Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
-	t, err := GetTpmInstance()
+	// Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
+	t, err := util.GetTpmInstance()
 	if err != nil {
-		return nil, fmt.Errorf("error attempting to create signature - could not open TPM")
+		return nil, fmt.Errorf("error attempting to create signature - could not open TPM. %s", err.Error())
 	}
 
 	if t.Version() == tpm.V12 {
@@ -506,10 +507,11 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 }
 
 func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
-	
-	var certifiedKey tpm.CertifiedKey
-	t, err := GetTpmInstance()
 
+	tpmMtx.Lock()
+	defer tpmMtx.Unlock()
+	var certifiedKey tpm.CertifiedKey
+	t, err := util.GetTpmInstance()
 	if err != nil {
 		return nil, fmt.Errorf("could not establish connection to TPM: %s", err)
 	}
