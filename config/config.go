@@ -243,6 +243,6 @@ func LogConfiguration(logFilePath string) {
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true, TimestampFormat: time.RFC1123Z})
 
 	// print logs to std out and logfile
-	logMultiWriter := io.MultiWriter(os.Stdout, logFile)
-	log.SetOutput(logMultiWriter)
+	logWriter := io.Writer(logFile)
+	log.SetOutput(logWriter)
 }

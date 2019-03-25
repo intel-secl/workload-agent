@@ -1,8 +1,15 @@
 package util
 
 import (
+        "encoding/base64"
+        "encoding/json"
+        "errors"
+        "fmt"
+
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/consts"
+        "intel/isecl/wlagent/config"
+        "intel/isecl/wlagent/keycache"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -72,3 +79,57 @@ func CloseTpmInstance() {
 		vmStartTpm.Close()
 	}
 }
+
+func UnwrapKey(tpmWrappedKey []byte, tpmMtx sync.Mutex) ([]byte, error) {
+
+        tpmMtx.Lock()
+        defer tpmMtx.Unlock()
+        var certifiedKey tpm.CertifiedKey
+        t, err := GetTpmInstance()
+        if err != nil {
+                return nil, fmt.Errorf("could not establish connection to TPM: %s", err)
+        }
+
+        log.Debug("Reading the binding key certificate")
+        bindingKeyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
+        bindingKeyCert, fileErr := ioutil.ReadFile(bindingKeyFilePath)
+        if fileErr != nil {
+                return nil, errors.New("error while reading the binding key certificate")
+        }
+
+        log.Debug("Unmarshalling the binding key certificate file contents to TPM CertifiedKey object")
+        jsonErr := json.Unmarshal(bindingKeyCert, &certifiedKey)
+        if jsonErr != nil {
+                return nil, errors.New("error unmarshalling the binding key file contents to TPM CertifiedKey object")
+        }
+
+        log.Debug("Binding key deserialized")
+        keyAuth, _ := base64.StdEncoding.DecodeString(config.Configuration.BindingKeySecret)
+        key, unbindErr := t.Unbind(&certifiedKey, keyAuth, tpmWrappedKey)
+        if unbindErr != nil {
+                return nil, fmt.Errorf("error while unbinding the tpm wrapped key: %s", unbindErr.Error())
+        }
+
+        log.Debug("Unbinding TPM wrapped key was successful, return the key")
+        return key, nil
+}
+
+// This method is used to check if the key for an image file is cached.
+// If the key is cached, the method you return the key ID.
+func GetKeyFromCache(keyID string) (keycache.Key, error) {
+        key, exists := keycache.Get(keyID)
+        //TODO : Remove debug log
+        log.Debugf("getKeyFromCache cache entry exists : %t, keyID : %s", exists, keyID)
+        if !exists {
+                return keycache.Key{}, errors.New("key is not cached")
+        }
+        return key, nil
+}
+
+// This method is used add the key to cache and map it with the keyID
+func CacheKeyInMemory(keyID string, key []byte) error {
+        log.Debugf("cacheKeyInMemory keyID : %s", keyID)
+        keycache.Store(keyID, keycache.Key{keyID, key})
+        return nil
+}
+

@@ -283,4 +283,58 @@ fi
 # Enable systemd service and start it
 systemctl start workload-agent | tee -a $logfile
 
+is_docker_installed(){
+  which docker 2>/dev/null
+  if [ $? -ne 0 ]; then
+    echo "Docker is not installed"
+    exit 1
+  fi
+}
+
+install_secure_docker_plugin(){
+
+mkdir /etc/systemd/system/secure-docker-plugin.service.d 2>1 /dev/null
+
+cat > /etc/systemd/system/secure-docker-plugin.service.d/securedockerplugin.conf <<EOF
+[Service]
+Environment="INSECURE_SKIP_VERIFY=${INSECURE_SKIP_VERIFY:-true}"
+Environment="NO_PROXY=${NO_PROXY}"
+Environment="REGISTRY_SCHEME_TYPE=${REGISTRY_SCHEME_TYPE:-https}"
+Environment="REGISTRY_USERNAME=${REGISTRY_USERNAME}"
+Environment="REGISTRY_PASSWORD=${REGISTRY_PASSWORD}"
+Environment="HTTPS_PROXY=${HTTPS_PROXY}"
+EOF
+
+cp secure-docker-plugin /usr/bin/
+cp artifact/* /lib/systemd/system/
+
+systemctl daemon-reload
+systemctl start secure-docker-plugin.service
+}
+
+
+#Install secure docker daemon with WA only if WA_WITH_CONTAINER_SECURITY is enabled in workload-agent.env
+if [ "$WA_WITH_CONTAINER_SECURITY" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY" == "Y" ] || [ "$WA_WITH_CONTAINER_SECURITY" == "yes" ]; then
+  is_docker_installed
+
+  which cryptsetup 2>/dev/null
+  if [ $? -ne 0 ]; then
+    yum install -y cryptsetup
+  fi  
+  echo "Installing secure docker daemon"
+  systemctl stop docker
+
+  mkdir -p $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup
+  cp /usr/bin/docker* $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+  cp -f daemon-output/* /usr/bin/
+
+  install_secure_docker_plugin
+
+  echo "Starting secure docker engine"
+  cp daemon.json /etc/docker/ 
+  systemctl daemon-reload
+  systemctl start docker
+  cp uninstall-container-security-dependencies.sh $WORKLOAD_AGENT_HOME/secure-docker-daemon/
+fi
+
 echo_success "Installation completed." | tee -a $logfile

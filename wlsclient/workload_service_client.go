@@ -66,6 +66,50 @@ func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error)
 	return flavorKeyInfo, nil
 }
 
+// GetImageFlavor method is used to get the image flavor from the workload service
+func GetImageFlavor(imageID, flavorPart string) (f.ImageFlavor, error) {
+
+	var flavor f.ImageFlavor
+	var flavors []f.ImageFlavor
+
+	requestURL, err := url.Parse(config.Configuration.Wls.APIURL)
+	if err != nil {
+		return flavor, errors.New("error retrieving WLS API URL")
+	}
+
+	requestURL, err = url.Parse(requestURL.String() + "images/" + imageID + "/flavors?flavor_part=" + flavorPart)
+	if err != nil {
+		return flavor, errors.New("error forming GET flavors for image API URL")
+	}
+
+	httpRequest, err := http.NewRequest("GET", requestURL.String(), nil)
+	if err != nil {
+		return flavor, err
+	}
+
+	log.Debugf("WLS image-flavor retrieval GET request URL: %s", requestURL.String())
+	httpRequest.Header.Set("Accept", "application/json")
+	httpRequest.Header.Set("Content-Type", "application/json")
+
+	httpResponse, err := SendRequest(httpRequest, true)
+	if err != nil {
+		return flavor, err
+	}
+
+	// deserialize the response to ImageFlavor response
+	err = json.Unmarshal(httpResponse, &flavors)
+	if err != nil {
+		return flavor, err
+	}
+
+	log.Debugf("response from API: %s", string(httpResponse))
+
+	if len(flavors) == 0 {
+		return flavor, nil
+	}
+	return flavors[0], nil
+}
+
 //PostVMReport method is used to upload the VM trust report to workload service
 func PostVMReport(report []byte) error {
 	var err error

@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"intel/isecl/lib/common/exec"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
+	"intel/isecl/wlagent/flavor"
 	wlrpc "intel/isecl/wlagent/rpc"
 	"intel/isecl/wlagent/setup"
 	"intel/isecl/wlagent/filewatch"
@@ -17,15 +19,16 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"os"
+        "sync"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	Version           string = ""
-	Time              string = ""
-	Branch            string = ""
+	Version       string = ""
+	Time          string = ""
+	Branch        string = ""
 	rpcSocketFilePath string = consts.RunDirPath + consts.RPCSocketFileName
 )
 
@@ -38,7 +41,7 @@ func printUsage() {
 	fmt.Printf("===============\n\n")
 	fmt.Printf("usage : %s <command> [<args>]\n\n", os.Args[0])
 	fmt.Printf("Following are the list of commands\n")
-	fmt.Printf("\tsetup|start|stop|status|uninstall [--purge]|--help|--version\n\n")
+	fmt.Printf("\tsetup|start|stop|status|create-instance-trust-report|fetch-flavor|cache-key|uninstall [--purge]|--help|--version\n\n")
 	fmt.Printf("\tusage : %s setup [<tasklist>]\n", os.Args[0])
 	fmt.Printf("\t\t<tasklist>-space seperated list of tasks\n")
 	fmt.Printf("\t\t\t-Supported tasks - SigningKey BindingKey RegisterSigningKey RegisterBindingKey\n")
@@ -181,7 +184,138 @@ func main() {
 		os.Exit(0)
 		fmt.Println("Return code from VM stop :", returnCode)
 
+	case "create-instance-trust-report":
+		if len(args[1:]) < 1 {
+			log.Info("Invalid number of parameters")
+			os.Exit(1)
+		}
+		log.Info("workload-agent create-instance-trust-report called")
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			log.Fatal("create-instance-trust-report: failed to dial wlagent.sock, is wlagent running?")
+			os.Exit(1)
+		}
+		client := rpc.NewClient(conn)
+		var args = wlrpc.ManifestString{
+			Manifest: args[1],
+		}
+		var status bool
+		client.Call("VirtualMachine.CreateInstanceTrustReport", &args, &status)
+		os.Exit(0)
+
+	case "fetch-flavor":
+		if len(args[1:]) < 2 {
+			log.Info("Invalid number of parameters")
+			os.Exit(1)
+		}
+
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			log.Fatal("fetch-flavor: failed to dial wlagent.sock, is wlagent running?")
+			os.Exit(1)
+		}
+
+		client := rpc.NewClient(conn)
+		var outFlavor flavor.OutFlavor
+		var args = wlrpc.FlavorInfo{
+			ImageID:    args[1],
+			FlavorPart: args[2],
+		}
+
+		err = client.Call("VirtualMachine.FetchFlavor", &args, &outFlavor)
+		if err != nil {
+			log.Error("client call failed")
+		}
+		if !outFlavor.ReturnCode {
+			os.Exit(1)
+		} else {
+			fmt.Print(outFlavor.ImageFlavor)
+			os.Exit(0)
+		}
+
+	case "cache-key":
+		if len(args[1:]) < 2 {
+			log.Info("Invalid number of parameters")
+			os.Exit(1)
+		}
+
+		log.Info("workload agent cache-key called")
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			log.Fatal("cache-key: failed to dial wlagent.sock, is wlagent running?")
+			os.Exit(1)
+		}
+
+		client := rpc.NewClient(conn)
+		var returnCode bool
+		var args = wlrpc.KeyInfo{
+                        ImageID: args[1],
+			KeyID: args[2],
+		}
+
+		err = client.Call("VirtualMachine.CacheKey", &args, &returnCode)
+		if err != nil {
+			log.Error("client call failed")
+		}
+
+		if !returnCode {
+			os.Exit(1)
+		} else {
+			os.Exit(0)
+		}
+
+        case "get-key-from-keycache":
+                if len(args[1:]) < 1 {
+                        log.Info("Invalid number of parameters")
+                        os.Exit(1)
+                }
+                log.Info("workload agent get-key-from-keycache called")
+                conn, err := net.Dial("unix", rpcSocketFilePath)
+                if err != nil {
+                        log.Fatal("get key from keycache: failed to dial wlagent.sock, is wlagent running?")
+                        os.Exit(1)
+                }
+
+                client := rpc.NewClient(conn)
+                var args = wlrpc.KeyInfo{
+                        KeyID:   args[1],
+                }
+                var outKey wlrpc.KeyInfo
+                err = client.Call("VirtualMachine.GetKeyFromKeyCache", &args, &outKey)
+                if err != nil {
+                        log.Errorf("client call failed %v", err)
+                }
+                fmt.Println(base64.StdEncoding.EncodeToString(outKey.Key)) 
+                if !outKey.ReturnCode {
+                        os.Exit(1)
+                } else {
+                        os.Exit(0)
+                }
+
+	case "unwrap-key":
+		if len(args[1:]) < 1 {
+			log.Info("Invalid number of parameters")
+			os.Exit(1)
+		}
+		wrappedKey, err := base64.StdEncoding.DecodeString(args[1])
+		if err != nil {
+			log.Error("Could not decode wrapped key")
+			os.Exit(1)
+		}
+                var tpmMtx sync.Mutex
+		key, err := util.UnwrapKey(wrappedKey, tpmMtx)
+		if err != nil {
+			log.Errorf("Could not unwrap the wrapped key %v", err)
+			os.Exit(1)
+		}
+		fmt.Println(key)
+
 	case "uninstall":
+                commandArgs := []string{consts.OptDirPath+"secure-docker-daemon"}
+                _, err := exec.ExecuteCommand("ls", commandArgs)
+                if err == nil {
+                   removeSecureDockerDaemon()
+                }
 		stop()
 		removeservice()
 
@@ -201,6 +335,14 @@ func main() {
 	case "help", "-help", "--help":
 		printUsage()
 	}
+}
+
+func removeSecureDockerDaemon(){
+        commandArgs := []string{consts.OptDirPath+"secure-docker-daemon/uninstall-container-security-dependencies.sh"}
+         _, err := exec.ExecuteCommand("/bin/bash", commandArgs)
+         if err != nil {
+                 fmt.Println(err)
+         }
 }
 
 func deleteFile(path string) {
@@ -263,12 +405,13 @@ func runservice() {
 	defer fileWatcher.Close()
 	// stop signaler
 	stop := make(chan bool)
-	go func() {
+        go func() {
 		for {
 			fileWatcher.Watch()
 		}
 	}()
-	if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
+	
+        if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
 			log.WithError(err).Fatalf("Could not create directory: %s, err: %s", consts.RunDirPath, err)
 		}

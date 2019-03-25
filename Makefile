@@ -14,6 +14,15 @@ installer: wlagent
 	cp dist/linux/workload-agent.service out/wla/workload-agent.service
 	cp libvirt/qemu out/wla/qemu && chmod +x out/wla/qemu
 	cp out/wlagent out/wla/wlagent && chmod +x out/wla/wlagent
+	chmod +x dist/linux/build-container-security-dependencies.sh
+	dist/linux/build-container-security-dependencies.sh
+	mv secure_docker_daemon out/
+	mv out/secure_docker_daemon/dcg_security-container-encryption/daemon-output out/wla/
+	mv  secure-docker-plugin out/
+	cp -r out/secure-docker-plugin/secure-docker-plugin out/wla/
+	cp dist/linux/daemon.json out/wla/
+	cp -rf out/secure-docker-plugin/artifact out/wla/
+	cp dist/linux/uninstall-container-security-dependencies.sh out/wla/uninstall-container-security-dependencies.sh && chmod +x out/wla/uninstall-container-security-dependencies.sh
 	makeself out/wla out/workload-agent-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 
 
 all: installer

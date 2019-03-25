@@ -11,6 +11,8 @@ import (
 	"intel/isecl/lib/common/crypt"
 	"intel/isecl/lib/common/exec"
 	osutil "intel/isecl/lib/common/os"
+	"intel/isecl/lib/common/pkg/instance"
+	flvr "intel/isecl/lib/flavor"
 	pinfo "intel/isecl/lib/platform-info"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/lib/verifier"
@@ -175,7 +177,7 @@ func Start(domainXMLContent string) bool {
 
 		// unwrap key
 		log.Info("Unwrapping the key...")
-		key, unWrapErr := unwrapKey(tpmWrappedKey)
+		key, unWrapErr := util.UnwrapKey(tpmWrappedKey, tpmMtx)
 		if unWrapErr != nil {
 			log.Errorf("Error unwrapping the key. %s", unWrapErr.Error())
 			return false
@@ -218,30 +220,10 @@ func Start(domainXMLContent string) bool {
 		return false
 	}
 
-	//create VM Trust Report
-	log.Info("Creating VM Trust Report")	
-	vmTrustReport, err := verifier.Verify(&manifest, &flavorKeyInfo.ImageFlavor)
-	if err != nil {
-		log.Debugf("Error creating VM Trust Report: %s", err.Error())
-		return false
-	}
-
-	// compute the hash and sign
-	log.Info("Signing VM Trust Report")
-	signedVMTrustReport, err := signVMTrustReport(vmTrustReport.(*verifier.VMTrustReport))
-	if err != nil {
-		log.Infof("Could not sign VM Trust Report using TPM :%s", err.Error())
-		return false
-	}
-
-	//post VM Trust Report on to workload service
-	log.Info("Post VM Trust Report on WLS")
-	report, _ := json.Marshal(*signedVMTrustReport)
-
-	log.Debugf("Report: %s", string(report))
-	err = wlsclient.PostVMReport(report)
-	if err!= nil {
-		log.Infof("Failed to post the VM Trust Report on to workload service: %s", err.Error())
+	//Create Image trust report
+	status := CreateInstanceTrustReport(manifest, flavorKeyInfo.ImageFlavor)
+	if status == false {
+		log.Error("Error while creating image trust report")
 		return false
 	}
 
@@ -429,13 +411,45 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 	return nil
 }
 
-func signVMTrustReport(report *verifier.VMTrustReport) (*crypt.SignedData, error) {
+func CreateInstanceTrustReport(manifest instance.Manifest, flavor flvr.ImageFlavor) bool {
+	//create VM trust report
+	log.Info("Creating image trust report")
+	instanceTrustReport, err := verifier.Verify(&manifest, &flavor)
+	if err != nil {
+		log.Errorf("Error creating image trust report: %s", err.Error())
+		return false
+	}
+	trustreport, _ := json.Marshal(instanceTrustReport)
+	log.Info(string(trustreport))
+
+	// compute the hash and sign
+	log.Info("Signing image trust report")
+	signedInstanceTrustReport, err := signInstanceTrustReport(instanceTrustReport.(*verifier.InstanceTrustReport))
+	if err != nil {
+		log.Errorf("Could not sign image trust report using TPM :%s", err.Error())
+		return false
+	}
+
+	//post VM trust report on to workload service
+	log.Info("Post image trust report on WLS")
+	report, _ := json.Marshal(*signedInstanceTrustReport)
+	log.Debugf("Report: %s", string(report))
+
+	err = wlsclient.PostVMReport(report)
+	if err != nil {
+		log.Errorf("Failed to post the instance trust report on to workload service: %s", err.Error())
+		return false
+	}
+	return true
+}
+
+func signInstanceTrustReport(report *verifier.InstanceTrustReport) (*crypt.SignedData, error) {
 
 	var signedreport crypt.SignedData
 
 	jsonVMTrustReport, err := json.Marshal(*report)
 	if err != nil {
-		return nil, fmt.Errorf("error : could not marshal VM Trust Report - %s", err)
+		return nil, fmt.Errorf("error : could not marshal instance trust report - %s", err)
 	}
 
 	signedreport.Data = jsonVMTrustReport
@@ -506,39 +520,6 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	return signature, nil
 }
 
-func unwrapKey(tpmWrappedKey []byte) ([]byte, error) {
-
-	tpmMtx.Lock()
-	defer tpmMtx.Unlock()
-	var certifiedKey tpm.CertifiedKey
-	t, err := util.GetTpmInstance()
-	if err != nil {
-		return nil, fmt.Errorf("could not establish connection to TPM: %s", err)
-	}
-
-	log.Debug("Reading the binding key certificate")
-	bindingKeyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
-	bindingKeyCert, fileErr := ioutil.ReadFile(bindingKeyFilePath)
-	if fileErr != nil {
-		return nil, errors.New("error while reading the binding key certificate")
-	}
-
-	log.Debug("Unmarshalling the binding key certificate file contents to TPM CertifiedKey object")
-	jsonErr := json.Unmarshal(bindingKeyCert, &certifiedKey)
-	if jsonErr != nil {
-		return nil, errors.New("error unmarshalling the binding key file contents to TPM CertifiedKey object")
-	}
-
-	log.Debug("Binding key deserialized")
-	keyAuth,_ := base64.StdEncoding.DecodeString(config.Configuration.BindingKeySecret)
-	key, unbindErr := t.Unbind(&certifiedKey, keyAuth, tpmWrappedKey)
-	if unbindErr != nil {
-		return nil, fmt.Errorf("error while unbinding the tpm wrapped key: %s", unbindErr.Error())
-	}
-
-	log.Debug("Unbinding TPM wrapped key was successful, return the key")
-	return key, nil
-}
 
 // This method is used to check if the key for an image file is cached.
 // If the key is cached, the method you return the key ID.
