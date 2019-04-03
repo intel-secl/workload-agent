@@ -326,6 +326,7 @@ if [ "$WA_WITH_CONTAINER_SECURITY" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY" =
 
   mkdir -p $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup
   cp /usr/bin/docker* $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+  chown -R root:root daemon-output/
   cp -f daemon-output/* /usr/bin/
 
   install_secure_docker_plugin
