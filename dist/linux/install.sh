@@ -332,6 +332,7 @@ if [ "$WA_WITH_CONTAINER_SECURITY" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY" =
   install_secure_docker_plugin
 
   echo "Starting secure docker engine"
+  mkdir -p /etc/docker
   cp daemon.json /etc/docker/ 
   systemctl daemon-reload
   systemctl start docker
