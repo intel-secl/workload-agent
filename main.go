@@ -126,9 +126,12 @@ func main() {
 		stop()
 
 	case "status":
-		if cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStatusCmd, 2); err == nil {
-			fmt.Println("Workload Agent Status")
-			fmt.Println(cmdOutput)
+		fmt.Println("Workload Agent Status")
+		stdout, stderr, err := exec.RunCommandWithTimeout(consts.ServiceStatusCmd, 2)
+		if err == nil {
+			fmt.Println(stdout)
+		} else {
+			fmt.Println(stderr)
 		}
 
 	case "start-vm":
@@ -450,17 +453,18 @@ func runservice() {
 	defer fileWatcher.Close()
 	// stop signaler
 	stop := make(chan bool)
-        go func() {
+    go func() {
 		for {
 			fileWatcher.Watch()
 		}
 	}()
 	
-        if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
+	if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
 			log.WithError(err).Fatalf("Could not create directory: %s, err: %s", consts.RunDirPath, err)
 		}
 	}
+
 	go func() {
 		for {
 			RPCSocketFilePath := consts.RunDirPath + consts.RPCSocketFileName
@@ -475,9 +479,11 @@ func runservice() {
 				return
 			}
 			r := rpc.NewServer()
-				vm := &wlrpc.VirtualMachine{
+			
+			vm := &wlrpc.VirtualMachine {
 				Watcher : fileWatcher,
 			}
+
 			err = r.Register(vm)
 			if err != nil {
 				log.Error(err)
