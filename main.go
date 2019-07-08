@@ -37,17 +37,19 @@ func printVersion() {
 }
 
 func printUsage() {
-	fmt.Printf("Work Load Agent\n")
-	fmt.Printf("===============\n\n")
-	fmt.Printf("usage : %s <command> [<args>]\n\n", os.Args[0])
-	fmt.Printf("Following are the list of commands\n")
-	fmt.Printf("\tsetup|start|stop|status|create-instance-trust-report|fetch-flavor|cache-key|uninstall [--purge]|--help|--version\n\n")
-	fmt.Printf("\tusage : %s setup [<tasklist>]\n", os.Args[0])
-	fmt.Printf("\t\t<tasklist>-space seperated list of tasks\n")
-	fmt.Printf("\t\t\t-Supported tasks - SigningKey BindingKey RegisterSigningKey RegisterBindingKey\n")
-	fmt.Printf("\tExample :-\n")
-	fmt.Printf("\t\t%s setup\n", os.Args[0])
-	fmt.Printf("\t\t%s setup SigningKey\n", os.Args[0])
+	fmt.Printf("Usage:\n\n")
+	fmt.Printf("    %s <command> [arguments]\n\n", os.Args[0])
+	fmt.Printf("Available Commands:\n")
+	fmt.Printf("    help|-help|--help  Show this help message\n")
+	fmt.Printf("    setup [task]       Run setup task\n")
+	fmt.Printf("    start              Start wlagent\n")
+	fmt.Printf("    stop               Stop wlagent\n")
+	fmt.Printf("    uninstall          Uninstall wlagent\n\n")
+	fmt.Printf("Available Tasks for setup:\n")
+	fmt.Printf("    SigningKey         Generate a TPM signing key\n")
+	fmt.Printf("    BindingKey         Generate a TPM binding key\n")
+	fmt.Printf("    RegisterSigningKey Register a signing key with the host verification service\n")
+	fmt.Printf("    RegisterBindingKey Register a binding key with the host verification service\n")
 }
 
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
