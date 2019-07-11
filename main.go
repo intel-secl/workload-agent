@@ -145,7 +145,7 @@ func main() {
 		log.Info("workload-agent start called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Error("start-vm: failed to dial wlagent.sock, is wlagent running?")
+			log.Println("start-vm: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 		client := rpc.NewClient(conn)
@@ -232,19 +232,19 @@ func main() {
 
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Error("fetch-flavor: failed to dial wlagent.sock, is wlagent running?")
+			log.Println("fetch-flavor: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 
 		// validate input
 		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			log.Error("Invalid imageUUID format")
+			log.Println("Invalid imageUUID format")
 			os.Exit(1)
 		}
 
 		inputArr := []string{os.Args[2]}
 		if validateLabelErr := validation.ValidateStrings(inputArr); validateLabelErr != nil {
-			fmt.Error("Invalid flavor part string format")
+			fmt.Printf("Invalid flavor part string format")
 			os.Exit(1)
 		}
 
@@ -275,18 +275,18 @@ func main() {
 		log.Info("workload agent cache-key called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Error("cache-key: failed to dial wlagent.sock, is wlagent running?")
+			log.Println("cache-key: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 
 		// validate input
 		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			log.Error("Invalid image UUID format")
+			log.Println("Invalid image UUID format")
 			os.Exit(1)
 		}
 		
 		if err = validation.ValidateUUIDv4(args[2]); err != nil {
-			log.Error("Invalid key UUID format")
+			log.Println("Invalid key UUID format")
 			os.Exit(1)
 		}
 
@@ -310,36 +310,36 @@ func main() {
 
         case "get-key-from-keycache":
 			if len(args[1:]) < 1 {
-				log.Error("Invalid number of parameters")
+				log.Info("Invalid number of parameters")
 				os.Exit(1)
 			}
 			log.Info("workload agent get-key-from-keycache called")
 			conn, err := net.Dial("unix", rpcSocketFilePath)
 			if err != nil {
-				log.Error("get key from keycache: failed to dial wlagent.sock, is wlagent running?")
+				log.Println("get key from keycache: failed to dial wlagent.sock, is wlagent running?")
 				os.Exit(1)
 			}
 
 			// validate input
 			if err = validation.ValidateUUIDv4(args[1]); err != nil {
-				log.Error("Invalid key UUID format")
+				log.Println("Invalid key UUID format")
 				os.Exit(1)
 			}
 
 			client := rpc.NewClient(conn)
 			var args = wlrpc.KeyInfo{
-				KeyID:   args[1],
+					KeyID:   args[1],
 			}
 			var outKey wlrpc.KeyInfo
 			err = client.Call("VirtualMachine.GetKeyFromKeyCache", &args, &outKey)
 			if err != nil {
-				log.Errorf("client call failed %v", err)
+					log.Errorf("client call failed %v", err)
 			}
 			fmt.Println(base64.StdEncoding.EncodeToString(outKey.Key)) 
 			if !outKey.ReturnCode {
-				os.Exit(1)
+					os.Exit(1)
 			} else {
-				os.Exit(0)
+					os.Exit(0)
 			}
 
 	case "unwrap-key":
