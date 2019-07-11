@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"intel/isecl/lib/common/exec"
 	csetup "intel/isecl/lib/common/setup"
+	"intel/isecl/lib/common/validation"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
@@ -140,9 +141,17 @@ func main() {
 		log.Info("workload-agent start called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Fatal("start-vm: failed to dial wlagent.sock, is wlagent running?")
+			log.Println("start-vm: failed to dial wlagent.sock, is wlagent running?")
+			os.Exit(1)
 		}
 		client := rpc.NewClient(conn)
+
+		// validate domainXML input
+		if err = validation.ValidateXMLString(args[1]); err != nil {
+			log.Error("Invalid domain XML format")
+			os.Exit(1)
+		}
+
 		var args = wlrpc.DomainXML{
 			XML: args[1],
 		}
@@ -165,9 +174,16 @@ func main() {
 		log.Info("workload-agent stop called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Fatal("stop-vm: failed to dial wlagent.sock, is wlagent running?")
+			log.Error("stop-vm: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
+
+		// validate domainXML input
+		if err = validation.ValidateXMLString(args[1]); err != nil {
+			log.Error("Invalid domain XML format")
+			os.Exit(1)
+		}
+
 		client := rpc.NewClient(conn)
 		var args = wlrpc.DomainXML{
 			XML: args[1],
@@ -176,6 +192,7 @@ func main() {
 		err = client.Call("VirtualMachine.Stop", &args, &stopState)
 		if err != nil {
 			log.Error("client call failed")
+			os.Exit(1)
 		}
 
 		if stopState := wlavm.Stop(args[1]); !stopState {
@@ -192,7 +209,7 @@ func main() {
 		log.Info("workload-agent create-instance-trust-report called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Fatal("create-instance-trust-report: failed to dial wlagent.sock, is wlagent running?")
+			log.Println("create-instance-trust-report: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 		client := rpc.NewClient(conn)
@@ -211,7 +228,19 @@ func main() {
 
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Fatal("fetch-flavor: failed to dial wlagent.sock, is wlagent running?")
+			log.Println("fetch-flavor: failed to dial wlagent.sock, is wlagent running?")
+			os.Exit(1)
+		}
+
+		// validate input
+		if err = validation.ValidateUUIDv4(args[1]); err != nil {
+			log.Println("Invalid imageUUID format")
+			os.Exit(1)
+		}
+
+		inputArr := []string{os.Args[2]}
+		if validateLabelErr := validation.ValidateStrings(inputArr); validateLabelErr != nil {
+			fmt.Printf("Invalid flavor part string format")
 			os.Exit(1)
 		}
 
@@ -242,14 +271,25 @@ func main() {
 		log.Info("workload agent cache-key called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Fatal("cache-key: failed to dial wlagent.sock, is wlagent running?")
+			log.Println("cache-key: failed to dial wlagent.sock, is wlagent running?")
+			os.Exit(1)
+		}
+
+		// validate input
+		if err = validation.ValidateUUIDv4(args[1]); err != nil {
+			log.Println("Invalid image UUID format")
+			os.Exit(1)
+		}
+		
+		if err = validation.ValidateUUIDv4(args[2]); err != nil {
+			log.Println("Invalid key UUID format")
 			os.Exit(1)
 		}
 
 		client := rpc.NewClient(conn)
 		var returnCode bool
 		var args = wlrpc.KeyInfo{
-                        ImageID: args[1],
+            ImageID: args[1],
 			KeyID: args[2],
 		}
 
@@ -265,32 +305,38 @@ func main() {
 		}
 
         case "get-key-from-keycache":
-                if len(args[1:]) < 1 {
-                        log.Info("Invalid number of parameters")
-                        os.Exit(1)
-                }
-                log.Info("workload agent get-key-from-keycache called")
-                conn, err := net.Dial("unix", rpcSocketFilePath)
-                if err != nil {
-                        log.Fatal("get key from keycache: failed to dial wlagent.sock, is wlagent running?")
-                        os.Exit(1)
-                }
+			if len(args[1:]) < 1 {
+				log.Info("Invalid number of parameters")
+				os.Exit(1)
+			}
+			log.Info("workload agent get-key-from-keycache called")
+			conn, err := net.Dial("unix", rpcSocketFilePath)
+			if err != nil {
+				log.Println("get key from keycache: failed to dial wlagent.sock, is wlagent running?")
+				os.Exit(1)
+			}
 
-                client := rpc.NewClient(conn)
-                var args = wlrpc.KeyInfo{
-                        KeyID:   args[1],
-                }
-                var outKey wlrpc.KeyInfo
-                err = client.Call("VirtualMachine.GetKeyFromKeyCache", &args, &outKey)
-                if err != nil {
-                        log.Errorf("client call failed %v", err)
-                }
-                fmt.Println(base64.StdEncoding.EncodeToString(outKey.Key)) 
-                if !outKey.ReturnCode {
-                        os.Exit(1)
-                } else {
-                        os.Exit(0)
-                }
+			// validate input
+			if err = validation.ValidateUUIDv4(args[1]); err != nil {
+				log.Println("Invalid key UUID format")
+				os.Exit(1)
+			}
+
+			client := rpc.NewClient(conn)
+			var args = wlrpc.KeyInfo{
+					KeyID:   args[1],
+			}
+			var outKey wlrpc.KeyInfo
+			err = client.Call("VirtualMachine.GetKeyFromKeyCache", &args, &outKey)
+			if err != nil {
+					log.Errorf("client call failed %v", err)
+			}
+			fmt.Println(base64.StdEncoding.EncodeToString(outKey.Key)) 
+			if !outKey.ReturnCode {
+					os.Exit(1)
+			} else {
+					os.Exit(0)
+			}
 
 	case "unwrap-key":
 		if len(args[1:]) < 1 {
@@ -302,7 +348,7 @@ func main() {
 			log.Error("Could not decode wrapped key")
 			os.Exit(1)
 		}
-                var tpmMtx sync.Mutex
+        var tpmMtx sync.Mutex
 		key, err := util.UnwrapKey(wrappedKey, tpmMtx)
 		if err != nil {
 			log.Errorf("Could not unwrap the wrapped key %v", err)
@@ -311,11 +357,11 @@ func main() {
 		fmt.Println(key)
 
 	case "uninstall":
-                commandArgs := []string{consts.OptDirPath+"secure-docker-daemon"}
-                _, err := exec.ExecuteCommand("ls", commandArgs)
-                if err == nil {
-                   removeSecureDockerDaemon()
-                }
+		commandArgs := []string{consts.OptDirPath+"secure-docker-daemon"}
+		_, err := exec.ExecuteCommand("ls", commandArgs)
+		if err == nil {
+			removeSecureDockerDaemon()
+		}
 		stop()
 		removeservice()
 
@@ -338,11 +384,11 @@ func main() {
 }
 
 func removeSecureDockerDaemon(){
-        commandArgs := []string{consts.OptDirPath+"secure-docker-daemon/uninstall-container-security-dependencies.sh"}
-         _, err := exec.ExecuteCommand("/bin/bash", commandArgs)
-         if err != nil {
-                 fmt.Println(err)
-         }
+    commandArgs := []string{consts.OptDirPath+"secure-docker-daemon/uninstall-container-security-dependencies.sh"}
+    _, err := exec.ExecuteCommand("/bin/bash", commandArgs)
+    if err != nil {
+        fmt.Println(err)
+    }
 }
 
 func deleteFile(path string) {
