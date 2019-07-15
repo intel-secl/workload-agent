@@ -20,9 +20,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"os"
-        "sync"
+    "sync"
 	"strings"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -134,14 +133,14 @@ func main() {
 
 	case "start-vm":
 		if len(args[1:]) < 1 {
-			log.Info("Invalid number of parameters")
+			log.Error("Invalid number of parameters")
 			os.Exit(1)
 		}
 
 		log.Info("workload-agent start called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Println("start-vm: failed to dial wlagent.sock, is wlagent running?")
+			log.Error("start-vm: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 		client := rpc.NewClient(conn)
@@ -168,7 +167,7 @@ func main() {
 
 	case "stop":
 		if len(args[1:]) < 1 {
-			log.Info("Invalid number of parameters")
+			log.Error("Invalid number of parameters")
 			os.Exit(1)
 		}
 		log.Info("workload-agent stop called")
@@ -222,25 +221,25 @@ func main() {
 
 	case "fetch-flavor":
 		if len(args[1:]) < 2 {
-			log.Info("Invalid number of parameters")
+			log.Error("Invalid number of parameters")
 			os.Exit(1)
 		}
 
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Println("fetch-flavor: failed to dial wlagent.sock, is wlagent running?")
+			log.Error("fetch-flavor: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 
 		// validate input
 		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			log.Println("Invalid imageUUID format")
+			log.Error("Invalid imageUUID format")
 			os.Exit(1)
 		}
 
 		inputArr := []string{os.Args[2]}
 		if validateLabelErr := validation.ValidateStrings(inputArr); validateLabelErr != nil {
-			fmt.Printf("Invalid flavor part string format")
+			fmt.Error("Invalid flavor part string format")
 			os.Exit(1)
 		}
 
@@ -264,25 +263,25 @@ func main() {
 
 	case "cache-key":
 		if len(args[1:]) < 2 {
-			log.Info("Invalid number of parameters")
+			log.Error("Invalid number of parameters")
 			os.Exit(1)
 		}
 
 		log.Info("workload agent cache-key called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Println("cache-key: failed to dial wlagent.sock, is wlagent running?")
+			log.Error("cache-key: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 
 		// validate input
 		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			log.Println("Invalid image UUID format")
+			log.Error("Invalid image UUID format")
 			os.Exit(1)
 		}
 		
 		if err = validation.ValidateUUIDv4(args[2]); err != nil {
-			log.Println("Invalid key UUID format")
+			log.Error("Invalid key UUID format")
 			os.Exit(1)
 		}
 
@@ -306,41 +305,41 @@ func main() {
 
         case "get-key-from-keycache":
 			if len(args[1:]) < 1 {
-				log.Info("Invalid number of parameters")
+				log.Error("Invalid number of parameters")
 				os.Exit(1)
 			}
 			log.Info("workload agent get-key-from-keycache called")
 			conn, err := net.Dial("unix", rpcSocketFilePath)
 			if err != nil {
-				log.Println("get key from keycache: failed to dial wlagent.sock, is wlagent running?")
+				log.Error("get key from keycache: failed to dial wlagent.sock, is wlagent running?")
 				os.Exit(1)
 			}
 
 			// validate input
 			if err = validation.ValidateUUIDv4(args[1]); err != nil {
-				log.Println("Invalid key UUID format")
+				log.Error("Invalid key UUID format")
 				os.Exit(1)
 			}
 
 			client := rpc.NewClient(conn)
 			var args = wlrpc.KeyInfo{
-					KeyID:   args[1],
+				KeyID:   args[1],
 			}
 			var outKey wlrpc.KeyInfo
 			err = client.Call("VirtualMachine.GetKeyFromKeyCache", &args, &outKey)
 			if err != nil {
-					log.Errorf("client call failed %v", err)
+				log.Errorf("client call failed %v", err)
 			}
 			fmt.Println(base64.StdEncoding.EncodeToString(outKey.Key)) 
 			if !outKey.ReturnCode {
-					os.Exit(1)
+				os.Exit(1)
 			} else {
-					os.Exit(0)
+				os.Exit(0)
 			}
 
 	case "unwrap-key":
 		if len(args[1:]) < 1 {
-			log.Info("Invalid number of parameters")
+			log.Error("Invalid number of parameters")
 			os.Exit(1)
 		}
 		wrappedKey, err := base64.StdEncoding.DecodeString(args[1])
