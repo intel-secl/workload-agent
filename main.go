@@ -481,8 +481,7 @@ func runservice() {
 				return
 			}
 			r := rpc.NewServer()
-			
-			vm := &wlrpc.VirtualMachine {
+			vm := &wlrpc.VirtualMachine{
 				Watcher : fileWatcher,
 			}
 
