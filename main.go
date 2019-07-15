@@ -244,7 +244,7 @@ func main() {
 
 		inputArr := []string{os.Args[2]}
 		if validateLabelErr := validation.ValidateStrings(inputArr); validateLabelErr != nil {
-			fmt.Printf("Invalid flavor part string format")
+			log.Error("Invalid flavor part string format")
 			os.Exit(1)
 		}
 
