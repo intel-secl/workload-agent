@@ -308,39 +308,39 @@ func main() {
 			os.Exit(0)
 		}
 
-        case "get-key-from-keycache":
-			if len(args[1:]) < 1 {
-				log.Info("Invalid number of parameters")
-				os.Exit(1)
-			}
-			log.Info("workload agent get-key-from-keycache called")
-			conn, err := net.Dial("unix", rpcSocketFilePath)
-			if err != nil {
-				log.Println("get key from keycache: failed to dial wlagent.sock, is wlagent running?")
-				os.Exit(1)
-			}
+	case "get-key-from-keycache":
+		if len(args[1:]) < 1 {
+			log.Error("Invalid number of parameters")
+			os.Exit(1)
+		}
+		log.Info("workload agent get-key-from-keycache called")
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			log.Error("get key from keycache: failed to dial wlagent.sock, is wlagent running?")
+			os.Exit(1)
+		}
 
-			// validate input
-			if err = validation.ValidateUUIDv4(args[1]); err != nil {
-				log.Println("Invalid key UUID format")
-				os.Exit(1)
-			}
+		// validate input
+		if err = validation.ValidateUUIDv4(args[1]); err != nil {
+			log.Error("Invalid key UUID format")
+			os.Exit(1)
+		}
 
-			client := rpc.NewClient(conn)
-			var args = wlrpc.KeyInfo{
-					KeyID:   args[1],
-			}
-			var outKey wlrpc.KeyInfo
-			err = client.Call("VirtualMachine.GetKeyFromKeyCache", &args, &outKey)
-			if err != nil {
-					log.Errorf("client call failed %v", err)
-			}
-			fmt.Println(base64.StdEncoding.EncodeToString(outKey.Key)) 
-			if !outKey.ReturnCode {
-					os.Exit(1)
-			} else {
-					os.Exit(0)
-			}
+		client := rpc.NewClient(conn)
+		var args = wlrpc.KeyInfo{
+			KeyID:   args[1],
+		}
+		var outKey wlrpc.KeyInfo
+		err = client.Call("VirtualMachine.GetKeyFromKeyCache", &args, &outKey)
+		if err != nil {
+			log.Errorf("client call failed %v", err)
+		}
+		fmt.Println(base64.StdEncoding.EncodeToString(outKey.Key)) 
+		if !outKey.ReturnCode {
+			os.Exit(1)
+		} else {
+			os.Exit(0)
+		}
 
 	case "unwrap-key":
 		if len(args[1:]) < 1 {
