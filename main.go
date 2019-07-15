@@ -293,7 +293,7 @@ func main() {
 		client := rpc.NewClient(conn)
 		var returnCode bool
 		var args = wlrpc.KeyInfo{
-            ImageID: args[1],
+			ImageID: args[1],
 			KeyID: args[2],
 		}
 
