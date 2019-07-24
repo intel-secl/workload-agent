@@ -57,6 +57,12 @@ func main() {
 	// Save log configurations
 	config.LogConfiguration()
 
+	inputValArr := []string{os.Args[0]}
+	if valErr := validation.ValidateStrings(inputValArr); valErr != nil {
+		fmt.Println("Invalid string format")
+		os.Exit(1)
+	}
+
 	args := os.Args[1:]
 	if len(args) <= 0 {
 		fmt.Println("Command not found. Usage below")
