@@ -3,7 +3,7 @@ package common
 import (
 	pinfo "intel/isecl/lib/platform-info"
 	"intel/isecl/wlagent/wlsclient"
-        
+
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -36,15 +36,15 @@ func RetrieveKey(imageUUID string) ([]byte, error) {
 		return nil, err
 	}
 
-	if flavorKeyInfo.Image.Meta.ID == "" {
+	if flavorKeyInfo.Flavor.Meta.ID == "" {
 		log.Infof("Flavor does not exist for the image %s", imageUUID)
 		// check with Ryan
 		return nil, nil
 	}
 
-	if flavorKeyInfo.Image.EncryptionRequired {
+	if flavorKeyInfo.Flavor.EncryptionRequired {
 		// if key not cached, cache the key
-		keyURLSplit := strings.Split(flavorKeyInfo.Image.Encryption.KeyURL, "/")
+		keyURLSplit := strings.Split(flavorKeyInfo.Flavor.Encryption.KeyURL, "/")
 		keyID = keyURLSplit[len(keyURLSplit)-2]
 		// if the WLS response includes a key, cache the key on host
 		if len(flavorKeyInfo.Key) > 0 {
@@ -58,4 +58,3 @@ func RetrieveKey(imageUUID string) ([]byte, error) {
 
 	return nil, nil
 }
-

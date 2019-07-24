@@ -3,11 +3,11 @@ package rpc
 import (
 	"encoding/json"
 	"intel/isecl/lib/common/pkg/instance"
-	flvr "intel/isecl/lib/flavor"
+	flavorUtil "intel/isecl/lib/flavor/util"
 	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/flavor"
 	"intel/isecl/wlagent/key"
-        "intel/isecl/wlagent/keycache"
+    "intel/isecl/wlagent/keycache"
 	"intel/isecl/wlagent/wlavm"
 )
 
@@ -57,13 +57,13 @@ func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
 // CreateInstanceTrustReport forwards the RPC request to wlavm.CreateImageTrustReport
 func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status *bool) error {
 	var manifestJSON instance.Manifest
-	var imageFlavor flvr.ImageFlavor
+	var imageFlavor flavorUtil.SignedImageFlavor
 	json.Unmarshal([]byte(args.Manifest), &manifestJSON)
 	imageID := manifestJSON.InstanceInfo.ImageID
 	flavor, _ := flavor.Fetch(imageID, "CONTAINER_IMAGE")
 	json.Unmarshal([]byte(flavor), &imageFlavor)
 	//adding integrity enforced value from flavor to that of manifest
-	manifestJSON.ImageIntegrityEnforced = imageFlavor.Image.IntegrityEnforced
+	manifestJSON.ImageIntegrityEnforced = imageFlavor.ImageFlavor.IntegrityEnforced
 	_ = wlavm.CreateInstanceTrustReport(manifestJSON, imageFlavor)
 	return nil
 }

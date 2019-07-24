@@ -12,7 +12,7 @@ import (
 	"intel/isecl/lib/common/exec"
 	osutil "intel/isecl/lib/common/os"
 	"intel/isecl/lib/common/pkg/instance"
-	flvr "intel/isecl/lib/flavor"
+	flavorUtil "intel/isecl/lib/flavor/util"
 	pinfo "intel/isecl/lib/platform-info"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/lib/verifier"
@@ -153,15 +153,15 @@ func Start(domainXMLContent string) bool {
 		return false
 	}
 
-	if flavorKeyInfo.ImageFlavor.Image.Meta.ID == "" {
+	if flavorKeyInfo.Flavor.Meta.ID == "" {
 		log.Infof("Flavor does not exist for the image %s", imageUUID)
 		// TODO: to be discussed
 		return true
 	}
 
-	if flavorKeyInfo.Image.EncryptionRequired {
+	if flavorKeyInfo.Flavor.EncryptionRequired {
 		// if key not cached, cache the key
-		keyURLSplit := strings.Split(flavorKeyInfo.Image.Encryption.KeyURL, "/")
+		keyURLSplit := strings.Split(flavorKeyInfo.Flavor.Encryption.KeyURL, "/")
 		keyID = keyURLSplit[len(keyURLSplit)-2]
 		// if the WLS response includes a key, cache the key on host
 		if len(flavorKeyInfo.Key) > 0 {
@@ -221,7 +221,7 @@ func Start(domainXMLContent string) bool {
 	}
 
 	//Create Image trust report
-	status := CreateInstanceTrustReport(manifest, flavorKeyInfo.ImageFlavor)
+	status := CreateInstanceTrustReport(manifest, flavorUtil.SignedImageFlavor{flavorKeyInfo.Flavor, flavorKeyInfo.Signature})
 	if status == false {
 		log.Error("Error while creating image trust report")
 		return false
@@ -411,10 +411,10 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 	return nil
 }
 
-func CreateInstanceTrustReport(manifest instance.Manifest, flavor flvr.ImageFlavor) bool {
+func CreateInstanceTrustReport(manifest instance.Manifest, flavor flavorUtil.SignedImageFlavor) bool {
 	//create VM trust report
 	log.Info("Creating image trust report")
-	instanceTrustReport, err := verifier.Verify(&manifest, &flavor)
+	instanceTrustReport, err := verifier.Verify(&manifest, &flavor, consts.FlavorSigningCertPath)
 	if err != nil {
 		log.Errorf("Error creating image trust report: %s", err.Error())
 		return false

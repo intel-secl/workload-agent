@@ -31,6 +31,7 @@ const (
 	DaemonLogFileName                           = "daemon.log"
 	ConfigFileName                              = "config.yml"
 	ConfigDirPath                               = "/etc/workload-agent/"
+	FlavorSigningCertPath                       = ConfigDirPath + "flavor-signing-cert.pem"
 	OptDirPath                                  = "/opt/workload-agent/"
 	BinDirPath                                  = "/opt/workload-agent/bin/"
 	RunDirPath                                  = "/var/run/workload-agent/"

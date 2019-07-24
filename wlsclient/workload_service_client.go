@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	f "intel/isecl/lib/flavor"
-	"intel/isecl/lib/verifier"
+	"intel/isecl/lib/flavor"
+	f "intel/isecl/lib/flavor/util"
 	"intel/isecl/wlagent/config"
 	"net/http"
 	"net/url"
@@ -16,8 +16,9 @@ import (
 
 //FlavorKey is a representation of flavor-key information
 type FlavorKey struct {
-	f.ImageFlavor
-	Key []byte `json:"key"`
+	Flavor    flavor.Image `json:"flavor"`
+	Signature string       `json:"signature"`
+	Key       []byte       `json:"key"`
 }
 
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
@@ -67,10 +68,9 @@ func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error)
 }
 
 // GetImageFlavor method is used to get the image flavor from the workload service
-func GetImageFlavor(imageID, flavorPart string) (f.ImageFlavor, error) {
+func GetImageFlavor(imageID, flavorPart string) (f.SignedImageFlavor, error) {
 
-	var flavor f.ImageFlavor
-	var flavors []f.ImageFlavor
+	var flavor f.SignedImageFlavor
 
 	requestURL, err := url.Parse(config.Configuration.Wls.APIURL)
 	if err != nil {
@@ -97,17 +97,14 @@ func GetImageFlavor(imageID, flavorPart string) (f.ImageFlavor, error) {
 	}
 
 	// deserialize the response to ImageFlavor response
-	err = json.Unmarshal(httpResponse, &flavors)
+	err = json.Unmarshal(httpResponse, &flavor)
 	if err != nil {
 		return flavor, err
 	}
 
 	log.Debugf("response from API: %s", string(httpResponse))
 
-	if len(flavors) == 0 {
-		return flavor, nil
-	}
-	return flavors[0], nil
+	return flavor, nil
 }
 
 //PostVMReport method is used to upload the VM trust report to workload service
