@@ -34,7 +34,6 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
-	xmlpath "gopkg.in/xmlpath.v2"
 )
 
 var (
@@ -57,12 +56,7 @@ func Start(domainXMLContent string) bool {
 	var skipManifestAndReportCreation = false
 
 	log.Info("Parsing domain XML to get image UUID, image path, VM UUID, VM path and disk size")
-	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
-	if err != nil {
-		log.Error("Error trying to parse domain xml")
-		return false
-	}
-	d, err := libvirt.NewDomainParser(domainXML,libvirt.Start)
+	d, err := libvirt.NewDomainParser(domainXMLContent, libvirt.Start)
 	if err != nil {
 		log.Error("Parsing error: ", err.Error())
 		return false
@@ -519,7 +513,6 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	log.Debug("Report signed by TPM successfully")
 	return signature, nil
 }
-
 
 // This method is used to check if the key for an image file is cached.
 // If the key is cached, the method you return the key ID.

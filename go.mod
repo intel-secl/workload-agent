@@ -7,7 +7,6 @@ require (
 	github.com/sirupsen/logrus v1.4.0
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/net v0.0.0-20190206173232-65e2d4e15006 // indirect
-	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
 
 	gopkg.in/yaml.v2 v2.2.2
 	intel/isecl/lib/common v0.0.0

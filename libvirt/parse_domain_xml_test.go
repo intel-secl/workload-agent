@@ -1,12 +1,10 @@
 package libvirt
 
 import (
-	"bytes"
 	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	xmlpath "gopkg.in/xmlpath.v2"
 )
 
 func TestGetItemFromDomainXML(t *testing.T) {
@@ -15,12 +13,8 @@ func TestGetItemFromDomainXML(t *testing.T) {
 	domainXMLFileContent, err := ioutil.ReadFile(domainXMLFile)
 	assert.NoError(t, err)
 
-	// parse domain XML file
-	domainXML, err := xmlpath.Parse(bytes.NewReader(domainXMLFileContent))
-	assert.NoError(t, err)
-
 	// get all the values from domain XML
-	d, err := NewDomainParser(domainXML, Start)
+	d, err := NewDomainParser(string(domainXMLFileContent), Start)
 	assert.NoError(t, err)
 
 	// get vm UUID from domain XML

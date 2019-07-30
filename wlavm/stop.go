@@ -14,8 +14,6 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	"intel/isecl/lib/common/exec"
-	xmlpath "gopkg.in/xmlpath.v2"
 )
 
 var (
@@ -37,13 +35,8 @@ var (
 func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	log.Info("Stop call intercepted")
 	log.Info("Parsing domain XML to get image UUID, VM UUID and VM path")
-	domainXML, err := xmlpath.Parse(strings.NewReader(domainXMLContent))
-	if err != nil {
-		log.Error("Error trying to parse domain xml")
-		return false
-	}
 
-	d, err := libvirt.NewDomainParser(domainXML, libvirt.Stop)
+	d, err := libvirt.NewDomainParser(domainXMLContent, libvirt.Stop)
 	if err != nil {
 		log.Error("Parsing error")
 		return false

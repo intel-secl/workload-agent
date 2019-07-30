@@ -1,10 +1,7 @@
 package libvirt
 
 import (
-	"fmt"
-	"strconv"
-
-	xmlpath "gopkg.in/xmlpath.v2"
+	"encoding/xml"
 )
 
 // QemuIntercept is used to get the qemu intercept call
@@ -19,10 +16,33 @@ const (
 	Stop
 )
 
-// DomainParser is used to set the XML node, qemu intercept call and all the values
+// Domain is used to represent root of domain xml
+type Domain struct {
+	XMLName            xml.Name `xml:"domain"`
+	UUID               string   `xml:"uuid"`
+	Root               Root     `xml:"metadata>instance>root"`
+	Disk               int      `xml:"metadata>instance>flavor>disk"`
+	Source             Source   `xml:"devices>disk>source"`
+	BackingStoreSource Source   `xml:"devices>disk>backingStore>source"`
+}
+
+// Root is used to represent root tag under metadata
+type Root struct {
+	XMLName xml.Name `xml:"root"`
+	UUID    string   `xml:"uuid,attr"`
+}
+
+// Source is used to represent source tags under devices
+type Source struct {
+	XMLName xml.Name `xml:"source"`
+	File    string   `xml:"file,attr"`
+	Dev     string   `xml:"dev,attr"`
+}
+
+// DomainParser is used to set the XML content, qemu intercept call and all the values
 // that will be parsed from Domain XMl
 type DomainParser struct {
-	xml               *xmlpath.Node
+	xml               string
 	qemuInterceptCall QemuIntercept
 	vmUUID            string
 	vmPath            string
@@ -31,52 +51,35 @@ type DomainParser struct {
 	size              int
 }
 
-// NewDomainParser method is used to get the DOmainParser struct values
-func NewDomainParser(domainXML *xmlpath.Node, qemuInterceptCall QemuIntercept) (*DomainParser, error) {
+// NewDomainParser method is used to get the DomainParser struct values
+func NewDomainParser(domainXML string, qemuInterceptCall QemuIntercept) (*DomainParser, error) {
 	var d DomainParser
+	var domain Domain
 	var err error
 	d.xml = domainXML
 	d.qemuInterceptCall = qemuInterceptCall
 
-	if d.vmUUID, err = d.getItemFromDomainXML("/domain/uuid", "vmUUID"); err != nil {
+	err = xml.Unmarshal([]byte(domainXML), &domain)
+	if err != nil {
 		return nil, err
 	}
 
-	if d.vmPath, err = d.getItemFromDomainXML("/domain/devices/disk/source/@file", "vmPath"); err != nil {
-		return nil, err
-	}
+	d.vmUUID = domain.UUID
 
-	if d.imageUUID, err = d.getItemFromDomainXML("/domain/metadata//node()[@type='image']/@uuid", "imageUUID"); err != nil {
-		return nil, err
-	}
+	d.vmPath = domain.Source.File
+
+	d.imageUUID = domain.Root.UUID
 
 	if d.qemuInterceptCall == Start {
-		if d.imagePath, err = d.getItemFromDomainXML("/domain/devices/disk/backingStore/source/@file", "imagePath"); err != nil {
-			if d.imagePath, err = d.getItemFromDomainXML("/domain/devices/disk/backingStore/source/@dev", "imagePath"); err != nil {
-				d.imagePath = ""
-			}
+		d.imagePath = domain.BackingStoreSource.File
+		if d.imagePath == "" {
+			d.imagePath = domain.BackingStoreSource.Dev
 		}
 
-		var diskSize string
-		if diskSize, err = d.getItemFromDomainXML("/domain/metadata//disk", "diskSize"); err != nil {
-			return nil, err
-		}
-		d.size, _ = strconv.Atoi(diskSize)
+		d.size = domain.Disk
 	}
 
 	return &d, nil
-}
-
-// getItemFromDomainXML method is used to get an item from domain XML given the xPath value
-func (d *DomainParser) getItemFromDomainXML(xmlPath string, item string) (string, error) {
-
-	// parse the item in xml path from domainXMl
-	parseItem := xmlpath.MustCompile(xmlPath)
-	itemValue, ok := parseItem.String(d.xml)
-	if !ok {
-		return "", fmt.Errorf("Error while getting %s from domainXMl", item)
-	}
-	return itemValue, nil
 }
 
 // GetVMUUID method is used to get the vm UUID value from the domain XML
