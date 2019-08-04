@@ -13,7 +13,7 @@ import (
 	osutil "intel/isecl/lib/common/os"
 	"intel/isecl/lib/common/pkg/instance"
 	flavorUtil "intel/isecl/lib/flavor/util"
-	pinfo "intel/isecl/lib/platform-info"
+	pinfo "intel/isecl/lib/platform-info/platforminfo"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/lib/verifier"
 	"intel/isecl/lib/vml"

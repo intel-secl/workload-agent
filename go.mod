@@ -9,7 +9,8 @@ require (
 	golang.org/x/net v0.0.0-20190206173232-65e2d4e15006 // indirect
 
 	gopkg.in/yaml.v2 v2.2.2
-	intel/isecl/lib/common v0.0.0
+	intel/isecl/lib/clients v0.0.0
+	intel/isecl/lib/common v1.0.0-Beta
 	intel/isecl/lib/flavor v0.0.0
 	intel/isecl/lib/mtwilson-client v0.0.0
 	intel/isecl/lib/platform-info v0.0.0
@@ -28,6 +29,8 @@ replace intel/isecl/lib/flavor => gitlab.devtools.intel.com/sst/isecl/lib/flavor
 
 replace intel/isecl/lib/verifier => gitlab.devtools.intel.com/sst/isecl/lib/verifier.git v0.0.0-20190724131213-64d659e7973d
 
-replace intel/isecl/lib/platform-info => gitlab.devtools.intel.com/sst/isecl/lib/platform-info.git v0.0.0-20181206180455-b2908f06aa05
+replace intel/isecl/lib/platform-info => gitlab.devtools.intel.com/sst/isecl/lib/platform-info.git v0.0.0-20190724162312-1400c15ab9ee
 
 replace intel/isecl/lib/mtwilson-client => gitlab.devtools.intel.com/sst/isecl/lib/mtwilson-client.git v0.0.0-20190213202719-11876bdbab7c
+
+replace intel/isecl/lib/clients => gitlab.devtools.intel.com/sst/isecl/lib/clients.git v0.0.0-20190724015617-7d3c4271db56

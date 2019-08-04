@@ -46,4 +46,11 @@ const (
 	HashingAlgorithm                crypto.Hash = crypto.SHA256
 	WLABinFilePath                              = "/usr/local/bin/wlagent"
 	AIKPemFileName                              = "aik.pem"
+	TrustedCaCertsDir                           = ConfigDirPath + "certs/trustedca/"
+	TokenSignKeysAndCertDir                     = ConfigDirPath + "certs/tokensign/"
+	TokenSignKeyFile                            = TokenSignKeysAndCertDir + "jwt.key"
+	TokenSignCertFile                           = TokenSignKeysAndCertDir + "jwtsigncert.pem"
+	TrustedJWTSigningCertsDir                   = ConfigDirPath + "certs/trustedjwt/"
+
+	AAS_URL = "AAS_API_URL"
 )

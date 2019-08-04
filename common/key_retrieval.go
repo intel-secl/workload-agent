@@ -1,7 +1,7 @@
 package common
 
 import (
-	pinfo "intel/isecl/lib/platform-info"
+	pinfo "intel/isecl/lib/platform-info/platforminfo"
 	"intel/isecl/wlagent/wlsclient"
 
 	"strings"

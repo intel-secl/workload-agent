@@ -41,6 +41,10 @@ var Configuration struct {
 	}
 	LogLevel       string
 	ConfigComplete bool
+
+	Aas struct {
+		BaseURL string
+	}
 }
 
 const HashingAlgorithm crypto.Hash = crypto.SHA256
@@ -203,6 +207,12 @@ func SaveConfiguration(c csetup.Context) error {
 			consts.LogLevelEnvVar,
 			&Configuration.LogLevel,
 			"Log Level",
+			false,
+		},
+		{
+			consts.AAS_URL,
+			&Configuration.Aas.BaseURL,
+			"AAS URL",
 			false,
 		},
 	}

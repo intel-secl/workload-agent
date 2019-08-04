@@ -23,6 +23,9 @@ import (
     "sync"
 	"strings"
 	log "github.com/sirupsen/logrus"
+
+	"intel/isecl/lib/clients"
+	"intel/isecl/lib/clients/aas"
 )
 
 var (
@@ -106,6 +109,11 @@ func main() {
 		// Run list of setup tasks one by one
 		setupRunner := &csetup.Runner{
 			Tasks: []csetup.Task{
+				csetup.Download_Ca_Cert{
+					Flags:         args,
+					CaCertDirPath: consts.TrustedCaCertsDir,
+					ConsoleWriter: os.Stdout,
+				},
 				setup.SigningKey{
 					T: t,
 				},
@@ -390,6 +398,26 @@ func main() {
 
 	case "help", "-help", "--help":
 		printUsage()
+
+	case "test-aas":
+		aasClient := aas.NewJWTClient(config.Configuration.Aas.BaseURL)
+		fmt.Println(aasClient)
+
+		var err error
+		aasClient.HTTPClient, err = clients.HTTPClientWithCADir(consts.TrustedCaCertsDir)
+		if err != nil {
+			fmt.Println(err)
+		}
+		aasClient.AddUser(config.Configuration.Wls.APIUsername, config.Configuration.Wls.APIPassword)
+		err = aasClient.FetchAllTokens()
+		if err != nil {
+			fmt.Println(err)
+		}
+		jwtToken, err := aasClient.GetUserToken(config.Configuration.Wls.APIUsername)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(string(jwtToken))
 	}
 }
 
