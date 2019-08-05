@@ -149,8 +149,7 @@ func Start(domainXMLContent string) bool {
 
 	if flavorKeyInfo.Flavor.Meta.ID == "" {
 		log.Infof("Flavor does not exist for the image %s", imageUUID)
-		// TODO: to be discussed
-		return true
+		return false
 	}
 
 	if flavorKeyInfo.Flavor.EncryptionRequired {
