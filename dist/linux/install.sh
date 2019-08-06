@@ -328,9 +328,18 @@ if [ "$WA_WITH_CONTAINER_SECURITY" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY" =
   systemctl stop docker
 
   mkdir -p $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup
-  cp /usr/bin/docker* $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+  cp /usr/bin/docker $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
   chown -R root:root docker-daemon/
-  cp -f docker-daemon/* /usr/bin/
+  
+  cp -f docker-daemon/docker /usr/bin/
+  which /usr/bin/dockerd-ce 2>/dev/null
+  if [ $? -ne 0 ]; then
+    cp /usr/bin/dockerd $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+    cp -f docker-daemon/dockerd-ce /usr/bin/dockerd
+  else
+    cp /usr/bin/dockerd-ce $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+    cp -f docker-daemon/dockerd-ce /usr/bin/dockerd-ce
+  fi
 
   install_secure_docker_plugin
 
