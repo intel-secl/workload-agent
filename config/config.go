@@ -39,12 +39,12 @@ var Configuration struct {
 		AikPemFile string
 		User       string
 	}
-	LogLevel       string
-	ConfigComplete bool
-
 	Aas struct {
 		BaseURL string
 	}
+	FlavorSignatureVerificationSkip bool
+	LogLevel                        string
+	ConfigComplete                  bool
 }
 
 const HashingAlgorithm crypto.Hash = crypto.SHA256
@@ -210,7 +210,12 @@ func SaveConfiguration(c csetup.Context) error {
 			false,
 		},
 		{
-			consts.AAS_URL,
+			consts.FlavorSignatureVerificationSkip,
+			&Configuration.FlavorSignatureVerificationSkip,
+			"Flavor Signature Verification Skip",
+			true,
+		},
+		{	consts.AAS_URL,
 			&Configuration.Aas.BaseURL,
 			"AAS URL",
 			false,

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"intel/isecl/lib/flavor"
-	f "intel/isecl/lib/flavor/util"
 	"intel/isecl/wlagent/config"
 	"net/http"
 	"net/url"
@@ -68,9 +67,9 @@ func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error)
 }
 
 // GetImageFlavor method is used to get the image flavor from the workload service
-func GetImageFlavor(imageID, flavorPart string) (f.SignedImageFlavor, error) {
+func GetImageFlavor(imageID, flavorPart string) (flavor.SignedImageFlavor, error) {
 
-	var flavor f.SignedImageFlavor
+	var flavor flavor.SignedImageFlavor
 
 	requestURL, err := url.Parse(config.Configuration.Wls.APIURL)
 	if err != nil {

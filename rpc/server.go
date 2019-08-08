@@ -3,11 +3,11 @@ package rpc
 import (
 	"encoding/json"
 	"intel/isecl/lib/common/pkg/instance"
-	flavorUtil "intel/isecl/lib/flavor/util"
+	flvr "intel/isecl/lib/flavor"
 	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/flavor"
 	"intel/isecl/wlagent/key"
-    "intel/isecl/wlagent/keycache"
+	"intel/isecl/wlagent/keycache"
 	"intel/isecl/wlagent/wlavm"
 )
 
@@ -31,8 +31,8 @@ type FlavorInfo struct {
 type KeyInfo struct {
 	ImageID    string
 	KeyID      string
-        Key        []byte
-        ReturnCode bool
+	Key        []byte
+	ReturnCode bool
 }
 
 // VirtualMachine is type that defines the RPC functions for communicating with the Wlagent daemon Starting/Stopping a VM
@@ -57,7 +57,7 @@ func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
 // CreateInstanceTrustReport forwards the RPC request to wlavm.CreateImageTrustReport
 func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status *bool) error {
 	var manifestJSON instance.Manifest
-	var imageFlavor flavorUtil.SignedImageFlavor
+	var imageFlavor flvr.SignedImageFlavor
 	json.Unmarshal([]byte(args.Manifest), &manifestJSON)
 	imageID := manifestJSON.InstanceInfo.ImageID
 	flavor, _ := flavor.Fetch(imageID, "CONTAINER_IMAGE")
@@ -88,13 +88,13 @@ func (vm *VirtualMachine) CacheKey(args *KeyInfo, reply *bool) error {
 	return nil
 }
 
-func (vm *VirtualMachine) GetKeyFromKeyCache (args *KeyInfo, outKeyInfo *KeyInfo, reply *bool) (error) {
-        key, returnCode := keycache.Get(args.KeyID)
-        var k = KeyInfo{
-          KeyID:   args.KeyID,
-          Key:     key.Bytes,
-          ReturnCode: returnCode,
-        }
-        *outKeyInfo = k
-        return nil
+func (vm *VirtualMachine) GetKeyFromKeyCache(args *KeyInfo, outKeyInfo *KeyInfo, reply *bool) error {
+	key, returnCode := keycache.Get(args.KeyID)
+	var k = KeyInfo{
+		KeyID:      args.KeyID,
+		Key:        key.Bytes,
+		ReturnCode: returnCode,
+	}
+	*outKeyInfo = k
+	return nil
 }

@@ -3,22 +3,21 @@
 package wlavm
 
 import (
-	//"log"
 	"crypto"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"intel/isecl/lib/common/crypt"
 	"intel/isecl/lib/common/exec"
 	osutil "intel/isecl/lib/common/os"
 	"intel/isecl/lib/common/pkg/instance"
-	flavorUtil "intel/isecl/lib/flavor/util"
+	flvr "intel/isecl/lib/flavor"
 	pinfo "intel/isecl/lib/platform-info/platforminfo"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/lib/verifier"
 	"intel/isecl/lib/vml"
 	"intel/isecl/wlagent/config"
-	"intel/isecl/wlagent/libvirt"
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/keycache"
@@ -42,13 +41,11 @@ var (
 	vmVolumeMtx  sync.Mutex
 )
 
-// var tpmMtx = &sync.Mutex{}
-
 // Start method is used perform the VM confidentiality check before lunching the VM
 // Input Parameters: domainXML content string
 // Return : Returns a boolean value to the main method.
-// true if the vm is launched sucessfully, else returns false. 
-func Start(domainXMLContent string) bool {
+// true if the vm is launched sucessfully, else returns false.
+func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 
 	log.Info("VM start call intercepted")
 	var skipImageVolumeCreation = false
@@ -82,8 +79,8 @@ func Start(domainXMLContent string) bool {
 			return true
 		}
 	}
-	
-	// check if the image is a symlink, if it is avoid creating image dm-crypt volume 
+
+	// check if the image is a symlink, if it is avoid creating image dm-crypt volume
 	log.Info("Checking if the image file is a symlink...")
 	symLinkOut, err := os.Readlink(imagePath)
 	imageFileStat, imageFileStatErr := os.Stat(symLinkOut)
@@ -125,7 +122,7 @@ func Start(domainXMLContent string) bool {
 
 	// get host hardware UUID
 	log.Debug("Retrieving host hardware UUID...")
-	hardwareUUID,err := pinfo.HardwareUUID()
+	hardwareUUID, err := pinfo.HardwareUUID()
 	if err != nil {
 		log.Error("Unable to get the host hardware UUID")
 		return false
@@ -214,7 +211,7 @@ func Start(domainXMLContent string) bool {
 	}
 
 	//Create Image trust report
-	status := CreateInstanceTrustReport(manifest, flavorUtil.SignedImageFlavor{flavorKeyInfo.Flavor, flavorKeyInfo.Signature})
+	status := CreateInstanceTrustReport(manifest, flvr.SignedImageFlavor{flavorKeyInfo.Flavor, flavorKeyInfo.Signature})
 	if status == false {
 		log.Error("Error while creating image trust report")
 		return false
@@ -225,9 +222,10 @@ func Start(domainXMLContent string) bool {
 	iAssoc := ImageVMAssociation{imageUUID, imagePath}
 	err = iAssoc.Create()
 	if err != nil {
-		log.Errorf("Error while updating the image-vm count file. %s", err.Error())
+		log.Errorf("Error while updating the image-instance count file: %s", err.Error())
 		return false
 	}
+
 	log.Infof("VM %s started", vmUUID)
 	return true
 }
@@ -338,7 +336,7 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	}
 
 	//decrypt the image
-	log.Info("Decrypting the image")		
+	log.Info("Decrypting the image")
 	decryptedImage, err := vml.Decrypt(encryptedImage, key)
 	if err != nil {
 		return fmt.Errorf("error while decrypting the image: %s", err.Error())
@@ -357,6 +355,13 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	if err != nil {
 		return fmt.Errorf("error creating a symlink and changing file ownership: %s", err.Error())
 	}
+
+	// Watch the symlink for deletion, and remove the _sparseFile if image is deleted
+	// filewatcher.HandleEvent(imagePath, func(e fsnotify.Event) {
+	// 	if e.Op&fsnotify.Remove == fsnotify.Remove {
+	// 		os.Remove(sparseFilePath)
+	// 	}
+	// })
 	return nil
 }
 
@@ -382,7 +387,7 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 		return fmt.Errorf("error while creating symbolic link: %s", err.Error())
 	}
 
-	// change the image symlink file ownership to qemu 
+	// change the image symlink file ownership to qemu
 	log.Debug("Changing symlink ownership to qemu")
 	err = os.Lchown(sourceFile, userID, groupID)
 	if err != nil {
@@ -404,10 +409,10 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 	return nil
 }
 
-func CreateInstanceTrustReport(manifest instance.Manifest, flavor flavorUtil.SignedImageFlavor) bool {
+func CreateInstanceTrustReport(manifest instance.Manifest, flavor flvr.SignedImageFlavor) bool {
 	//create VM trust report
 	log.Info("Creating image trust report")
-	instanceTrustReport, err := verifier.Verify(&manifest, &flavor, consts.FlavorSigningCertPath)
+	instanceTrustReport, err := verifier.Verify(&manifest, &flavor, consts.FlavorSigningCertPath, config.Configuration.FlavorSignatureVerificationSkip)
 	if err != nil {
 		log.Errorf("Error creating image trust report: %s", err.Error())
 		return false
@@ -480,7 +485,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 		return nil, err
 	}
 
-	// Get the secret associated when the SigningKey was created. 
+	// Get the secret associated when the SigningKey was created.
 	log.Debug("Retrieving the signing key secret form WA configuration")
 	keyAuth, err := base64.StdEncoding.DecodeString(config.Configuration.SigningKeySecret)
 	if err != nil {
@@ -532,7 +537,7 @@ func cacheKeyInMemory(imageUUID string, keyID string, key []byte) error {
 	return nil
 }
 
-// checkMountPathExistsAndMountVolume method is used to check if te mount path exists, 
+// checkMountPathExistsAndMountVolume method is used to check if te mount path exists,
 // if it does not exists, the method creates the mount path and mounts the device mapper.
 func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath, emptyFileName string) error {
 	log.Debugf("Mounting the device mapper: %s", deviceMapperPath)

@@ -13,6 +13,7 @@ const (
 	WLS_API_PASSWORD                            = "WLS_API_PASSWORD"
 	WLS_TLS_SHA256                              = "WLS_TLS_SHA256"
 	LogLevelEnvVar                              = "LOG_LEVEL"
+	FlavorSignatureVerificationSkip             = "FLAVOR_SIGNATURE_VERIFICATION_SKIP"
 	AikSecretKeyName                            = "aik.secret"
 	TAConfigDirEnvVar                           = "TRUSTAGENT_CONFIGURATION"
 	TAConfigAikSecretCmd                        = "tagent config aik.secret"
@@ -31,7 +32,7 @@ const (
 	DaemonLogFileName                           = "daemon.log"
 	ConfigFileName                              = "config.yml"
 	ConfigDirPath                               = "/etc/workload-agent/"
-	FlavorSigningCertPath                       = ConfigDirPath + "flavor-signing-cert.pem"
+	FlavorSigningCertPath                       = ConfigDirPath + "flavor-signing-cert.pem" //Manually copy Flavor Signing Certificate from WPM to WLA
 	OptDirPath                                  = "/opt/workload-agent/"
 	BinDirPath                                  = "/opt/workload-agent/bin/"
 	RunDirPath                                  = "/var/run/workload-agent/"

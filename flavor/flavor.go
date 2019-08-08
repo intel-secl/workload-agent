@@ -2,7 +2,7 @@ package flavor
 
 import (
 	"encoding/json"
-        flavorUtil "intel/isecl/lib/flavor/util"
+	flvr "intel/isecl/lib/flavor"
 	"intel/isecl/wlagent/wlsclient"
 
 	log "github.com/sirupsen/logrus"
@@ -20,7 +20,7 @@ type OutFlavor struct {
 // true if the flavor is fetched successfully, else return false.
 func Fetch(imageID, flavorPart string) (string, bool) {
 
-	var flavor flavorUtil.SignedImageFlavor
+	var flavor flvr.SignedImageFlavor
 
 	// get image flavor from workload service
 	flavor, err := wlsclient.GetImageFlavor(imageID, flavorPart)
