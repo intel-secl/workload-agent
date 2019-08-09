@@ -88,13 +88,13 @@ func (vm *VirtualMachine) CacheKey(args *KeyInfo, reply *bool) error {
 	return nil
 }
 
-func (vm *VirtualMachine) GetKeyFromKeyCache(args *KeyInfo, outKeyInfo *KeyInfo, reply *bool) error {
-	key, returnCode := keycache.Get(args.KeyID)
-	var k = KeyInfo{
-		KeyID:      args.KeyID,
-		Key:        key.Bytes,
-		ReturnCode: returnCode,
-	}
-	*outKeyInfo = k
-	return nil
+func (vm *VirtualMachine) GetKeyFromKeyCache (args *KeyInfo, outKeyInfo *KeyInfo) (error) {
+        key, returnCode := keycache.Get(args.KeyID)
+        var k = KeyInfo{
+          KeyID:   args.KeyID,
+          Key:     key.Bytes,
+          ReturnCode: returnCode,
+        }
+        *outKeyInfo = k
+        return nil
 }
