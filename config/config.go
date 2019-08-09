@@ -26,13 +26,13 @@ var Configuration struct {
 		APIURL      string
 		APIUsername string
 		APIPassword string
-		TLSSha256   string
+		TLSSha384   string
 	}
 	Wls struct {
 		APIURL      string
 		APIUsername string
 		APIPassword string
-		TLSSha256   string
+		TLSSha384   string
 	}
 	TrustAgent struct {
 		ConfigDir  string
@@ -162,9 +162,9 @@ func SaveConfiguration(c csetup.Context) error {
 			false,
 		},
 		{
-			consts.MTWILSON_TLS_SHA256,
-			&Configuration.Mtwilson.TLSSha256,
-			"Mtwilson TLS SHA256",
+			consts.MTWILSON_TLS_SHA384,
+			&Configuration.Mtwilson.TLSSha384,
+			"Mtwilson TLS SHA384",
 			false,
 		},
 		{
@@ -186,9 +186,9 @@ func SaveConfiguration(c csetup.Context) error {
 			false,
 		},
 		//{
-		//	consts.WLS_TLS_SHA256,
-		//	&Configuration.Wls.TLSSha256,
-		//	"Workload Service TLS SHA256",
+		//	consts.WLS_TLS_SHA384,
+		//	&Configuration.Wls.TLSSha384,
+		//	"Workload Service TLS SHA384",
 		//	false,
 		//},
 		{

@@ -9,10 +9,10 @@ import (
 
 func InitializeClient() (*mtwilson.Client, error) {
 	var mc *mtwilson.Client
-	var certificateDigest [32]byte
-	certDigestBytes, err := hex.DecodeString(config.Configuration.Mtwilson.TLSSha256)
+	var certificateDigest [48]byte
+	certDigestBytes, err := hex.DecodeString(config.Configuration.Mtwilson.TLSSha384)
 
-	if err != nil || len(certDigestBytes) != 32 {
+	if err != nil || len(certDigestBytes) != 48 {
 		return mc, errors.New("error converting certificate digest to hex. " + err.Error())
 	}
 	copy(certificateDigest[:], certDigestBytes)
@@ -20,7 +20,7 @@ func InitializeClient() (*mtwilson.Client, error) {
 		BaseURL:    config.Configuration.Mtwilson.APIURL,
 		Username:   config.Configuration.Mtwilson.APIUsername,
 		Password:   config.Configuration.Mtwilson.APIPassword,
-		CertSha256: &certificateDigest,
+		CertSha384: &certificateDigest,
 	}
 	return mc, err
 }

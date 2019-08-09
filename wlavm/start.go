@@ -440,7 +440,7 @@ func CreateInstanceTrustReport(manifest instance.Manifest, flavor flvr.SignedIma
 	}
 	return true
 }
-
+//Using SHA256 signing algorithm as TPM2.0 supports SHA256
 func signInstanceTrustReport(report *verifier.InstanceTrustReport) (*crypt.SignedData, error) {
 
 	var signedreport crypt.SignedData
@@ -451,14 +451,14 @@ func signInstanceTrustReport(report *verifier.InstanceTrustReport) (*crypt.Signe
 	}
 
 	signedreport.Data = jsonVMTrustReport
-	signedreport.Alg = crypt.GetHashingAlgorithmName(consts.HashingAlgorithm)
+	signedreport.Alg = crypt.GetHashingAlgorithmName(crypto.SHA256)
 	log.Debug("Getting Signing Key Certificate from disk")
 	signedreport.Cert, err = config.GetSigningCertFromFile()
 	if err != nil {
 		return nil, err
 	}
 	log.Debug("Using TPM to create signature")
-	signature, err := createSignatureWithTPM([]byte(signedreport.Data), consts.HashingAlgorithm)
+	signature, err := createSignatureWithTPM([]byte(signedreport.Data), crypto.SHA256)
 	if err != nil {
 		return nil, err
 	}

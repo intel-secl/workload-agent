@@ -7,11 +7,11 @@ const (
 	MTWILSON_API_URL                            = "MTWILSON_API_URL"
 	MTWILSON_API_USERNAME                       = "MTWILSON_API_USERNAME"
 	MTWILSON_API_PASSWORD                       = "MTWILSON_API_PASSWORD"
-	MTWILSON_TLS_SHA256                         = "MTWILSON_TLS_CERT_SHA256"
+	MTWILSON_TLS_SHA384                         = "MTWILSON_TLS_CERT_SHA384"
 	WLS_API_URL                                 = "WLS_API_URL"
 	WLS_API_USERNAME                            = "WLS_API_USERNAME"
 	WLS_API_PASSWORD                            = "WLS_API_PASSWORD"
-	WLS_TLS_SHA256                              = "WLS_TLS_SHA256"
+	WLS_TLS_SHA384                              = "WLS_TLS_SHA384"
 	LogLevelEnvVar                              = "LOG_LEVEL"
 	FlavorSignatureVerificationSkip             = "FLAVOR_SIGNATURE_VERIFICATION_SKIP"
 	AikSecretKeyName                            = "aik.secret"
@@ -44,7 +44,7 @@ const (
 	ServiceStatusCmd                            = "systemctl status workload-agent"
 	ServiceRemoveCmd                            = "systemctl disable workload-agent"
 	PemCertificateHeader                        = "CERTIFICATE"
-	HashingAlgorithm                crypto.Hash = crypto.SHA256
+	HashingAlgorithm                crypto.Hash = crypto.SHA384
 	WLABinFilePath                              = "/usr/local/bin/wlagent"
 	AIKPemFileName                              = "aik.pem"
 	TrustedCaCertsDir                           = ConfigDirPath + "certs/trustedca/"
