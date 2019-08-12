@@ -143,10 +143,14 @@ func main() {
 
 	case "status":
 		fmt.Println("Workload Agent Status")
-		stdout, stderr, err := exec.RunCommandWithTimeout(consts.ServiceStatusCmd, 2)
-		if err == nil {
-			fmt.Println(stdout)
-		} else {
+		stdout, stderr, _ := exec.RunCommandWithTimeout(consts.ServiceStatusCmd, 2)
+
+		// When stopped, 'systemctl status workload-agent' will return '3' and print
+		// the status message to stdout.  Other errors (ex 'systemctl status xyz') will return
+		// an error code (ex. 4) and write to stderr.  Alwyas print stdout and print
+		// stderr if present.
+		fmt.Println(stdout)
+		if stderr != "" {
 			fmt.Println(stderr)
 		}
 
