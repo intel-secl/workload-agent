@@ -25,7 +25,7 @@ func (bk BindingKey) Run(c csetup.Context) error {
 	log.Info("Creating binding key.")
 
 	err := common.GenerateKey(tpm.Binding, bk.T)
-	return err
+		return err
 }
 
 func (bk BindingKey) Validate(c csetup.Context) error {

@@ -1,15 +1,14 @@
 package util
 
 import (
-        "encoding/base64"
-        "encoding/json"
-        "errors"
-        "fmt"
-
+    "encoding/base64"
+    "encoding/json"
+    "errors"
+    "fmt"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/consts"
-        "intel/isecl/wlagent/config"
-        "intel/isecl/wlagent/keycache"
+    "intel/isecl/wlagent/config"
+    "intel/isecl/wlagent/keycache"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -51,7 +50,7 @@ var fileMutex sync.Mutex
 func SaveImageVMAssociation() error {
 	imageVMAssociationFilePath := consts.ConfigDirPath + consts.ImageVmCountAssociationFileName
 	log.Info("Writing to image vm association file.")
-	data, err := yaml.Marshal(&ImageVMAssociations)
+	associations, err := yaml.Marshal(&ImageVMAssociations)
 	if err != nil {
 		return err
 	}
@@ -64,15 +63,16 @@ func SaveImageVMAssociation() error {
 
 var vmStartTpm tpm.Tpm
 
+// GetTpmInstance method is used to get an instance of TPM to perform various tpm operations
 func GetTpmInstance() (tpm.Tpm, error) {
-	var err error = nil
 	if vmStartTpm == nil {
 		log.Debug("Opening a new connection to the tpm")
-		vmStartTpm, err = tpm.Open()
+		return tpm.Open()
 	}
-	return vmStartTpm, err
+	return vmStartTpm, nil
 }
 
+// CloseTpmInstance method is used to close an instance of TPM
 func CloseTpmInstance() {
 	if vmStartTpm != nil {
 		log.Debug("Closing connection to the tpm")
@@ -80,41 +80,39 @@ func CloseTpmInstance() {
 	}
 }
 
-func UnwrapKey(tpmWrappedKey []byte, tpmMtx sync.Mutex) ([]byte, error) {
+// UnwrapKey method is used to unbind a key using TPM
+func UnwrapKey(tpmWrappedKey []byte) ([]byte, error) {
+	var certifiedKey tpm.CertifiedKey
+	t, err := GetTpmInstance()
+	if err != nil {
+		return nil, fmt.Errorf("could not establish connection to TPM: %s", err)
+	}
 
-        tpmMtx.Lock()
-        defer tpmMtx.Unlock()
-        var certifiedKey tpm.CertifiedKey
-        t, err := GetTpmInstance()
-        if err != nil {
-                return nil, fmt.Errorf("could not establish connection to TPM: %s", err)
-        }
+	log.Debug("Reading the binding key certificate")
+	bindingKeyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
+	bindingKeyCert, fileErr := ioutil.ReadFile(bindingKeyFilePath)
+	if fileErr != nil {
+		return nil, errors.New("error while reading the binding key certificate")
+	}
 
-        log.Debug("Reading the binding key certificate")
-        bindingKeyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
-        bindingKeyCert, fileErr := ioutil.ReadFile(bindingKeyFilePath)
-        if fileErr != nil {
-                return nil, errors.New("error while reading the binding key certificate")
-        }
+	log.Debug("Unmarshalling the binding key certificate file contents to TPM CertifiedKey object")
+	jsonErr := json.Unmarshal(bindingKeyCert, &certifiedKey)
+	if jsonErr != nil {
+		return nil, errors.New("error unmarshalling the binding key file contents to TPM CertifiedKey object")
+	}
 
-        log.Debug("Unmarshalling the binding key certificate file contents to TPM CertifiedKey object")
-        jsonErr := json.Unmarshal(bindingKeyCert, &certifiedKey)
-        if jsonErr != nil {
-                return nil, errors.New("error unmarshalling the binding key file contents to TPM CertifiedKey object")
-        }
+	log.Debug("Binding key deserialized")
+	keyAuth, _ := base64.StdEncoding.DecodeString(config.Configuration.BindingKeySecret)
+	key, unbindErr := t.Unbind(&certifiedKey, keyAuth, tpmWrappedKey)
+	if unbindErr != nil {
+		return nil, fmt.Errorf("error while unbinding the tpm wrapped key: %s", unbindErr.Error())
+	}
 
-        log.Debug("Binding key deserialized")
-        keyAuth, _ := base64.StdEncoding.DecodeString(config.Configuration.BindingKeySecret)
-        key, unbindErr := t.Unbind(&certifiedKey, keyAuth, tpmWrappedKey)
-        if unbindErr != nil {
-                return nil, fmt.Errorf("error while unbinding the tpm wrapped key: %s", unbindErr.Error())
-        }
-
-        log.Debug("Unbinding TPM wrapped key was successful, return the key")
-        return key, nil
+	log.Debug("Unbinding TPM wrapped key was successful, return the key")
+	return key, nil
 }
 
-// This method is used to check if the key for an image file is cached.
+// GetKeyFromCache method is used to check if the key for an image file is cached.
 // If the key is cached, the method you return the key ID.
 func GetKeyFromCache(keyID string) (keycache.Key, error) {
         key, exists := keycache.Get(keyID)
@@ -126,7 +124,7 @@ func GetKeyFromCache(keyID string) (keycache.Key, error) {
         return key, nil
 }
 
-// This method is used add the key to cache and map it with the keyID
+// CacheKeyInMemory method is used add the key to cache and map it with the keyID
 func CacheKeyInMemory(keyID string, key []byte) error {
         log.Debugf("cacheKeyInMemory keyID : %s", keyID)
         keycache.Store(keyID, keycache.Key{keyID, key})

@@ -20,7 +20,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"os"
-    "sync"
 	"strings"
 	log "github.com/sirupsen/logrus"
 
@@ -370,8 +369,7 @@ func main() {
 			log.Error("Could not decode wrapped key")
 			os.Exit(1)
 		}
-        var tpmMtx sync.Mutex
-		key, err := util.UnwrapKey(wrappedKey, tpmMtx)
+		key, err := util.UnwrapKey(wrappedKey)
 		if err != nil {
 			log.Errorf("Could not unwrap the wrapped key %v", err)
 			os.Exit(1)
@@ -449,12 +447,6 @@ func start() {
 		fmt.Println("Error : ", err)
 		os.Exit(1)
 	}
-	_, err = util.GetTpmInstance()
-	if err != nil {
-		fmt.Println("Could not make a connection to Tpm")
-		fmt.Println("Error : ", err)
-		os.Exit(1)
-	}
 	fmt.Println(cmdOutput)
 	fmt.Println("Workload Agent Service Started...")
 }
@@ -466,7 +458,6 @@ func stop() {
 		fmt.Println("Error : ", err)
 		os.Exit(1)
 	}
-	util.CloseTpmInstance()
 	fmt.Println(cmdOutput)
 	fmt.Println("Workload Agent Service Stopped...")
 }

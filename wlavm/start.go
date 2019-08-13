@@ -30,13 +30,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	tpmMtx       sync.Mutex
 	imgVolumeMtx sync.Mutex
 	vmVolumeMtx  sync.Mutex
 )
@@ -105,6 +103,10 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 			return false
 		}
 		log.Info("Image is encrypted")
+		// defer the CloseTpmInstance() to take care of closing the Tpm connection
+	    // Todo: ISECL-3352 remove when TPM vm is managed by daemon start and stop
+
+	    defer util.CloseTpmInstance()
 	}
 
 	//check if the key is cached by filtercriteria imageUUID
@@ -167,7 +169,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 
 		// unwrap key
 		log.Info("Unwrapping the key...")
-		key, unWrapErr := util.UnwrapKey(tpmWrappedKey, tpmMtx)
+		key, unWrapErr := util.UnwrapKey(tpmWrappedKey)
 		if unWrapErr != nil {
 			log.Errorf("Error unwrapping the key. %s", unWrapErr.Error())
 			return false
@@ -175,11 +177,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 
 		if !skipImageVolumeCreation {
 			log.Info("Creating and mounting image dm-crypt volume")
-			// Added mutex lock during image volume creation. While launching multiple instances at once,
-			// launch fails as all processes run in parallel and try to create image volume.
-			imgVolumeMtx.Lock()
 			err = imageVolumeManager(imageUUID, imagePath, size, key)
-			imgVolumeMtx.Unlock()
 			if err != nil {
 				log.Error(err.Error())
 				return false
@@ -305,7 +303,9 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	sparseFilePath := imagePath + "_sparseFile"
 	// check if the sprse file already exists, if it does, skip image file decryption
 	_, sparseFileStatErr := os.Stat(sparseFilePath)
+	imgVolumeMtx.Lock()
 	err = vml.CreateVolume(sparseFilePath, imageDeviceMapperPath, key, size)
+	imgVolumeMtx.Lock()
 	if err != nil {
 		if strings.Contains(err.Error(), "device mapper of the same already exists") {
 			log.Debug("Device mapper of same name already exists. Skipping image volume creation..")
@@ -468,8 +468,6 @@ func signInstanceTrustReport(report *verifier.InstanceTrustReport) (*crypt.Signe
 }
 
 func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
-	tpmMtx.Lock()
-	defer tpmMtx.Unlock()
 	var signingKey tpm.CertifiedKey
 
 	// Get the Signing Key that is stored on disk

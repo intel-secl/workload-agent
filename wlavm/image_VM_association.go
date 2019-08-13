@@ -14,11 +14,17 @@ type ImageVMAssociation struct {
 	ImagePath string
 }
 
-// Create method is used to check if an entry exists with the image ID. If it does, increment the vm count,
-// else create an entry with image vm association and append it.
-func (IAssoc ImageVMAssocociation) Create() error {
+var fileMutex sync.Mutex
+
+// Create method is used to check if an entry exists with the image ID. If it does, increment the instance count,
+// else create an entry with image instance association and append it.
+func (IAssoc ImageVMAssociation) Create() error {
 	imageUUIDFound := false
 	log.Debug("Loading yaml file to vm image association structure.")
+
+	fileMutex.Lock()
+	defer fileMutex.Unlock()
+
 	err := util.LoadImageVMAssociation()
 	if err != nil {
 		return fmt.Errorf("error occured while loading image VM association from a file. %s" + err.Error())
@@ -50,7 +56,7 @@ func (IAssoc ImageVMAssocociation) Create() error {
 
 // Delete method is used to check if an entry exists with the image ID. If it does, decrement the vm count.
 // Check if the vm count is zero, then delete the image entry from the file.
-func (IAssoc ImageVMAssocociation) Delete() (bool, string, error) {
+func (IAssoc ImageVMAssociation) Delete() (bool, string, error) {
 	imagePath := ""
 	isLastVM := false
 

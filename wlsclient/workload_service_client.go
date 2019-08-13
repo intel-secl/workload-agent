@@ -34,7 +34,6 @@ func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error)
 		return flavorKeyInfo, errors.New("error forming GET flavor-key for image API URL")
 	}
 
-	var flavorKeyInfo FlavorKey
 	if len(strings.TrimSpace(keyID)) > 0 {
 		requestURL, err = url.Parse(requestURL.String() + "&&key_id=" + keyID)
 		if err != nil {
