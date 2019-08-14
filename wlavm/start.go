@@ -305,7 +305,7 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	_, sparseFileStatErr := os.Stat(sparseFilePath)
 	imgVolumeMtx.Lock()
 	err = vml.CreateVolume(sparseFilePath, imageDeviceMapperPath, key, size)
-	imgVolumeMtx.Lock()
+	imgVolumeMtx.Unlock()
 	if err != nil {
 		if strings.Contains(err.Error(), "device mapper of the same already exists") {
 			log.Debug("Device mapper of same name already exists. Skipping image volume creation..")
