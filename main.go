@@ -46,6 +46,7 @@ func printUsage() {
 	fmt.Printf("    setup [task]       Run setup task\n")
 	fmt.Printf("    start              Start wlagent\n")
 	fmt.Printf("    stop               Stop wlagent\n")
+	fmt.Printf("    status             Reports the status of wlagent service\n")
 	fmt.Printf("    uninstall          Uninstall wlagent\n\n")
 	fmt.Printf("Available Tasks for setup:\n")
 	fmt.Printf("    SigningKey         Generate a TPM signing key\n")
