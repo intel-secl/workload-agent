@@ -33,4 +33,4 @@ replace intel/isecl/lib/platform-info => gitlab.devtools.intel.com/sst/isecl/lib
 
 replace intel/isecl/lib/mtwilson-client => gitlab.devtools.intel.com/sst/isecl/lib/mtwilson-client.git v0.0.0-20190809105425-381a94cb0c9e
 
-replace intel/isecl/lib/clients => gitlab.devtools.intel.com/sst/isecl/lib/clients.git v0.0.0-20190724015617-7d3c4271db56
+replace intel/isecl/lib/clients => gitlab.devtools.intel.com/sst/isecl/lib/clients.git v0.0.0-20190801010949-eded2c2c8405
