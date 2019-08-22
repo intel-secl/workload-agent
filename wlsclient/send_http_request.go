@@ -50,7 +50,6 @@ func SendRequest(req *http.Request, insecureConnection bool) ([]byte, error) {
 		return nil, err
 	}
 	defer response.Body.Close()
-
 	if response.StatusCode == http.StatusUnauthorized {
 		// fetch token and try again
 		aasClient.FetchAllTokens()
@@ -62,6 +61,9 @@ func SendRequest(req *http.Request, insecureConnection bool) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+	if response.StatusCode == http.StatusNotFound {
+		return nil, err
 	}
 	//create byte array of HTTP response body
 	body, err := ioutil.ReadAll(response.Body)

@@ -93,13 +93,14 @@ func GetImageFlavor(imageID, flavorPart string) (flavor.SignedImageFlavor, error
 	if err != nil {
 		return flavor, err
 	}
-
+	
 	// deserialize the response to ImageFlavor response
-	err = json.Unmarshal(httpResponse, &flavor)
-	if err != nil {
-		return flavor, err
+	if(httpResponse != nil){
+		err = json.Unmarshal(httpResponse, &flavor)
+		if err != nil {
+			return flavor, err
+		}
 	}
-
 	log.Debugf("response from API: %s", string(httpResponse))
 
 	return flavor, nil
