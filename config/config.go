@@ -42,7 +42,10 @@ var Configuration struct {
 	Aas struct {
 		BaseURL string
 	}
-	FlavorSignatureVerificationSkip bool
+	Cms struct {
+		BaseURL string
+	}
+	SkipFlavorSignatureVerification bool
 	LogLevel                        string
 	ConfigComplete                  bool
 }
@@ -210,14 +213,19 @@ func SaveConfiguration(c csetup.Context) error {
 			false,
 		},
 		{
-			consts.FlavorSignatureVerificationSkip,
-			&Configuration.FlavorSignatureVerificationSkip,
+			consts.SkipFlavorSignatureVerification,
+			&Configuration.SkipFlavorSignatureVerification,
 			"Flavor Signature Verification Skip",
 			true,
 		},
 		{	consts.AAS_URL,
 			&Configuration.Aas.BaseURL,
 			"AAS URL",
+			false,
+		},
+		{	consts.CMS_BASE_URL,
+			&Configuration.Cms.BaseURL,
+			"CMS URL",
 			false,
 		},
 	}

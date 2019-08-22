@@ -13,7 +13,7 @@ const (
 	WLS_API_PASSWORD                            = "WLS_API_PASSWORD"
 	WLS_TLS_SHA384                              = "WLS_TLS_SHA384"
 	LogLevelEnvVar                              = "LOG_LEVEL"
-	FlavorSignatureVerificationSkip             = "FLAVOR_SIGNATURE_VERIFICATION_SKIP"
+	SkipFlavorSignatureVerification             = "SKIP_FLAVOR_SIGNATURE_VERIFICATION"
 	AikSecretKeyName                            = "aik.secret"
 	TAConfigDirEnvVar                           = "TRUSTAGENT_CONFIGURATION"
 	TAConfigAikSecretCmd                        = "tagent config aik.secret"
@@ -54,4 +54,5 @@ const (
 	TrustedJWTSigningCertsDir                   = ConfigDirPath + "certs/trustedjwt/"
 
 	AAS_URL = "AAS_API_URL"
+	CMS_BASE_URL = "CMS_BASE_URL"
 )

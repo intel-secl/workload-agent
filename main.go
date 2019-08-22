@@ -111,6 +111,7 @@ func main() {
 			Tasks: []csetup.Task{
 				csetup.Download_Ca_Cert{
 					Flags:         args,
+					CmsBaseURL:	   config.Configuration.Cms.BaseURL,
 					CaCertDirPath: consts.TrustedCaCertsDir,
 					ConsoleWriter: os.Stdout,
 				},

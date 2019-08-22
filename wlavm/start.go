@@ -412,7 +412,7 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 func CreateInstanceTrustReport(manifest instance.Manifest, flavor flvr.SignedImageFlavor) bool {
 	//create VM trust report
 	log.Info("Creating image trust report")
-	instanceTrustReport, err := verifier.Verify(&manifest, &flavor, consts.FlavorSigningCertPath, config.Configuration.FlavorSignatureVerificationSkip)
+	instanceTrustReport, err := verifier.Verify(&manifest, &flavor, consts.FlavorSigningCertPath, config.Configuration.SkipFlavorSignatureVerification)
 	if err != nil {
 		log.Errorf("Error creating image trust report: %s", err.Error())
 		return false
