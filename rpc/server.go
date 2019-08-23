@@ -61,6 +61,9 @@ func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status
 	json.Unmarshal([]byte(args.Manifest), &manifestJSON)
 	imageID := manifestJSON.InstanceInfo.ImageID
 	flavor, _ := flavor.Fetch(imageID, "CONTAINER_IMAGE")
+	if flavor == ""{
+		return nil
+	}
 	json.Unmarshal([]byte(flavor), &imageFlavor)
 	//adding integrity enforced value from flavor to that of manifest
 	manifestJSON.ImageIntegrityEnforced = imageFlavor.ImageFlavor.IntegrityEnforced
