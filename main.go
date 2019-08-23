@@ -106,11 +106,15 @@ func main() {
 			os.Exit(1)
 		}
 
+		flags := args
+		if len(args) > 1 {
+			flags = args[2:]
+		}
 		// Run list of setup tasks one by one
 		setupRunner := &csetup.Runner{
 			Tasks: []csetup.Task{
 				csetup.Download_Ca_Cert{
-					Flags:         args,
+					Flags:         flags,
 					CmsBaseURL:	   config.Configuration.Cms.BaseURL,
 					CaCertDirPath: consts.TrustedCaCertsDir,
 					ConsoleWriter: os.Stdout,
