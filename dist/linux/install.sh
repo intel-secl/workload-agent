@@ -209,8 +209,8 @@ fi
 
 
 # exit workload-agent setup if WORKLOAD_AGENT_NOSETUP is set
-if [ -n "$WORKLOAD_AGENT_NOSETUP" ]; then
-  echo "WORKLOAD_AGENT_NOSETUP is set. So, skipping the workload-agent setup task." | tee -a $logfile
+if [ $WLA_NOSETUP == "true" ]; then
+  echo "WLA_NOSETUP is set. So, skipping the workload-agent setup task." | tee -a $logfile
   exit 0
 fi
 
