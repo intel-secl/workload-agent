@@ -9,6 +9,7 @@ import (
 	"intel/isecl/wlagent/key"
 	"intel/isecl/wlagent/keycache"
 	"intel/isecl/wlagent/wlavm"
+	"errors"
 )
 
 // DomainXML is a struct containing domain XML as argument to allow invocation over RPC
@@ -60,14 +61,17 @@ func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status
 	var imageFlavor flvr.SignedImageFlavor
 	json.Unmarshal([]byte(args.Manifest), &manifestJSON)
 	imageID := manifestJSON.InstanceInfo.ImageID
-	flavor, _ := flavor.Fetch(imageID, "CONTAINER_IMAGE")
-	if flavor == ""{
-		return nil
+	flavor, ok := flavor.Fetch(imageID, "CONTAINER_IMAGE")
+	if (flavor == "" && !ok) {
+		return errors.New("Error while retrieving flavor")
 	}
 	json.Unmarshal([]byte(flavor), &imageFlavor)
 	//adding integrity enforced value from flavor to that of manifest
 	manifestJSON.ImageIntegrityEnforced = imageFlavor.ImageFlavor.IntegrityEnforced
-	_ = wlavm.CreateInstanceTrustReport(manifestJSON, imageFlavor)
+	reportCreated := wlavm.CreateInstanceTrustReport(manifestJSON, imageFlavor)
+	if !reportCreated {
+		return errors.New("Error while creating trust report")
+	}
 	return nil
 }
 

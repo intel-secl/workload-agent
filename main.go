@@ -244,7 +244,12 @@ func main() {
 			Manifest: args[1],
 		}
 		var status bool
-		client.Call("VirtualMachine.CreateInstanceTrustReport", &args, &status)
+		err = client.Call("VirtualMachine.CreateInstanceTrustReport", &args, &status)
+		if err != nil {
+			fmt.Printf("Error while creating trust report: %s\n",err.Error())
+			os.Exit(1)
+		}
+		fmt.Println("Successfully created trust report")
 		os.Exit(0)
 
 	case "fetch-flavor":
