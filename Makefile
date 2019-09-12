@@ -36,5 +36,9 @@ vmc-only: wlagent
 
 all: installer
 
+deploy-artifact: installer
+	chmod +x dist/linux/deploy-to-artifactory.sh
+	dist/linux/deploy-to-artifactory.sh
+
 clean: 
 	rm -rf out/
