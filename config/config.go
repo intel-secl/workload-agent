@@ -54,7 +54,10 @@ var Configuration struct {
 	ConfigComplete                  bool
 }
 
-const HashingAlgorithm crypto.Hash = crypto.SHA256
+var (
+	configFilePath string = consts.ConfigDirPath + consts.ConfigFileName
+	LogWriter      io.Writer
+)
 
 func getFileContentFromConfigDir(fileName string) ([]byte, error) {
 	filePath := consts.ConfigDirPath + fileName
@@ -69,7 +72,7 @@ func getFileContentFromConfigDir(fileName string) ([]byte, error) {
 
 func GetSigningKeyFromFile() ([]byte, error) {
 
-	return getFileContentFromConfigDir(GetSigningKeyFileName())
+	return getFileContentFromConfigDir(consts.SigningKeyFileName)
 }
 
 func GetBindingKeyFromFile() ([]byte, error) {
@@ -79,7 +82,7 @@ func GetBindingKeyFromFile() ([]byte, error) {
 
 func GetSigningCertFromFile() (string, error) {
 
-	f, err := getFileContentFromConfigDir(GetSigningKeyPemFileName())
+	f, err := getFileContentFromConfigDir(consts.SigningKeyPemFileName)
 	if err != nil {
 		return "", err
 	}
@@ -88,7 +91,7 @@ func GetSigningCertFromFile() (string, error) {
 
 func GetBindingCertFromFile() (string, error) {
 
-	f, err := getFileContentFromConfigDir(GetBindingKeyPemFileName())
+	f, err := getFileContentFromConfigDir(consts.BindingKeyPemFileName)
 	if err != nil {
 		return "", err
 	}

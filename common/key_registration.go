@@ -25,25 +25,7 @@ func CreateRequest(key []byte) (*mtwilson.RegisterKeyInfo, error) {
 	var tpmVersion string
 	var err error
 
-	// check if binding key file exists
-	_, err = os.Stat(keyfilePath)
-	if os.IsNotExist(err) {
-		return httpRequestBody, errors.New("key file does not exist")
-	}
-	// read contents of key file and store in KeyInfo struct
-	file, err := os.Open(keyfilePath)
-	if err != nil {
-		return httpRequestBody, errors.New("error opening key file. " + err.Error())
-	}
-
-	defer file.Close()
-
-	byteValue, err := ioutil.ReadAll(file)
-	if err != nil {
-		return httpRequestBody, errors.New("error reading file. ")
-	}
-
-	err = json.Unmarshal(byteValue, &keyInfo)
+	err = json.Unmarshal(key, &keyInfo)
 	if err != nil {
 		return httpRequestBody, errors.New("error unmarshalling. " + err.Error())
 	}

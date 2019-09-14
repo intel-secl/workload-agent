@@ -20,9 +20,6 @@ import (
 	"intel/isecl/wlagent/util"
 	"net"
 	"net/rpc"
-
-	log "github.com/sirupsen/logrus"
-
 	"os"
 	"strings"
 	log "github.com/sirupsen/logrus"
@@ -62,7 +59,7 @@ func printUsage() {
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
 	// Save log configurations
-	config.LogConfiguration()
+	config.LogConfiguration(consts.LogDirPath + consts.LogFileName)
 
 	inputValArr := []string{os.Args[0]}
 	if valErr := validation.ValidateStrings(inputValArr); valErr != nil {
@@ -172,7 +169,7 @@ func main() {
 		log.Info("workload-agent start called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Println("start-vm: failed to dial wlagent.sock, is wlagent running?")
+			log.Error("start-vm: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 		client := rpc.NewClient(conn)
@@ -194,10 +191,11 @@ func main() {
 
 		if !startState {
 			os.Exit(1)
+		} else {
+			os.Exit(0)
 		}
-		os.Exit(0)
 
-	case "stop":
+	case "stop-vm":
 		if len(args[1:]) < 1 {
 			log.Error("Invalid number of parameters")
 			os.Exit(1)
@@ -226,11 +224,11 @@ func main() {
 			os.Exit(1)
 		}
 
-		if stopState := wlavm.Stop(args[1]); !stopState {
+		if !stopState {
 			os.Exit(1)
+		} else {
+			os.Exit(0)
 		}
-		os.Exit(0)
-		fmt.Println("Return code from VM stop :", returnCode)
 
 	case "create-instance-trust-report":
 		if len(args[1:]) < 1 {
@@ -264,13 +262,13 @@ func main() {
 
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Println("fetch-flavor: failed to dial wlagent.sock, is wlagent running?")
+			log.Error("fetch-flavor: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 
 		// validate input
 		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			log.Println("Invalid imageUUID format")
+			log.Error("Invalid imageUUID format")
 			os.Exit(1)
 		}
 
@@ -307,18 +305,18 @@ func main() {
 		log.Info("workload agent cache-key called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Println("cache-key: failed to dial wlagent.sock, is wlagent running?")
+			log.Error("cache-key: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 
 		// validate input
 		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			log.Println("Invalid image UUID format")
+			log.Error("Invalid image UUID format")
 			os.Exit(1)
 		}
 		
 		if err = validation.ValidateUUIDv4(args[2]); err != nil {
-			log.Println("Invalid key UUID format")
+			log.Error("Invalid key UUID format")
 			os.Exit(1)
 		}
 
@@ -499,13 +497,13 @@ func runservice() {
 	defer fileWatcher.Close()
 	// stop signaler
 	stop := make(chan bool)
-    go func() {
+        go func() {
 		for {
 			fileWatcher.Watch()
 		}
 	}()
 	
-	if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
+        if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
 			log.WithError(err).Fatalf("Could not create directory: %s, err: %s", consts.RunDirPath, err)
 		}

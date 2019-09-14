@@ -1,4 +1,5 @@
 out/
 src/wlagent
 wlagent
+/cover.out
 go.sum

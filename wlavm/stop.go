@@ -81,7 +81,7 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	// to check if original image is encrypted. Instead we check if sparse file of image
 	// exists at given path, if it does that means the image was enrypted and volumes were created
 	if _, err := os.Stat(imagePath + "_sparseFile"); os.IsNotExist(err) {
-		log.Info("The base image is not ecrypted. Exiting with success.")
+		log.Info("The base image is not ecrypted, returning to hook...")
 		return true
 	}
 
