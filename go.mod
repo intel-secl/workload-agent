@@ -21,7 +21,7 @@ require (
 
 replace intel/isecl/lib/tpm => github.com/intel-secl/tpm v1.6-beta
 
-intel/isecl/lib/vml => github.com/intel-secl/volume-management-library v1.6-beta
+replace intel/isecl/lib/vml => github.com/intel-secl/volume-management-library v1.6-beta
 
 replace intel/isecl/lib/common => github.com/intel-secl/common v1.6-beta
 
@@ -29,7 +29,7 @@ replace intel/isecl/lib/flavor => github.com/intel-secl/flavor v1.6-beta
 
 replace intel/isecl/lib/verifier => github.com/intel-secl/verifier v1.6-beta
 
-intel/isecl/lib/platform-info => github.com/intel-secl/platform-info v1.6-beta
+replace intel/isecl/lib/platform-info => github.com/intel-secl/platform-info v1.6-beta
 
 replace intel/isecl/lib/mtwilson-client => github.com/intel-secl/mtwilson-client v1.6-beta
 
