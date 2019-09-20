@@ -1,10 +1,10 @@
 #!/bin/bash
 
 CURR_DIR=`pwd`
-SECURE_DOCKER_DAEMON_DIR=$CURR_DIR/secure_docker_daemon
+SECURE_DOCKER_DAEMON_DIR=$CURR_DIR/secure-docker-daemon
 SECURE_DOCKER_PLUGIN_DIR=$CURR_DIR/secure-docker-plugin
 
-git clone ssh://git@gitlab.devtools.intel.com:29418/sst/isecl/secure_docker_daemon.git 2>/dev/null 
+git clone ssh://git@gitlab.devtools.intel.com:29418/sst/isecl/secure-docker-daemon.git 2>/dev/null 
 
 cd $SECURE_DOCKER_DAEMON_DIR
 git fetch
