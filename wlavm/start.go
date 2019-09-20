@@ -8,7 +8,7 @@ package wlavm
 
 import (
 	"crypto"
-	"encoding/base64"
+        "encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -489,7 +489,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 
 	// Get the secret associated when the SigningKey was created.
 	log.Debug("Retrieving the signing key secret form WA configuration")
-	keyAuth, err := base64.StdEncoding.DecodeString(config.Configuration.SigningKeySecret)
+	keyAuth, err := hex.DecodeString(config.Configuration.SigningKeySecret)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving the signing key secret from configuration. %s", err.Error())
 	}

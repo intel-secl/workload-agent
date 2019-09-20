@@ -5,7 +5,7 @@
 package common
 
 import (
-	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"intel/isecl/lib/common/crypt"
@@ -42,9 +42,9 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 	
 	switch (usage){
 	case tpm.Binding:
-		config.Configuration.BindingKeySecret  = base64.StdEncoding.EncodeToString(secretbytes)
+		config.Configuration.BindingKeySecret  = hex.EncodeToString(secretbytes)
 	case tpm.Signing:
-		config.Configuration.SigningKeySecret  = base64.StdEncoding.EncodeToString(secretbytes)
+		config.Configuration.SigningKeySecret  = hex.EncodeToString(secretbytes)
 	}
 
 	config.Save()

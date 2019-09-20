@@ -5,7 +5,7 @@
 package util
 
 import (
-    "encoding/base64"
+    "encoding/hex"
     "encoding/json"
     "errors"
     "fmt"
@@ -106,7 +106,7 @@ func UnwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	}
 
 	log.Debug("Binding key deserialized")
-	keyAuth, _ := base64.StdEncoding.DecodeString(config.Configuration.BindingKeySecret)
+	keyAuth, _ := hex.DecodeString(config.Configuration.BindingKeySecret)
 	key, unbindErr := t.Unbind(&certifiedKey, keyAuth, tpmWrappedKey)
 	if unbindErr != nil {
 		return nil, fmt.Errorf("error while unbinding the tpm wrapped key: %s", unbindErr.Error())
