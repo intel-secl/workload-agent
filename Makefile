@@ -16,8 +16,8 @@ installer: wlagent
 	cp out/wlagent out/wla/wlagent && chmod +x out/wla/wlagent
 	chmod +x dist/linux/build-container-security-dependencies.sh
 	dist/linux/build-container-security-dependencies.sh
-	cp -rlf secure-docker-daemon/out out/wla/docker-daemon
-	rm -rf secure-docker-daemon
+	cp -rlf secure_docker_daemon/out out/wla/docker-daemon
+	rm -rf secure_docker_daemon
 	cp -rlf secure-docker-plugin out/
 	rm -rf secure-docker-plugin
 	cp -r out/secure-docker-plugin/secure-docker-plugin out/wla/
