@@ -5,29 +5,26 @@
 package util
 
 import (
-    "encoding/hex"
-    "encoding/json"
-    "errors"
-    "fmt"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 	"intel/isecl/lib/tpm"
+	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
-    "intel/isecl/wlagent/config"
-    "intel/isecl/wlagent/keycache"
+	"intel/isecl/wlagent/keycache"
 	"io/ioutil"
 	"os"
 	"sync"
-	log "github.com/sirupsen/logrus"
-	yaml "gopkg.in/yaml.v2"
 )
 
-// ImageVMAssociations is variable that consists of array of ImageVMAssociation struct
-var ImageVMAssociations []ImageVMAssociation
+var ImageVMAssociations = make(map[string]*ImageVMAssociation)
 
-// ImageVMAssociation is the global struct that is used to store the image vm count to yaml file
 type ImageVMAssociation struct {
-	ImageID   string
-	ImagePath string
-	VMCount   int
+	ImagePath string `yaml:"imagepath"`
+	VMCount   int `yaml:"vmcount"`
 }
 
 // LoadImageVMAssociation method loads image vm association from yaml file
