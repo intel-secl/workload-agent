@@ -423,12 +423,12 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		aasClient.AddUser(config.Configuration.Wls.APIUsername, config.Configuration.Wls.APIPassword)
+		aasClient.AddUser(config.Configuration.Wla.APIUsername, config.Configuration.Wla.APIPassword)
 		err = aasClient.FetchAllTokens()
 		if err != nil {
 			fmt.Println(err)
 		}
-		jwtToken, err := aasClient.GetUserToken(config.Configuration.Wls.APIUsername)
+		jwtToken, err := aasClient.GetUserToken(config.Configuration.Wla.APIUsername)
 		if err != nil {
 			fmt.Println(err)
 		}

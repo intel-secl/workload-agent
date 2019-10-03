@@ -8,10 +8,10 @@ import (
 	"errors"
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
+	hvsclient "intel/isecl/wlagent/clients"
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/mtwilsonclient"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -42,11 +42,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 		return errors.New("error registering signing key. " + err.Error())
 	}
 
-	mc, err := mtwilsonclient.InitializeClient()
-	if err != nil {
-		return errors.New("error initializing HVS client")
-	}
-	registerKey, err := mc.HostKey().CertifyHostSigningKey(httpRequestBody)
+	registerKey, err := hvsclient.CertifyHostSigningKey(httpRequestBody)
 	if err != nil {
 		return errors.New("error while updating the KBS user with envelope public key. " + err.Error())
 	}

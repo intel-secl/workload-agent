@@ -8,7 +8,7 @@ package wlavm
 
 import (
 	"crypto"
-        "encoding/hex"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,19 +21,20 @@ import (
 	"intel/isecl/lib/tpm"
 	"intel/isecl/lib/verifier"
 	"intel/isecl/lib/vml"
+	wlsclient "intel/isecl/wlagent/clients"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/keycache"
 	"intel/isecl/wlagent/libvirt"
 	"intel/isecl/wlagent/util"
-	"intel/isecl/wlagent/wlsclient"
 	"io/ioutil"
 	"os"
 	"os/user"
 	"strconv"
 	"strings"
 	"sync"
+
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 )
@@ -108,9 +109,9 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 		}
 		log.Info("Image is encrypted")
 		// defer the CloseTpmInstance() to take care of closing the Tpm connection
-	    // Todo: ISECL-3352 remove when TPM vm is managed by daemon start and stop
+		// Todo: ISECL-3352 remove when TPM vm is managed by daemon start and stop
 
-	    defer util.CloseTpmInstance()
+		defer util.CloseTpmInstance()
 	}
 
 	//check if the key is cached by filtercriteria imageUUID
@@ -444,6 +445,7 @@ func CreateInstanceTrustReport(manifest instance.Manifest, flavor flvr.SignedIma
 	}
 	return true
 }
+
 //Using SHA256 signing algorithm as TPM2.0 supports SHA256
 func signInstanceTrustReport(report *verifier.InstanceTrustReport) (*crypt.SignedData, error) {
 

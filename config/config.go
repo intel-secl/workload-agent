@@ -28,16 +28,15 @@ var Configuration struct {
 
 	Mtwilson struct {
 		APIURL      string
-		APIUsername string
-		APIPassword string
-		TLSSha384   string
 	}
 	Wls struct {
 		APIURL      string
-		APIUsername string
-		APIPassword string
-		TLSSha384   string
 	}
+	Wla struct {
+                APIUsername string
+                APIPassword string
+        }
+
 	TrustAgent struct {
 		ConfigDir  string
 		AikPemFile string
@@ -160,47 +159,23 @@ func SaveConfiguration(c csetup.Context) error {
 			false,
 		},
 		{
-			consts.MTWILSON_API_USERNAME,
-			&Configuration.Mtwilson.APIUsername,
-			"Mtwilson Username",
-			false,
-		},
-		{
-			consts.MTWILSON_API_PASSWORD,
-			&Configuration.Mtwilson.APIPassword,
-			"Mtwilson Password",
-			false,
-		},
-		{
-			consts.MTWILSON_TLS_SHA384,
-			&Configuration.Mtwilson.TLSSha384,
-			"Mtwilson TLS SHA384",
-			false,
-		},
-		{
 			consts.WLS_API_URL,
 			&Configuration.Wls.APIURL,
 			"Workload Service URL",
 			false,
 		},
 		{
-			consts.WLS_API_USERNAME,
-			&Configuration.Wls.APIUsername,
+			consts.WLA_USERNAME,
+			&Configuration.Wla.APIUsername,
 			"Workload Service API Username",
 			false,
 		},
 		{
-			consts.WLS_API_PASSWORD,
-			&Configuration.Wls.APIPassword,
+			consts.WLA_PASSWORD,
+			&Configuration.Wla.APIPassword,
 			"Workload Service API Password",
 			false,
 		},
-		//{
-		//	consts.WLS_TLS_SHA384,
-		//	&Configuration.Wls.TLSSha384,
-		//	"Workload Service TLS SHA384",
-		//	false,
-		//},
 		{
 			consts.TAUserNameEnvVar,
 			&Configuration.TrustAgent.User,

@@ -2,7 +2,7 @@
  * Copyright (C) 2019 Intel Corporation
  * SPDX-License-Identifier: BSD-3-Clause
  */
-package wlsclient
+package clients
 
 import (
 	"io/ioutil"
@@ -19,6 +19,7 @@ import (
 var aasClient = aas.NewJWTClient(config.Configuration.Aas.BaseURL)
 var aasRWLock = sync.RWMutex{}
 
+
 func init() {
 	aasRWLock.Lock()
 	if aasClient.HTTPClient == nil {
@@ -34,19 +35,19 @@ func init() {
 func addJWTToken(req *http.Request) error {
 
 	aasRWLock.RLock()
-	jwtToken, err := aasClient.GetUserToken(config.Configuration.Wls.APIUsername)
+	jwtToken, err := aasClient.GetUserToken(config.Configuration.Wla.APIUsername)
 	aasRWLock.RUnlock()
 	// something wrong
 	if err != nil {
 		// lock aas with w lock
 		aasRWLock.Lock()
 		// check if other thread fix it already
-		jwtToken, err = aasClient.GetUserToken(config.Configuration.Wls.APIUsername)
+		jwtToken, err = aasClient.GetUserToken(config.Configuration.Wla.APIUsername)
 		// it is not fixed
 		if err != nil {
 			// these operation cannot be done in init() because it is not sure
 			// if config.Configuration is loaded at that time
-			aasClient.AddUser(config.Configuration.Wls.APIUsername, config.Configuration.Wls.APIPassword)
+			aasClient.AddUser(config.Configuration.Wla.APIUsername, config.Configuration.Wla.APIPassword)
 			aasClient.FetchAllTokens()
 		}
 		aasRWLock.Unlock()

@@ -15,7 +15,7 @@ import (
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/mtwilsonclient"
+	hvsclient "intel/isecl/wlagent/clients"
 	"os"
 	"os/user"
 	"strconv"
@@ -48,11 +48,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 		return errors.New("error registering binding key. " + err.Error())
 	}
 
-	mc, err := mtwilsonclient.InitializeClient()
-	if err != nil {
-		return errors.New("error initializing HVS client")
-	}
-	registerKey, err := mc.HostKey().CertifyHostBindingKey(httpRequestBody)
+	registerKey, err := hvsclient.CertifyHostBindingKey(httpRequestBody)
 	if err != nil {
 		return errors.New("error while updating the KBS user with envelope public key. " + err.Error())
 	}

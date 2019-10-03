@@ -13,9 +13,8 @@ const (
 	MTWILSON_API_PASSWORD                       = "MTWILSON_API_PASSWORD"
 	MTWILSON_TLS_SHA384                         = "MTWILSON_TLS_CERT_SHA384"
 	WLS_API_URL                                 = "WLS_API_URL"
-	WLS_API_USERNAME                            = "WLS_API_USERNAME"
-	WLS_API_PASSWORD                            = "WLS_API_PASSWORD"
-	WLS_TLS_SHA384                              = "WLS_TLS_SHA384"
+	WLA_USERNAME                                = "WLA_USERNAME"
+	WLA_PASSWORD                                = "WLA_PASSWORD"
 	LogLevelEnvVar                              = "LOG_LEVEL"
 	SkipFlavorSignatureVerification             = "SKIP_FLAVOR_SIGNATURE_VERIFICATION"
 	AikSecretKeyName                            = "aik.secret"
@@ -57,6 +56,6 @@ const (
 	TokenSignCertFile                           = TokenSignKeysAndCertDir + "jwtsigncert.pem"
 	TrustedJWTSigningCertsDir                   = ConfigDirPath + "certs/trustedjwt/"
 
-	AAS_URL = "AAS_API_URL"
+	AAS_URL      = "AAS_API_URL"
 	CMS_BASE_URL = "CMS_BASE_URL"
 )

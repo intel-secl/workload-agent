@@ -10,7 +10,7 @@ import (
 	"encoding/pem"
 	"errors"
 	exec "intel/isecl/lib/common/exec"
-	mtwilson "intel/isecl/lib/mtwilson-client"
+	hvsclient "intel/isecl/wlagent/clients"
 	tpm "intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/consts"
 	"io/ioutil"
@@ -19,8 +19,8 @@ import (
 	"strings"
 )
 
-func CreateRequest(key []byte) (*mtwilson.RegisterKeyInfo, error) {
-	var httpRequestBody *mtwilson.RegisterKeyInfo
+func CreateRequest(key []byte) (*hvsclient.RegisterKeyInfo, error) {
+	var httpRequestBody *hvsclient.RegisterKeyInfo
 	var keyInfo tpm.CertifiedKey
 	var tpmVersion string
 	var err error
@@ -56,7 +56,7 @@ func CreateRequest(key []byte) (*mtwilson.RegisterKeyInfo, error) {
 	// so that HVS can register the key.
 	// ISECL - 3506 opened to address this issue later
 	//construct request body
-	httpRequestBody = &mtwilson.RegisterKeyInfo{
+	httpRequestBody = &hvsclient.RegisterKeyInfo{
 		PublicKeyModulus:       keyInfo.PublicKey,
 		TpmCertifyKey:          keyInfo.KeyAttestation[2:],
 		TpmCertifyKeySignature: keyInfo.KeySignature,

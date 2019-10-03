@@ -7,7 +7,7 @@ package flavor
 import (
 	"encoding/json"
 	flvr "intel/isecl/lib/flavor"
-	"intel/isecl/wlagent/wlsclient"
+	wlsclient "intel/isecl/wlagent/clients"
 
 	log "github.com/sirupsen/logrus"
 )

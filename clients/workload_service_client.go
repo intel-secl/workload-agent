@@ -2,7 +2,7 @@
  * Copyright (C) 2019 Intel Corporation
  * SPDX-License-Identifier: BSD-3-Clause
  */
-package wlsclient
+package clients
 
 import (
 	"bytes"
@@ -97,9 +97,9 @@ func GetImageFlavor(imageID, flavorPart string) (flavor.SignedImageFlavor, error
 	if err != nil {
 		return flavor, err
 	}
-	
+
 	// deserialize the response to ImageFlavor response
-	if(httpResponse != nil){
+	if httpResponse != nil {
 		err = json.Unmarshal(httpResponse, &flavor)
 		if err != nil {
 			return flavor, err
