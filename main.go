@@ -63,7 +63,7 @@ func main() {
 
 	inputValArr := []string{os.Args[0]}
 	if valErr := validation.ValidateStrings(inputValArr); valErr != nil {
-		fmt.Println("Invalid string format")
+		fmt.Fprintln(os.Stderr, "Invalid string format")
 		os.Exit(1)
 	}
 
@@ -96,14 +96,14 @@ func main() {
 		}
 		err := installRunner.RunTasks("Configurer")
 		if err != nil {
-			fmt.Println("Error running setup: ", err)
+			fmt.Fprintln(os.Stderr, "Error running setup: ", err)
 			os.Exit(1)
 		}
 
 		// Workaround for tpm2-abrmd bug in RHEL 7.5
 		t, err := tpm.Open()
 		if err != nil {
-			fmt.Println("Error while opening a connection to TPM.")
+			fmt.Fprintln(os.Stderr, "Error while opening a connection to TPM.")
 			os.Exit(1)
 		}
 
@@ -134,7 +134,7 @@ func main() {
 		defer t.Close()
 		err = setupRunner.RunTasks(args[1:]...)
 		if err != nil {
-			fmt.Println("Error running setup: ", err)
+			fmt.Fprintln(os.Stderr, "Error running setup: ", err)
 			os.Exit(1)
 		}
 
@@ -421,16 +421,16 @@ func main() {
 		var err error
 		aasClient.HTTPClient, err = clients.HTTPClientWithCADir(consts.TrustedCaCertsDir)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 		}
 		aasClient.AddUser(config.Configuration.Wla.APIUsername, config.Configuration.Wla.APIPassword)
 		err = aasClient.FetchAllTokens()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 		}
 		jwtToken, err := aasClient.GetUserToken(config.Configuration.Wla.APIUsername)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 		}
 		fmt.Println(string(jwtToken))
 	}
@@ -440,7 +440,7 @@ func removeSecureDockerDaemon(){
     commandArgs := []string{consts.OptDirPath+"secure-docker-daemon/uninstall-container-security-dependencies.sh"}
     _, err := exec.ExecuteCommand("/bin/bash", commandArgs)
     if err != nil {
-        fmt.Println(err)
+        fmt.Fprintln(os.Stderr, err)
     }
 }
 
@@ -456,8 +456,8 @@ func deleteFile(path string) {
 func start() {
 	cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStartCmd, 5)
 	if err != nil {
-		fmt.Println("Could not start Workload Agent Service")
-		fmt.Println("Error : ", err)
+		fmt.Fprintln(os.Stderr, "Could not start Workload Agent Service")
+		fmt.Fprintln(os.Stderr, "Error : ", err)
 		os.Exit(1)
 	}
 	fmt.Println(cmdOutput)
@@ -467,8 +467,8 @@ func start() {
 func stop() {
 	cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStopCmd, 5)
 	if err != nil {
-		fmt.Println("Could not stop Workload Agent Service")
-		fmt.Println("Error : ", err)
+		fmt.Fprintln(os.Stderr, "Could not stop Workload Agent Service")
+		fmt.Fprintln(os.Stderr, "Error : ", err)
 		os.Exit(1)
 	}
 	fmt.Println(cmdOutput)
@@ -478,8 +478,8 @@ func stop() {
 func removeservice() {
 	_, _, err := exec.RunCommandWithTimeout(consts.ServiceRemoveCmd, 5)
 	if err != nil {
-		fmt.Println("Could not remove Workload Agent Service")
-		fmt.Println("Error : ", err)
+		fmt.Fprintln(os.Stderr, "Could not remove Workload Agent Service")
+		fmt.Fprintln(os.Stderr, "Error : ", err)
 	}
 	fmt.Println("Workload Agent Service Removed...")
 }
