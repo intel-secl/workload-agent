@@ -14,7 +14,6 @@ import (
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/keycache"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -112,23 +111,3 @@ func UnwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	log.Debug("Unbinding TPM wrapped key was successful, return the key")
 	return key, nil
 }
-
-// GetKeyFromCache method is used to check if the key for an image file is cached.
-// If the key is cached, the method you return the key ID.
-func GetKeyFromCache(keyID string) (keycache.Key, error) {
-        key, exists := keycache.Get(keyID)
-        //TODO : Remove debug log
-        log.Debugf("getKeyFromCache cache entry exists : %t, keyID : %s", exists, keyID)
-        if !exists {
-                return keycache.Key{}, errors.New("key is not cached")
-        }
-        return key, nil
-}
-
-// CacheKeyInMemory method is used add the key to cache and map it with the keyID
-func CacheKeyInMemory(keyID string, key []byte) error {
-        log.Debugf("cacheKeyInMemory keyID : %s", keyID)
-        keycache.Store(keyID, keycache.Key{keyID, key})
-        return nil
-}
-

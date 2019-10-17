@@ -7,9 +7,6 @@ package common
 import (
 	pinfo "intel/isecl/lib/platform-info/platforminfo"
 	wlsclient "intel/isecl/wlagent/clients"
-
-	"strings"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,7 +16,6 @@ func RetrieveKey(imageUUID string) ([]byte, error) {
 
 	//check if the key is cached by filtercriteria imageUUID
 	var err error
-	var keyID string
 	var flavorKeyInfo wlsclient.FlavorKey
 	var tpmWrappedKey []byte
 
@@ -34,7 +30,7 @@ func RetrieveKey(imageUUID string) ([]byte, error) {
 
 	//get flavor-key from workload service
 	log.Infof("Retrieving image-flavor-key for image %s from WLS", imageUUID)
-	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID, keyID)
+	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID)
 	if err != nil {
 		log.Errorf("Error retrieving the image flavor and key: %s", err.Error())
 		return nil, err
@@ -47,9 +43,6 @@ func RetrieveKey(imageUUID string) ([]byte, error) {
 	}
 
 	if flavorKeyInfo.Flavor.EncryptionRequired {
-		// if key not cached, cache the key
-		keyURLSplit := strings.Split(flavorKeyInfo.Flavor.Encryption.KeyURL, "/")
-		keyID = keyURLSplit[len(keyURLSplit)-2]
 		// if the WLS response includes a key, cache the key on host
 		if len(flavorKeyInfo.Key) > 0 {
 			// get the key from WLS response

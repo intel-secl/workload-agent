@@ -10,8 +10,6 @@ import (
 	flvr "intel/isecl/lib/flavor"
 	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/flavor"
-	"intel/isecl/wlagent/key"
-	"intel/isecl/wlagent/keycache"
 	"intel/isecl/wlagent/wlavm"
 	"errors"
 )
@@ -30,14 +28,6 @@ type ManifestString struct {
 type FlavorInfo struct {
 	ImageID    string
 	FlavorPart string
-}
-
-// KeyInfo is a struct containing image ID and key ID as arguments to allow invocation over RPC
-type KeyInfo struct {
-	ImageID    string
-	KeyID      string
-	Key        []byte
-	ReturnCode bool
 }
 
 // VirtualMachine is type that defines the RPC functions for communicating with the Wlagent daemon Starting/Stopping a VM
@@ -90,22 +80,4 @@ func (vm *VirtualMachine) FetchFlavor(args *FlavorInfo, outFlavor *flavor.OutFla
 
 	*outFlavor = o
 	return nil
-}
-
-// CacheKey forwards the RPC request to key.Cache
-func (vm *VirtualMachine) CacheKey(args *KeyInfo, reply *bool) error {
-
-	*reply = key.Cache(args.ImageID, args.KeyID)
-	return nil
-}
-
-func (vm *VirtualMachine) GetKeyFromKeyCache (args *KeyInfo, outKeyInfo *KeyInfo) (error) {
-        key, returnCode := keycache.Get(args.KeyID)
-        var k = KeyInfo{
-          KeyID:   args.KeyID,
-          Key:     key.Bytes,
-          ReturnCode: returnCode,
-        }
-        *outKeyInfo = k
-        return nil
 }

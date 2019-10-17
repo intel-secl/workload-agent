@@ -12,8 +12,6 @@ import (
 	"intel/isecl/wlagent/config"
 	"net/http"
 	"net/url"
-	"strings"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -25,7 +23,7 @@ type FlavorKey struct {
 }
 
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
-func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error) {
+func GetImageFlavorKey(imageUUID, hardwareUUID string) (FlavorKey, error) {
 	var flavorKeyInfo FlavorKey
 
 	requestURL, err := url.Parse(config.Configuration.Wls.APIURL)
@@ -36,13 +34,6 @@ func GetImageFlavorKey(imageUUID, hardwareUUID, keyID string) (FlavorKey, error)
 	requestURL, err = url.Parse(requestURL.String() + "images/" + imageUUID + "/flavor-key?hardware_uuid=" + hardwareUUID)
 	if err != nil {
 		return flavorKeyInfo, errors.New("error forming GET flavor-key for image API URL")
-	}
-
-	if len(strings.TrimSpace(keyID)) > 0 {
-		requestURL, err = url.Parse(requestURL.String() + "&&key_id=" + keyID)
-		if err != nil {
-			return flavorKeyInfo, errors.New("error forming GET flavor-key for image API URL")
-		}
 	}
 
 	httpRequest, err := http.NewRequest("GET", requestURL.String(), nil)
