@@ -87,7 +87,7 @@ func UnwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not establish connection to TPM: %s", err)
 	}
-
+	
 	log.Debug("Reading the binding key certificate")
 	bindingKeyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
 	bindingKeyCert, fileErr := ioutil.ReadFile(bindingKeyFilePath)
@@ -107,7 +107,6 @@ func UnwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	if unbindErr != nil {
 		return nil, fmt.Errorf("error while unbinding the tpm wrapped key: %s", unbindErr.Error())
 	}
-
 	log.Debug("Unbinding TPM wrapped key was successful, return the key")
 	return key, nil
 }

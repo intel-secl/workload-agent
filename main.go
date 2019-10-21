@@ -5,7 +5,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"intel/isecl/lib/common/exec"
 	csetup "intel/isecl/lib/common/setup"
@@ -13,15 +12,15 @@ import (
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
+	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/flavor"
 	wlrpc "intel/isecl/wlagent/rpc"
 	"intel/isecl/wlagent/setup"
-	"intel/isecl/wlagent/filewatch"
-	"intel/isecl/wlagent/util"
 	"net"
 	"net/rpc"
 	"os"
 	"strings"
+
 	log "github.com/sirupsen/logrus"
 
 	"intel/isecl/lib/clients"
@@ -29,9 +28,9 @@ import (
 )
 
 var (
-	Version       string = ""
-	Time          string = ""
-	Branch        string = ""
+	Version           string = ""
+	Time              string = ""
+	Branch            string = ""
 	rpcSocketFilePath string = consts.RunDirPath + consts.RPCSocketFileName
 )
 
@@ -84,7 +83,7 @@ func main() {
 		// runner runs only the tasks passed in the argument if there are 1 or more tasks.
 		// This means that with current logic, if there are no specific tasks passed in the
 		// argument, we will only run the confugurer but the intention was to run all of them
-		
+
 		// TODO : The right way to address this is to pass the arguments from the commandline
 		// to a functon in the workload agent setup package and have it build a slice of tasks
 		// to run.
@@ -116,7 +115,7 @@ func main() {
 			Tasks: []csetup.Task{
 				csetup.Download_Ca_Cert{
 					Flags:         flags,
-					CmsBaseURL:	   config.Configuration.Cms.BaseURL,
+					CmsBaseURL:    config.Configuration.Cms.BaseURL,
 					CaCertDirPath: consts.TrustedCaCertsDir,
 					ConsoleWriter: os.Stdout,
 				},
@@ -248,7 +247,7 @@ func main() {
 		var status bool
 		err = client.Call("VirtualMachine.CreateInstanceTrustReport", &args, &status)
 		if err != nil {
-			fmt.Printf("Error while creating trust report: %s\n",err.Error())
+			fmt.Printf("Error while creating trust report: %s\n", err.Error())
 			os.Exit(1)
 		}
 		fmt.Println("Successfully created trust report")
@@ -296,25 +295,85 @@ func main() {
 			os.Exit(0)
 		}
 
-	case "unwrap-key":
+	case "fetch-key":
 		if len(args[1:]) < 1 {
 			log.Error("Invalid number of parameters")
 			os.Exit(1)
 		}
-		wrappedKey, err := base64.StdEncoding.DecodeString(args[1])
+		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Error("Could not decode wrapped key")
+			log.Error("fetch-key: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
-		key, err := util.UnwrapKey(wrappedKey)
-		if err != nil {
-			log.Errorf("Could not unwrap the wrapped key %v", err)
+
+		// validate key id given as input
+		if err = validation.ValidateUUIDv4(args[1]); err != nil {
+			log.Error("Invalid KeyID format")
 			os.Exit(1)
 		}
-		fmt.Println(key)
+
+		client := rpc.NewClient(conn)
+		var outKey wlrpc.KeyInfo
+		var args = wlrpc.KeyInfo{
+			KeyID:   args[1],
+			ImageID: args[2],
+		}
+
+		err = client.Call("VirtualMachine.FetchKey", &args, &outKey)
+		if err != nil {
+			log.Error("client call failed")
+			os.Exit(1)
+		}
+		if !outKey.ReturnCode {
+			os.Exit(1)
+		} else {
+			fmt.Println(outKey.Key)
+			os.Exit(0)
+		}
+
+	case "cache-key":
+		if len(args[1:]) < 2 {
+			log.Error("Invalid number of parameters")
+			os.Exit(1)
+		}
+
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			log.Error("cache-key: failed to dial wlagent.sock, is wlagent running?")
+			os.Exit(1)
+		}
+
+		// validate key id given as input
+		if err = validation.ValidateUUIDv4(args[1]); err != nil {
+			log.Error("Invalid Key ID format")
+			os.Exit(1)
+		}
+		// validate image uuid given as input
+		if err = validation.ValidateUUIDv4(args[2]); err != nil {
+			log.Error("Invalid imageUUID format")
+			os.Exit(1)
+		}
+
+		client := rpc.NewClient(conn)
+		var outKey wlrpc.KeyInfo
+		var args = wlrpc.KeyInfo{
+			KeyID:   args[1],
+			ImageID: args[2],
+		}
+
+		err = client.Call("VirtualMachine.FetchKey", &args, &outKey)
+		if err != nil {
+			log.Error("client call failed")
+			os.Exit(1)
+		}
+		if !outKey.ReturnCode {
+			os.Exit(1)
+		} else {
+			os.Exit(0)
+		}
 
 	case "uninstall":
-		commandArgs := []string{consts.OptDirPath+"secure-docker-daemon"}
+		commandArgs := []string{consts.OptDirPath + "secure-docker-daemon"}
 		_, err := exec.ExecuteCommand("ls", commandArgs)
 		if err == nil {
 			removeSecureDockerDaemon()
@@ -421,13 +480,13 @@ func runservice() {
 	defer fileWatcher.Close()
 	// stop signaler
 	stop := make(chan bool)
-        go func() {
+	go func() {
 		for {
 			fileWatcher.Watch()
 		}
 	}()
-	
-        if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
+
+	if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
 			log.WithError(err).Fatalf("Could not create directory: %s, err: %s", consts.RunDirPath, err)
 		}
@@ -448,7 +507,7 @@ func runservice() {
 			}
 			r := rpc.NewServer()
 			vm := &wlrpc.VirtualMachine{
-				Watcher : fileWatcher,
+				Watcher: fileWatcher,
 			}
 
 			err = r.Register(vm)

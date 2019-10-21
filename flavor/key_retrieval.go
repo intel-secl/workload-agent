@@ -2,7 +2,8 @@
  * Copyright (C) 2019 Intel Corporation
  * SPDX-License-Identifier: BSD-3-Clause
  */
-package common
+
+package flavor
 
 import (
 	pinfo "intel/isecl/lib/platform-info/platforminfo"
@@ -12,19 +13,25 @@ import (
 
 // RetrieveKey retrieves an Image decryption key
 // It uses the hardwareUUID that is fetched from the the Platform Info library
-func RetrieveKey(imageUUID string) ([]byte, error) {
+func RetrieveKey(keyID, imageUUID string) ([]byte, bool) {
 
 	//check if the key is cached by filtercriteria imageUUID
 	var err error
 	var flavorKeyInfo wlsclient.FlavorKey
 	var tpmWrappedKey []byte
 
+	if imageUUID == "" {
+		imageUUID = imageKeyID[keyID]
+	} else {
+		imageKeyID[keyID] = imageUUID
+	}
+
 	// get host hardware UUID
 	log.Debug("Retrieving host hardware UUID...")
 	hardwareUUID, err := pinfo.HardwareUUID()
 	if err != nil {
 		log.Error("Unable to get the host hardware UUID")
-		return nil, err
+		return nil, false
 	}
 	log.Debugf("The host hardware UUID is :%s", hardwareUUID)
 
@@ -33,13 +40,12 @@ func RetrieveKey(imageUUID string) ([]byte, error) {
 	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID)
 	if err != nil {
 		log.Errorf("Error retrieving the image flavor and key: %s", err.Error())
-		return nil, err
+		return nil, false
 	}
 
 	if flavorKeyInfo.Flavor.Meta.ID == "" {
 		log.Infof("Flavor does not exist for the image %s", imageUUID)
-		// check with Ryan
-		return nil, nil
+		return nil, true
 	}
 
 	if flavorKeyInfo.Flavor.EncryptionRequired {
@@ -47,11 +53,11 @@ func RetrieveKey(imageUUID string) ([]byte, error) {
 		if len(flavorKeyInfo.Key) > 0 {
 			// get the key from WLS response
 			tpmWrappedKey = flavorKeyInfo.Key
-			return tpmWrappedKey, nil
+			return tpmWrappedKey, true
 		}
 
-		return nil, nil
+		return nil, false
 	}
 
-	return nil, nil
+	return nil, false
 }

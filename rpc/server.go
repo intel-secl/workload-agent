@@ -6,12 +6,13 @@ package rpc
 
 import (
 	"encoding/json"
+	"errors"
 	"intel/isecl/lib/common/pkg/instance"
 	flvr "intel/isecl/lib/flavor"
 	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/flavor"
+	"intel/isecl/wlagent/util"
 	"intel/isecl/wlagent/wlavm"
-	"errors"
 )
 
 // DomainXML is a struct containing domain XML as argument to allow invocation over RPC
@@ -28,6 +29,14 @@ type ManifestString struct {
 type FlavorInfo struct {
 	ImageID    string
 	FlavorPart string
+}
+
+// KeyInfo is a struct containing image ID and key ID as arguments to allow invocation over RPC
+type KeyInfo struct {
+	KeyID      string
+	Key        []byte
+	ImageID    string
+	ReturnCode bool
 }
 
 // VirtualMachine is type that defines the RPC functions for communicating with the Wlagent daemon Starting/Stopping a VM
@@ -56,7 +65,7 @@ func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status
 	json.Unmarshal([]byte(args.Manifest), &manifestJSON)
 	imageID := manifestJSON.InstanceInfo.ImageID
 	flavor, ok := flavor.Fetch(imageID, "CONTAINER_IMAGE")
-	if (flavor == "" && !ok) {
+	if flavor == "" && !ok {
 		return errors.New("Error while retrieving flavor")
 	}
 	json.Unmarshal([]byte(flavor), &imageFlavor)
@@ -79,5 +88,23 @@ func (vm *VirtualMachine) FetchFlavor(args *FlavorInfo, outFlavor *flavor.OutFla
 	}
 
 	*outFlavor = o
+	return nil
+}
+
+// FetchKey forwards the RPC request to flavor.RetrieveKey
+func (vm *VirtualMachine) FetchKey(args *KeyInfo, outKeyInfo *KeyInfo) error {
+
+	wrappedKey, returnCode := flavor.RetrieveKey(args.KeyID, args.ImageID)
+	key, err := util.UnwrapKey(wrappedKey)
+	if err != nil {
+		return errors.New("Error while unwrapping the key")
+	}
+	var k = KeyInfo{
+		KeyID:      args.KeyID,
+		Key:        key,
+		ReturnCode: returnCode,
+	}
+
+	*outKeyInfo = k
 	return nil
 }
