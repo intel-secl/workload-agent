@@ -7,6 +7,8 @@ package main
 import (
 	"fmt"
 	"intel/isecl/lib/common/exec"
+	cLog "intel/isecl/lib/common/log"
+	"intel/isecl/lib/common/proc"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/common/validation"
 	"intel/isecl/lib/tpm"
@@ -21,8 +23,6 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"intel/isecl/lib/clients"
 	"intel/isecl/lib/clients/aas"
 )
@@ -33,6 +33,9 @@ var (
 	Branch            string = ""
 	rpcSocketFilePath string = consts.RunDirPath + consts.RPCSocketFileName
 )
+
+var log = cLog.GetDefaultLogger()
+var secLog = cLog.GetSecurityLogger()
 
 func printVersion() {
 	fmt.Printf("Version %s\nBuild %s at %s\n", Version, Branch, Time)
@@ -57,8 +60,9 @@ func printUsage() {
 
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
+	log.Trace("main:main() Entering")
+	defer log.Trace("main:main() Leaving")
 	// Save log configurations
-	config.LogConfiguration(consts.LogDirPath + consts.LogFileName)
 
 	inputValArr := []string{os.Args[0]}
 	if valErr := validation.ValidateStrings(inputValArr); valErr != nil {
@@ -95,14 +99,14 @@ func main() {
 		}
 		err := installRunner.RunTasks("Configurer")
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error running setup: ", err)
+			fmt.Fprintln(os.Stderr, "main:main() Error running setup: ", err)
 			os.Exit(1)
 		}
-
+		config.LogConfiguration(false, true, false)
 		// Workaround for tpm2-abrmd bug in RHEL 7.5
 		t, err := tpm.Open()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error while opening a connection to TPM.")
+			secLog.WithError(err).Error("main:main() Error while opening a connection to TPM.")
 			os.Exit(1)
 		}
 
@@ -133,11 +137,12 @@ func main() {
 		defer t.Close()
 		err = setupRunner.RunTasks(args[1:]...)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error running setup: ", err)
+			log.WithError(err).Error("main:main() Error running setup")
 			os.Exit(1)
 		}
 
 	case "runservice":
+		config.LogConfiguration(false, true, true)
 		runservice()
 
 	case "start":
@@ -161,21 +166,21 @@ func main() {
 
 	case "start-vm":
 		if len(args[1:]) < 1 {
-			log.Error("Invalid number of parameters")
+			log.Error("main:main() start-vm: Invalid number of parameters")
 			os.Exit(1)
 		}
 
-		log.Info("workload-agent start called")
+		log.Info("main:main() start-vm: workload-agent start called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Error("start-vm: failed to dial wlagent.sock, is wlagent running?")
+			log.Error("main:main() start-vm: Failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 		client := rpc.NewClient(conn)
 
 		// validate domainXML input
 		if err = validation.ValidateXMLString(args[1]); err != nil {
-			log.Error("Invalid domain XML format")
+			secLog.Error("main:main() start-vm: Invalid domain XML format")
 			os.Exit(1)
 		}
 
@@ -185,7 +190,7 @@ func main() {
 		var startState bool
 		err = client.Call("VirtualMachine.Start", &args, &startState)
 		if err != nil {
-			log.Error("client call failed")
+			log.Error("main:main() start-vm: Client call failed")
 		}
 
 		if !startState {
@@ -196,19 +201,19 @@ func main() {
 
 	case "stop-vm":
 		if len(args[1:]) < 1 {
-			log.Error("Invalid number of parameters")
+			log.Error("main:main() stop-vm: Invalid number of parameters")
 			os.Exit(1)
 		}
-		log.Info("workload-agent stop called")
+		log.Info("main/main() stop-vm: workload-agent stop called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Error("stop-vm: failed to dial wlagent.sock, is wlagent running?")
+			log.Error("main:main() stop-vm: Failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 
 		// validate domainXML input
 		if err = validation.ValidateXMLString(args[1]); err != nil {
-			log.Error("Invalid domain XML format")
+			secLog.Error("main:main() stop-vm: Invalid domain XML format")
 			os.Exit(1)
 		}
 
@@ -219,7 +224,7 @@ func main() {
 		var stopState bool
 		err = client.Call("VirtualMachine.Stop", &args, &stopState)
 		if err != nil {
-			log.Error("client call failed")
+			log.Error("main:main() stop-vm: Client call failed")
 			os.Exit(1)
 		}
 
@@ -231,13 +236,13 @@ func main() {
 
 	case "create-instance-trust-report":
 		if len(args[1:]) < 1 {
-			log.Info("Invalid number of parameters")
+			log.Info("main:main() create-instance-trust-report Invalid number of parameters")
 			os.Exit(1)
 		}
-		log.Info("workload-agent create-instance-trust-report called")
+		log.Info("main:main()  workload-agent create-instance-trust-report called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Println("create-instance-trust-report: failed to dial wlagent.sock, is wlagent running?")
+			log.WithError(err).Error("main:main() create-instance-trust-report: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 		client := rpc.NewClient(conn)
@@ -247,33 +252,33 @@ func main() {
 		var status bool
 		err = client.Call("VirtualMachine.CreateInstanceTrustReport", &args, &status)
 		if err != nil {
-			fmt.Printf("Error while creating trust report: %s\n", err.Error())
+			log.WithError(err).Error("main:main() create-instance-trust-report: Error while creating trust report")
 			os.Exit(1)
 		}
-		fmt.Println("Successfully created trust report")
+		log.Info("main:main() create-instance-trust-report Successfully created trust report")
 		os.Exit(0)
 
 	case "fetch-flavor":
 		if len(args[1:]) < 2 {
-			log.Error("Invalid number of parameters")
+			log.Error("main:main() fetch-flavor: Invalid number of parameters")
 			os.Exit(1)
 		}
 
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Error("fetch-flavor: failed to dial wlagent.sock, is wlagent running?")
+			log.WithError(err).Error("main:main() fetch-flavor: failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 
 		// validate input
 		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			log.Error("Invalid imageUUID format")
+			log.Error("main:main() fetch-flavor: Invalid imageUUID format")
 			os.Exit(1)
 		}
 
 		inputArr := []string{os.Args[2]}
 		if validateLabelErr := validation.ValidateStrings(inputArr); validateLabelErr != nil {
-			log.Error("Invalid flavor part string format")
+			log.Error("main:main() fetch-flavor: Invalid flavor part string format")
 			os.Exit(1)
 		}
 
@@ -286,7 +291,8 @@ func main() {
 
 		err = client.Call("VirtualMachine.FetchFlavor", &args, &outFlavor)
 		if err != nil {
-			log.Error("client call failed")
+			log.Error("main:main() fetch-flavor: Client call failed")
+			log.Tracef("%+v", err)
 		}
 		if !outFlavor.ReturnCode {
 			os.Exit(1)
@@ -297,18 +303,18 @@ func main() {
 
 	case "fetch-key":
 		if len(args[1:]) < 1 {
-			log.Error("Invalid number of parameters")
+			log.Error("main:main() fetch-key: Invalid number of parameters")
 			os.Exit(1)
 		}
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Error("fetch-key: failed to dial wlagent.sock, is wlagent running?")
+			log.Error("main:main() fetch-key:  failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 
 		// validate key id given as input
 		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			log.Error("Invalid KeyID format")
+			secLog.Error("main:main() fetch-key: Invalid KeyID format")
 			os.Exit(1)
 		}
 
@@ -321,7 +327,8 @@ func main() {
 
 		err = client.Call("VirtualMachine.FetchKey", &args, &outKey)
 		if err != nil {
-			log.Error("client call failed")
+			log.Error("main:main() fetch-key: Client call failed")
+			log.Tracef("%+v", err)
 			os.Exit(1)
 		}
 		if !outKey.ReturnCode {
@@ -333,24 +340,24 @@ func main() {
 
 	case "cache-key":
 		if len(args[1:]) < 2 {
-			log.Error("Invalid number of parameters")
+			log.Error("main:main() cache-key: Invalid number of parameters")
 			os.Exit(1)
 		}
 
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Error("cache-key: failed to dial wlagent.sock, is wlagent running?")
+			log.Error("main:main() cache-key: Failed to dial wlagent.sock, is wlagent running?")
 			os.Exit(1)
 		}
 
 		// validate key id given as input
 		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			log.Error("Invalid Key ID format")
+			secLog.Error("main:main() cache-key: Invalid Key ID format")
 			os.Exit(1)
 		}
 		// validate image uuid given as input
 		if err = validation.ValidateUUIDv4(args[2]); err != nil {
-			log.Error("Invalid imageUUID format")
+			secLog.Error("main:main() cache-key: Invalid imageUUID format")
 			os.Exit(1)
 		}
 
@@ -363,16 +370,19 @@ func main() {
 
 		err = client.Call("VirtualMachine.FetchKey", &args, &outKey)
 		if err != nil {
-			log.Error("client call failed")
+			log.Error("main:main() cache-key: Client call failed")
+			log.Tracef("%+v", err)
 			os.Exit(1)
 		}
 		if !outKey.ReturnCode {
+			log.Error("main:main() cache-key: Error while fetching the key")
 			os.Exit(1)
 		} else {
 			os.Exit(0)
 		}
 
 	case "uninstall":
+		config.LogConfiguration(true, true, false)
 		commandArgs := []string{consts.OptDirPath + "secure-docker-daemon"}
 		_, err := exec.ExecuteCommand("ls", commandArgs)
 		if err == nil {
@@ -419,24 +429,32 @@ func main() {
 	}
 }
 
-func removeSecureDockerDaemon(){
-    commandArgs := []string{consts.OptDirPath+"secure-docker-daemon/uninstall-container-security-dependencies.sh"}
-    _, err := exec.ExecuteCommand("/bin/bash", commandArgs)
-    if err != nil {
-        fmt.Fprintln(os.Stderr, err)
-    }
+func removeSecureDockerDaemon() {
+	log.Trace("main/main:removeSecureDockerDaemon() Entering")
+	defer log.Trace("main/main:removeSecureDockerDaemon() Leaving")
+
+	commandArgs := []string{consts.OptDirPath + "secure-docker-daemon/uninstall-container-security-dependencies.sh"}
+	_, err := exec.ExecuteCommand("/bin/bash", commandArgs)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
 }
 
 func deleteFile(path string) {
+	log.Trace("main/main:deleteFile() Entering")
+	defer log.Trace("main/main:deleteFile() Leaving")
 	log.Info("Deleting : ", path)
 	// delete file
 	var err = os.RemoveAll(path)
 	if err != nil {
 		log.Error(err)
+		log.Tracef("%+v", err)
 	}
 }
 
 func start() {
+	log.Trace("main:start() Entering")
+	defer log.Trace("main:start() Leaving")
 	cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStartCmd, 5)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Could not start Workload Agent Service")
@@ -448,6 +466,9 @@ func start() {
 }
 
 func stop() {
+	log.Trace("main:stop() Entering")
+	defer log.Trace("main:stop() Leaving")
+
 	cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStopCmd, 5)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Could not stop Workload Agent Service")
@@ -459,6 +480,9 @@ func stop() {
 }
 
 func removeservice() {
+	log.Trace("main:removeservice() Entering")
+	defer log.Trace("main:removeservice() Leaving")
+
 	_, _, err := exec.RunCommandWithTimeout(consts.ServiceRemoveCmd, 5)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Could not remove Workload Agent Service")
@@ -468,19 +492,20 @@ func removeservice() {
 }
 
 func runservice() {
+	log.Trace("main:runservice() Entering")
+	defer log.Trace("main:runservice() Leaving")
 	// Save log configurations
 	//TODO : daemon log configuration - does it need to be passed in?
-	config.LogConfiguration(consts.LogDirPath + consts.DaemonLogFileName)
 
 	fileWatcher, err := filewatch.NewWatcher()
 	if err != nil {
-		log.Error(err.Error())
+		log.WithError(err).Error("main:runservice() Could not create File Watcher")
 		os.Exit(1)
 	}
 	defer fileWatcher.Close()
-	// stop signaler
-	stop := make(chan bool)
+	proc.AddTask()
 	go func() {
+		defer proc.TaskDone()
 		for {
 			fileWatcher.Watch()
 		}
@@ -488,11 +513,13 @@ func runservice() {
 
 	if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
-			log.WithError(err).Fatalf("Could not create directory: %s, err: %s", consts.RunDirPath, err)
+			log.WithError(err).Fatalf("main:runservice() Could not create directory: %s, err: %s", consts.RunDirPath, err)
 		}
 	}
 
+	proc.AddTask()
 	go func() {
+		defer proc.TaskDone()
 		for {
 			RPCSocketFilePath := consts.RunDirPath + consts.RPCSocketFileName
 			// When the socket is closed, the file handle on the socket file isn't handled.
@@ -512,12 +539,13 @@ func runservice() {
 
 			err = r.Register(vm)
 			if err != nil {
-				log.Error(err)
+				log.WithError(err).Error("main:runservice() Unable to Register vm wathcer")
+				log.Tracef("%+v", err)
 				return
 			}
 			r.Accept(l)
 		}
 	}()
 	// block until stop channel receives
-	<-stop
+	proc.WaitForQuitAndSignalTasks()
 }

@@ -14,11 +14,12 @@ import (
 
 	"intel/isecl/lib/clients"
 	"intel/isecl/lib/clients/aas"
+
+	"github.com/pkg/errors"
 )
 
 var aasClient = aas.NewJWTClient(config.Configuration.Aas.BaseURL)
 var aasRWLock = sync.RWMutex{}
-
 
 func init() {
 	aasRWLock.Lock()
@@ -33,7 +34,11 @@ func init() {
 }
 
 func addJWTToken(req *http.Request) error {
-
+	log.Trace("clients/send_http_request:addJWTToken() Entering")
+	defer log.Trace("clients/send_http_request:addJWTToken() Leaving")
+	if aasClient.BaseURL == "" {
+		aasClient = aas.NewJWTClient(config.Configuration.Aas.BaseURL)
+	}
 	aasRWLock.RLock()
 	jwtToken, err := aasClient.GetUserToken(config.Configuration.Wla.APIUsername)
 	aasRWLock.RUnlock()
@@ -48,29 +53,35 @@ func addJWTToken(req *http.Request) error {
 			// these operation cannot be done in init() because it is not sure
 			// if config.Configuration is loaded at that time
 			aasClient.AddUser(config.Configuration.Wla.APIUsername, config.Configuration.Wla.APIPassword)
-			aasClient.FetchAllTokens()
+			err = aasClient.FetchAllTokens()
+			if err != nil {
+				return errors.Wrap(err, "clients/send_http_request.go:addJWTToken() Could not fetch token")
+			}
 		}
 		aasRWLock.Unlock()
 	}
+	log.Debug("clients/send_http_request:addJWTToken() successfully added jwt bearer token")
 	req.Header.Set("Authorization", "Bearer "+string(jwtToken))
 	return nil
 }
 
 //SendRequest method is used to create an http client object and send the request to the server
 func SendRequest(req *http.Request, insecureConnection bool) ([]byte, error) {
+	log.Trace("clients/send_http_request:SendRequest() Entering")
+	defer log.Trace("clients/send_http_request:SendRequest() Leaving")
 
 	client, err := clients.HTTPClientWithCADir(consts.TrustedCaCertsDir)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "clients/send_http_request.go:SendRequest() Failed to create http client")
 	}
 	err = addJWTToken(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "clients/send_http_request.go:SendRequest() Failed to add JWT token")
 	}
 
 	response, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "clients/send_http_request.go:SendRequest() Error from response")
 	}
 	defer response.Body.Close()
 	if response.StatusCode == http.StatusUnauthorized {
@@ -80,20 +91,22 @@ func SendRequest(req *http.Request, insecureConnection bool) ([]byte, error) {
 		aasRWLock.Unlock()
 		err = addJWTToken(req)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "clients/send_http_request.go:SendRequest() Failed to add JWT token")
 		}
 		response, err = client.Do(req)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "clients/send_http_request.go:SendRequest() Error from response")
 		}
 	}
 	if response.StatusCode == http.StatusNotFound {
-		return nil, err
+		return nil, errors.Wrap(err, "clients/send_http_request.go:SendRequest() Error from response")
 	}
+
 	//create byte array of HTTP response body
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "clients/send_http_request.go:SendRequest() Error from response")
 	}
+	log.Info("clients/send_http_request.go:SendRequest() Recieved the response successfully")
 	return body, nil
 }

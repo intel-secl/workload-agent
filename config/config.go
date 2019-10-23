@@ -8,6 +8,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"intel/isecl/lib/common/exec"
+	cLog "intel/isecl/lib/common/log"
+	cLogInt "intel/isecl/lib/common/log/setup"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/wlagent/consts"
 	"io"
@@ -15,9 +17,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -27,15 +29,15 @@ var Configuration struct {
 	SigningKeySecret string
 
 	Mtwilson struct {
-		APIURL      string
+		APIURL string
 	}
 	Wls struct {
-		APIURL      string
+		APIURL string
 	}
 	Wla struct {
-                APIUsername string
-                APIPassword string
-        }
+		APIUsername string
+		APIPassword string
+	}
 
 	TrustAgent struct {
 		ConfigDir  string
@@ -49,7 +51,7 @@ var Configuration struct {
 		BaseURL string
 	}
 	SkipFlavorSignatureVerification bool
-	LogLevel                        string
+	LogLevel                        logrus.Level
 	ConfigComplete                  bool
 }
 
@@ -57,6 +59,9 @@ var (
 	configFilePath string = consts.ConfigDirPath + consts.ConfigFileName
 	LogWriter      io.Writer
 )
+
+var secLog = cLog.GetSecurityLogger()
+var log = cLog.GetDefaultLogger()
 
 func getFileContentFromConfigDir(fileName string) ([]byte, error) {
 	filePath := consts.ConfigDirPath + fileName
@@ -70,52 +75,70 @@ func getFileContentFromConfigDir(fileName string) ([]byte, error) {
 }
 
 func GetSigningKeyFromFile() ([]byte, error) {
+	log.Trace("config/config:GetSigningKeyFromFile() Entering")
+	defer log.Trace("config/config:GetSigningKeyFromFile() Leaving")
 
 	return getFileContentFromConfigDir(consts.SigningKeyFileName)
 }
 
 func GetBindingKeyFromFile() ([]byte, error) {
+	log.Trace("config/config:GetBindingKeyFromFile() Entering")
+	defer log.Trace("config/config:GetBindingKeyFromFile() Leaving")
 
 	return getFileContentFromConfigDir(consts.BindingKeyFileName)
 }
 
 func GetSigningCertFromFile() (string, error) {
+	log.Trace("config/config:GetSigningCertFromFile() Entering")
+	defer log.Trace("config/config:GetSigningCertFromFile() Leaving")
 
 	f, err := getFileContentFromConfigDir(consts.SigningKeyPemFileName)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "config/config:GetSigningCertFromFile() Error while getting contents of File :%s", consts.SigningKeyPemFileName)
 	}
 	return string(f), nil
 }
 
 func GetBindingCertFromFile() (string, error) {
+	log.Trace("config/config:GetBindingCertFromFile() Entering")
+	defer log.Trace("config/config:GetBindingCertFromFile() Leaving")
 
 	f, err := getFileContentFromConfigDir(consts.BindingKeyPemFileName)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "config/config:BindingKeyPemFileName() Error while getting contents of File :%s", consts.BindingKeyPemFileName)
 	}
 	return string(f), nil
 }
 
+type CommandError struct {
+	IssuedCommand string
+	StdError      string
+}
+
+func (e CommandError) Error() string {
+	return fmt.Sprintf("config/config Command Error %s: %s", e.IssuedCommand, e.StdError)
+}
+
 // GetAikSecret function returns the AIK Secret as a byte array running the tagent export config command
 func GetAikSecret() ([]byte, error) {
-	log.Info("Getting AIK secret from trustagent configuration.")
+	log.Trace("config/config:GetAikSecret() Entering")
+	defer log.Trace("config/config:GetAikSecret() Leaving")
+
+	log.Info("config/config:GetAikSecret() Getting AIK secret from trustagent configuration.")
 	aikSecret, stderr, err := exec.RunCommandWithTimeout(consts.TAConfigAikSecretCmd, 2)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"Issued Command:": consts.TAConfigAikSecretCmd,
-			"StdError:":       stderr,
-		}).Error("GetAikSecret: Command Failed. Details follow")
+		log.WithError(&CommandError{IssuedCommand: consts.TAConfigAikSecretCmd, StdError: stderr}).Error("GetAikSecret: Command Failed. Details follow")
 		return nil, err
 	}
 	return hex.DecodeString(strings.TrimSpace(aikSecret))
 }
 
+// Save method saves the changes in configuration file made by any of the setup tasks
 func Save() error {
 	file, err := os.OpenFile(configFilePath, os.O_CREATE|os.O_RDWR, 0)
 	defer file.Close()
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "config/config:Save() Unable to save into config file %s", configFilePath)
 	}
 	return yaml.NewEncoder(file).Encode(Configuration)
 }
@@ -133,6 +156,8 @@ func init() {
 // SaveConfiguration is used to save configurations that are provided in environment during setup tasks
 // This is called when setup tasks are called
 func SaveConfiguration(c csetup.Context) error {
+	log.Trace("config/config:SaveConfiguration() Entering")
+	defer log.Trace("config/config:SaveConfiguration() Leaving")
 	var err error
 
 	//clear the ConfigComplete flag and save the file. We will mark it complete on at the end.
@@ -141,7 +166,7 @@ func SaveConfiguration(c csetup.Context) error {
 	Configuration.ConfigComplete = false
 	err = Save()
 	if err != nil {
-		return fmt.Errorf("unable to save configuration file")
+		return errors.Wrap(err, "config/config:SaveConfiguration() unable to save configuration file")
 	}
 
 	// we are going to check and set the required configuration variables
@@ -189,23 +214,19 @@ func SaveConfiguration(c csetup.Context) error {
 			false,
 		},
 		{
-			consts.LogLevelEnvVar,
-			&Configuration.LogLevel,
-			"Log Level",
-			false,
-		},
-		{
 			consts.SkipFlavorSignatureVerification,
 			&Configuration.SkipFlavorSignatureVerification,
 			"Flavor Signature Verification Skip",
 			true,
 		},
-		{	consts.AAS_URL,
+		{
+			consts.AAS_URL,
 			&Configuration.Aas.BaseURL,
 			"AAS URL",
 			false,
 		},
-		{	consts.CMS_BASE_URL,
+		{
+			consts.CMS_BASE_URL,
 			&Configuration.Cms.BaseURL,
 			"CMS URL",
 			false,
@@ -216,38 +237,52 @@ func SaveConfiguration(c csetup.Context) error {
 		_, _, err = c.OverrideValueFromEnvVar(cv.Name, cv.ConfigVar, cv.Description, cv.EmptyOkay)
 		if err != nil {
 			requiredConfigsPresent = false
-			log.Errorf("environment variable %s required - but not set", cv.Name)
+			fmt.Fprintf(os.Stderr, "environment variable %s required - but not set", cv.Name)
+			fmt.Fprintln(os.Stderr, err)
 		}
 	}
-
+	ll, err := c.GetenvString(consts.LogLevelEnvVar, "Logging Level")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "No logging level specified, using default logging level: Error")
+		Configuration.LogLevel = logrus.ErrorLevel
+	}
+	Configuration.LogLevel, err = logrus.ParseLevel(ll)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Invalid logging level specified, using default logging level: Error")
+		Configuration.LogLevel = logrus.ErrorLevel
+	}
 	if requiredConfigsPresent {
 		Configuration.TrustAgent.AikPemFile = filepath.Join(Configuration.TrustAgent.ConfigDir, consts.TAAikPemFileName)
 		Configuration.ConfigComplete = true
 		return Save()
 	}
-	return fmt.Errorf("one or more required environment variables for setup not present. log file has details")
+	return errors.New("one or more required environment variables for setup not present. log file has details")
 }
 
 // LogConfiguration is used to save log configurations
-func LogConfiguration(logFilePath string) {
+func LogConfiguration(stdOut, logFile, dLogFile bool) {
 	// creating the log file if not preset
-	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		fmt.Printf("unable to write file on filehook %v\n", err)
-		return
-	}
-	// parse string, this is built-in feature of logrus
-	logLevel, err := log.ParseLevel(Configuration.LogLevel)
-	if err != nil {
-		logLevel = log.InfoLevel
-	}
-	// set global log level
-	log.SetLevel(logLevel)
+	var ioWriterDefault io.Writer
+	secLogFile, _ := os.OpenFile(consts.SecurityLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
+	defaultLogFile, _ := os.OpenFile(consts.DefaultLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
+	daemonLogFile, _ := os.OpenFile(consts.DaemonLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
 
-	// set formatting of logs
-	log.SetFormatter(&log.TextFormatter{FullTimestamp: true, TimestampFormat: time.RFC1123Z})
+	ioWriterDefault = defaultLogFile
+	if stdOut {
+		ioWriterDefault = os.Stdout
+	}
 
-	// print logs to std out and logfile
-	logWriter := io.Writer(logFile)
-	log.SetOutput(logWriter)
+	if stdOut && logFile {
+		ioWriterDefault = io.MultiWriter(os.Stdout, defaultLogFile)
+	}
+
+	if dLogFile {
+		ioWriterDefault = daemonLogFile
+	}
+	ioWriterSecurity := io.MultiWriter(ioWriterDefault, secLogFile)
+
+	cLogInt.SetLogger(cLog.DefaultLoggerName, Configuration.LogLevel, nil, ioWriterDefault, false)
+	cLogInt.SetLogger(cLog.SecurityLoggerName, Configuration.LogLevel, nil, ioWriterSecurity, false)
+	secLog.Trace("Security log initiated")
+	log.Trace("Loggers setup finished")
 }

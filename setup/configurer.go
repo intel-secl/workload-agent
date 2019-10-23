@@ -5,20 +5,27 @@
 package setup
 
 import (
-	"fmt"
+	cLog "intel/isecl/lib/common/log"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/wlagent/config"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/pkg/errors"
 )
 
 type Configurer struct {
 }
 
+var ErrMessageSetupIncomplete = errors.New("configuration is not complete - setup tasks can be completed only after configuration")
+
+var log = cLog.GetDefaultLogger()
+var secLog = cLog.GetSecurityLogger()
+
 func (cnfr Configurer) Run(c csetup.Context) error {
+	log.Trace("setup/configurer:Run() Entering")
+	defer log.Trace("setup/configurer:Run() Leaving")
 	// save configuration from config.yml
 	if cnfr.Validate(c) == nil {
-		log.Debug("Configuration is complete")
+		log.Debug("setup/configurer:Run() Configurer setup task is complete")
 		return nil
 	}
 
@@ -31,9 +38,11 @@ func (cnfr Configurer) Run(c csetup.Context) error {
 }
 
 func (cnfr Configurer) Validate(c csetup.Context) error {
+	log.Trace("setup/configurer:Validate() Entering")
+	defer log.Trace("setup/configurer:Validateun() Leaving")
 
 	if config.Configuration.ConfigComplete != true {
-		return fmt.Errorf("Configuration is not complete")
+		return errors.New("setup/configurer:Validate() Configuration is not complete")
 	}
 	return nil
 }

@@ -3,13 +3,18 @@ package clients
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
+	cLog "intel/isecl/lib/common/log"
 	"intel/isecl/wlagent/config"
 	"net/http"
 	"net/url"
 	"path"
+
+	"github.com/pkg/errors"
 )
+
+var log = cLog.GetDefaultLogger()
+var secLog = cLog.GetSecurityLogger()
 
 // Error is an error struct that contains error information thrown by the actual HVS
 type Error struct {
@@ -40,50 +45,55 @@ func (e Error) Error() string {
 
 // CertifyHostSigningKey sends a POST to /certify-host-signing-key to register signing key with HVS
 func CertifyHostSigningKey(key *RegisterKeyInfo) (*SigningKeyCert, error) {
+	log.Trace("clients/hvs_client:CertifyHostSigningKey() Entering")
+	defer log.Trace("clients/hvs_client:CertifyHostSigningKey() Leaving")
 	var keyCert SigningKeyCert
 
 	rsp, err := certifyHostKey(key, "/rpc/certify-host-signing-key", "signing")
 	if err != nil {
-		return nil, errors.New("error registering signing key with HVS. " + err.Error())
+		return nil, errors.Wrap(err, "clients/hvs_client.go:CertifyHostSigningKey()  error registering signing key with HVS")
 	}
 	err = json.Unmarshal(rsp, &keyCert)
 	if err != nil {
-		return nil, errors.New("error decoding signing key certificate. " + err.Error())
+		return nil, errors.Wrap(err, "clients/hvs_client.go:CertifyHostSigningKey() error decoding signing key certificate")
 	}
 	return &keyCert, nil
 }
 
 // CertifyHostBindingKey sends a POST to /certify-host-binding-key to register binding key with HVS
 func CertifyHostBindingKey(key *RegisterKeyInfo) (*BindingKeyCert, error) {
+	log.Trace("clients/hvs_client:CertifyHostBindingKey Entering")
+	defer log.Trace("clients/hvs_client:CertifyHostBindingKey Leaving")
 	var keyCert BindingKeyCert
 	rsp, err := certifyHostKey(key, "/rpc/certify-host-binding-key", "binding")
 	if err != nil {
-		return nil, errors.New("error registering binding key with HVS. " + err.Error())
+		return nil, errors.Wrap(err, "clients/hvs_client.go:CertifyHostBindingKey() error registering binding key with HVS")
 	}
 	err = json.Unmarshal(rsp, &keyCert)
 	if err != nil {
-		return nil, errors.New("error decoding binding key certificate. " + err.Error())
+		return nil, errors.Wrap(err, "clients/hvs_client.go:CertifyHostBindingKey() error decoding binding key certificate.")
 	}
 	return &keyCert, nil
 }
 
 func certifyHostKey(key *RegisterKeyInfo, endPoint string, keyUsage string) ([]byte, error) {
-
+	log.Trace("clients/hvs_client:certifyHostKey Entering")
+	defer log.Trace("clients/hvs_client:certifyHostKey Leaving")
 	kiJSON, err := json.Marshal(key)
 	if err != nil {
-		return nil, fmt.Errorf("error marshalling %s key. ", keyUsage)
+		return nil, errors.Wrapf(err, "clients/hvs_client.go:certifyHostKey() error marshalling %s key. ", keyUsage)
 	}
 
 	certifyKeyURL, err := url.Parse(config.Configuration.Mtwilson.APIURL)
 	if err != nil {
-		return nil, errors.New("error parsing base url. " + err.Error())
+		return nil, errors.Wrap(err, "clients/hvs_client.go:certifyHostKey() error parsing base url")
 	}
 
 	certifyKeyURL.Path = path.Join(certifyKeyURL.Path, endPoint)
 
 	req, err := http.NewRequest("POST", certifyKeyURL.String(), bytes.NewBuffer(kiJSON))
 	if err != nil {
-		return nil, errors.New(err.Error())
+		return nil, errors.Wrap(err, "clients/hvs_client.go:certifyHostKey() Failed to create request for certifying Binding/Signing Key")
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
@@ -91,7 +101,7 @@ func certifyHostKey(key *RegisterKeyInfo, endPoint string, keyUsage string) ([]b
 	rsp, err := SendRequest(req, false)
 
 	if rsp == nil {
-		return nil, &Error{Message: fmt.Sprintf("Failed to register host %s key with HVS . Error : %s", keyUsage, err.Error())}
+		return nil, &Error{Message: fmt.Sprintf("clients/hvs_client.go:certifyHostKey() Failed to register host %s key with HVS . Error : %s", keyUsage, err.Error())}
 	}
 	return rsp, nil
 

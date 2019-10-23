@@ -7,44 +7,49 @@ package common
 import (
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"intel/isecl/lib/common/crypt"
+	cLog "intel/isecl/lib/common/log"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
 	"os"
-	log "github.com/sirupsen/logrus"
+
+	"github.com/pkg/errors"
 )
 
 const secretKeyLength int = 20
 
+var log = cLog.GetDefaultLogger()
+var secLog = cLog.GetSecurityLogger()
+
 // tpmCertifiedKeySetup calls the TPM helper library to export a binding or signing keypair
 func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) {
-	log.Info("Creation of signing or binding key.")
+	log.Trace("common/key_creation:createKey() Entering")
+	defer log.Trace("common/key_creation:createKey() Leaving")
 	if usage != tpm.Binding && usage != tpm.Signing {
-		return nil, errors.New("incorrect KeyUsage parameter - needs to be signing or binding")
+		return nil, errors.New("common/key_creation:createKey()  Incorrect KeyUsage parameter - needs to be signing or binding")
 	}
 	secretbytes, err := crypt.GetRandomBytes(secretKeyLength)
 	if err != nil {
 		return nil, err
 	}
 	// get the aiksecret. This will return a byte array.
-	log.Debug("Getting aik secret from trusagent configuration.")
+	log.Debug("common/key_creation:createKey() Getting aik secret from trusagent configuration.")
 	aiksecret, err := config.GetAikSecret()
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("Calling CreateCertifiedKey of tpm library to create and certify signing or binding key.")
+	log.Debug("common/key_creation:createKey() Calling CreateCertifiedKey of tpm library to create and certify signing or binding key.")
 	tpmck, err = t.CreateCertifiedKey(usage, secretbytes, aiksecret)
 	if err != nil {
 		return nil, err
 	}
-	
-	switch (usage){
+
+	switch usage {
 	case tpm.Binding:
-		config.Configuration.BindingKeySecret  = hex.EncodeToString(secretbytes)
+		config.Configuration.BindingKeySecret = hex.EncodeToString(secretbytes)
 	case tpm.Signing:
-		config.Configuration.SigningKeySecret  = hex.EncodeToString(secretbytes)
+		config.Configuration.SigningKeySecret = hex.EncodeToString(secretbytes)
 	}
 
 	config.Save()
@@ -55,21 +60,23 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 //Todo: for now, this will always overwrite the file. Should be a parameter
 // that forces overwrite of file.
 func writeCertifiedKeyToDisk(tpmck *tpm.CertifiedKey, filepath string) error {
-	log.Debug("Writing certified signing or binding key to specified location on disk.")
+	log.Trace("common/key_creation:writeCertifiedKeyToDisk() Entering")
+	defer log.Trace("common/key_creation:writeCertifiedKeyToDisk() Leaving")
+
 	if tpmck == nil {
-		return errors.New("certifiedKey struct is empty")
+		return errors.New("common/key_creation:writeCertifiedKeyToDisk() certifiedKey struct is empty")
 	}
 
 	// Marshal the certified key to json
 	json, err := json.MarshalIndent(tpmck, "", "    ")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "common/key_creation:writeCertifiedKeyToDisk() Error while marshalling tpm certified key to json")
 	}
 
 	// create a file and write the json value to it and finally close it
 	f, err := os.Create(filepath)
 	if err != nil {
-		return errors.New("could not create file Error:" + err.Error())
+		return errors.New("common/key_creation:writeCertifiedKeyToDisk() Could not create file Error:" + err.Error())
 	}
 	f.WriteString(string(json))
 	f.WriteString("\n")
@@ -83,14 +90,17 @@ func writeCertifiedKeyToDisk(tpmck *tpm.CertifiedKey, filepath string) error {
 // that is obtained from the trust agent, a randomn secret and uses the TPM
 // to generate a keypair that is tied to the TPM
 func GenerateKey(usage tpm.Usage, t tpm.Tpm) error {
+	log.Trace("common/key_creation:GenerateKey() Entering")
+	defer log.Trace("common/key_creation:GenerateKey() Leaving")
+
 	if t == nil || (usage != tpm.Binding && usage != tpm.Signing) {
-		return errors.New("certified key or connection to TPM library failed")
+		return errors.New("common/key_creation:GenerateKey() Certified key or connection to TPM library failed")
 	}
 
 	// Create and certify the signing or binding key
 	certKey, err := createKey(usage, t)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "common/key_creation:GenerateKey() Error while creating binding/signing key")
 	}
 
 	// Get the name of signing or binding key files depending on input parameter
@@ -108,10 +118,10 @@ func GenerateKey(usage tpm.Usage, t tpm.Tpm) error {
 	// Writing certified key value to file path
 	err = writeCertifiedKeyToDisk(certKey, filepath)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "common/key_creation:GenerateKey() Error while writing key to the file %s", filepath)
 	}
 
-	log.Info("Key is stored at file path : ", filepath)
+	log.Info("common/key_creation:GenerateKey() Key is stored at file path : ", filepath)
 	return nil
 }
 
@@ -121,6 +131,9 @@ func GenerateKey(usage tpm.Usage, t tpm.Tpm) error {
 // For now, this only checks for the existence of the file and does not check if
 // contents of the file are indeed correct
 func ValidateKey(usage tpm.Usage) error {
+	log.Trace("common/key_creation:ValidateKey() Entering")
+	defer log.Trace("common/key_creation:ValidateKey() Leaving")
+
 	// Get the name of signing or binding key files depending on input parameter
 	var filename string
 	switch usage {
@@ -134,10 +147,10 @@ func ValidateKey(usage tpm.Usage) error {
 	filepath := consts.ConfigDirPath + filename
 	fi, err := os.Stat(filepath)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "common/key_creation:ValidateKey() Could not find file %s", filepath)
 	}
 	if fi == nil && !fi.Mode().IsRegular() {
-		return errors.New("key file path is incorrect")
+		return errors.New("common/key_creation:ValidateKey() Key file path is incorrect")
 	}
 	return nil
 }

@@ -5,14 +5,12 @@
 package setup
 
 import (
-	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
 
-
-	log "github.com/sirupsen/logrus"
+	"github.com/pkg/errors"
 )
 
 type SigningKey struct {
@@ -20,28 +18,34 @@ type SigningKey struct {
 }
 
 func (sk SigningKey) Run(c csetup.Context) error {
+	log.Trace("setup/create_signing_key:Run() Entering")
+	defer log.Trace("setup/create_signing_key:Run() Leaving")
+
 	if config.Configuration.ConfigComplete == false {
-		return fmt.Errorf("configuration is not complete - setup tasks can be completed only after configuration")
+		return ErrMessageSetupIncomplete
 	}
 	if sk.Validate(c) == nil {
-		log.Info("Signing key already created, skipping ...")
+		log.Info("setup/create_signing_key:Run() Signing key already created, skipping ...")
 		return nil
 	}
-	log.Info("Creating signing key.")
+	log.Info("setup/create_signing_key:Run() Creating signing key.")
 
 	err := common.GenerateKey(tpm.Signing, sk.T)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "setup/create_singing_key:Run() Error while generating tpm certified signing key")
 	}
 	return nil
 }
 
 func (sk SigningKey) Validate(c csetup.Context) error {
-	log.Info("Validation for signing key.")
+	log.Trace("setup/create_signing_key:Validate() Entering")
+	defer log.Trace("setup/create_signing_key:Validate() Leaving")
+
+	log.Info("setup/create_signing_key:Validate() Validation for signing key.")
 
 	err := common.ValidateKey(tpm.Signing)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "setup/create_singing_key:Validate() Error while validating signing key")
 	}
 
 	return nil

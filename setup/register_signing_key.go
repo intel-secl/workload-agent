@@ -5,8 +5,6 @@
 package setup
 
 import (
-	"errors"
-	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	hvsclient "intel/isecl/wlagent/clients"
 	"intel/isecl/wlagent/common"
@@ -14,53 +12,59 @@ import (
 	"intel/isecl/wlagent/consts"
 	"os"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/pkg/errors"
 )
 
 type RegisterSigningKey struct {
 }
 
 func (rs RegisterSigningKey) Run(c csetup.Context) error {
+	log.Trace("setup/register_signing_key:Run() Entering")
+	defer log.Trace("setup/register_signing_key:Run() Leaving")
 
 	if config.Configuration.ConfigComplete == false {
-		return fmt.Errorf("configuration is not complete - setup tasks can be completed only after configuration")
+		return ErrMessageSetupIncomplete
 	}
 
 	if rs.Validate(c) == nil {
-		log.Info("Signing key already registered. Skipping this setup task.")
+		log.Info("setup/register_signing_key:Run() Signing key already registered. Skipping this setup task.")
 		return nil
 	}
 
-	log.Info("Registering signing key with host verification service.")
+	log.Info("setup/register_signing_key:Run() Registering signing key with host verification service.")
 	signingKey, err := config.GetSigningKeyFromFile()
 	if err != nil {
-		return errors.New("error reading signing key from  file. " + err.Error())
+		return errors.Wrap(err, "setup/register_signing_key.go:Run() error reading signing key from  file ")
 	}
 
 	httpRequestBody, err := common.CreateRequest(signingKey)
 	if err != nil {
-		return errors.New("error registering signing key. " + err.Error())
+		return errors.Wrap(err, "setup/register_signing_key.go:Run() error registering signing key ")
 	}
 
 	registerKey, err := hvsclient.CertifyHostSigningKey(httpRequestBody)
 	if err != nil {
-		return errors.New("error while updating the KBS user with envelope public key. " + err.Error())
+		secLog.WithError(err).Error("setup/register_signing_key.go:Run() error while certify host signing key from hvs")
+		return errors.Wrap(err, "setup/register_signing_key.go:Run() error while certify host signing key from hvs")
 	}
 
 	err = common.WriteKeyCertToDisk(consts.ConfigDirPath+consts.SigningKeyPemFileName, registerKey.SigningKeyCertificate)
 	if err != nil {
-		return errors.New("error writing signing key certificate to file.")
+		return errors.New("setup/register_signing_key.go:Run() error writing signing key certificate to file")
 	}
 	return nil
 }
 
 // Validate checks whether or not the Register Signing Key task was completed successfully
 func (rs RegisterSigningKey) Validate(c csetup.Context) error {
-	log.Info("Validation for registering signing key.")
+	log.Trace("setup/register_signing_key:Validate() Entering")
+	defer log.Trace("setup/register_signing_key:Validate() Leaving")
+
+	log.Info("setup/register_signing_key:Validate() Validation for registering signing key.")
 	signingKeyCertPath := consts.ConfigDirPath + consts.SigningKeyPemFileName
 	_, err := os.Stat(signingKeyCertPath)
 	if os.IsNotExist(err) {
-		return errors.New("Signing key certificate file does not exist")
+		return errors.New("setup/register_signing_key.go:Validate() Signing key certificate file does not exist")
 	}
 	return nil
 }

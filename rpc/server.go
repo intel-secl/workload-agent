@@ -6,7 +6,8 @@ package rpc
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
+	cLog "intel/isecl/lib/common/log"
 	"intel/isecl/lib/common/pkg/instance"
 	flvr "intel/isecl/lib/flavor"
 	"intel/isecl/wlagent/filewatch"
@@ -14,6 +15,9 @@ import (
 	"intel/isecl/wlagent/util"
 	"intel/isecl/wlagent/wlavm"
 )
+
+var log = cLog.GetDefaultLogger()
+var secLog = cLog.GetSecurityLogger()
 
 // DomainXML is a struct containing domain XML as argument to allow invocation over RPC
 type DomainXML struct {
@@ -44,8 +48,20 @@ type VirtualMachine struct {
 	Watcher *filewatch.Watcher
 }
 
+type rpcError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e rpcError) Error() string {
+	return fmt.Sprintf("%d: %s", e.StatusCode, e.Message)
+}
+
 // Start forwards the RPC request to wlavm.Start
 func (vm *VirtualMachine) Start(args *DomainXML, reply *bool) error {
+	log.Trace("rpc/server:Start() Entering")
+	defer log.Trace("rpc/server:Start() Leaving")
+
 	// pass in vm.Watcher to get the instance to the File System Watcher
 	*reply = wlavm.Start(args.XML, vm.Watcher)
 	return nil
@@ -53,6 +69,9 @@ func (vm *VirtualMachine) Start(args *DomainXML, reply *bool) error {
 
 // Stop forwards the RPC request to wlavm.Stop
 func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
+	log.Trace("rpc/server:Stop() Entering")
+	defer log.Trace("rpc/server:Stop() Leaving")
+
 	// pass in vm.Watcher to get the instance to the File System Watcher
 	*reply = wlavm.Stop(args.XML, vm.Watcher)
 	return nil
@@ -60,26 +79,37 @@ func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
 
 // CreateInstanceTrustReport forwards the RPC request to wlavm.CreateImageTrustReport
 func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status *bool) error {
+	log.Trace("rpc/server:CreateInstanceTrustReport() Entering")
+	defer log.Trace("rpc/server:CreateInstanceTrustReport() Leaving")
+
 	var manifestJSON instance.Manifest
 	var imageFlavor flvr.SignedImageFlavor
-	json.Unmarshal([]byte(args.Manifest), &manifestJSON)
+	err := json.Unmarshal([]byte(args.Manifest), &manifestJSON)
+	if err != nil {
+		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while unmarshalling manifest", StatusCode: 1}
+	}
 	imageID := manifestJSON.InstanceInfo.ImageID
 	flavor, ok := flavor.Fetch(imageID, "CONTAINER_IMAGE")
 	if flavor == "" && !ok {
-		return errors.New("Error while retrieving flavor")
+		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while retrieving flavor", StatusCode: 1}
 	}
-	json.Unmarshal([]byte(flavor), &imageFlavor)
+	err = json.Unmarshal([]byte(flavor), &imageFlavor)
+	if err != nil {
+		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while unmarshalling flavor", StatusCode: 1}
+	}
 	//adding integrity enforced value from flavor to that of manifest
 	manifestJSON.ImageIntegrityEnforced = imageFlavor.ImageFlavor.IntegrityEnforced
 	reportCreated := wlavm.CreateInstanceTrustReport(manifestJSON, imageFlavor)
 	if !reportCreated {
-		return errors.New("Error while creating trust report")
+		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while creating trust report", StatusCode: 1}
 	}
 	return nil
 }
 
 // FetchFlavor forwards the RPC request to flavor.Fetch
 func (vm *VirtualMachine) FetchFlavor(args *FlavorInfo, outFlavor *flavor.OutFlavor) error {
+	log.Trace("rpc/server:FetchFlavor() Entering")
+	defer log.Trace("rpc/server:FetchFlavor() Leaving")
 
 	imageFlavor, returnCode := flavor.Fetch(args.ImageID, args.FlavorPart)
 	var o = flavor.OutFlavor{
@@ -93,11 +123,13 @@ func (vm *VirtualMachine) FetchFlavor(args *FlavorInfo, outFlavor *flavor.OutFla
 
 // FetchKey forwards the RPC request to flavor.RetrieveKey
 func (vm *VirtualMachine) FetchKey(args *KeyInfo, outKeyInfo *KeyInfo) error {
+	log.Trace("rpc/server:FetchKey() Entering")
+	defer log.Trace("rpc/server:FetchKey() Leaving")
 
 	wrappedKey, returnCode := flavor.RetrieveKey(args.KeyID, args.ImageID)
 	key, err := util.UnwrapKey(wrappedKey)
 	if err != nil {
-		return errors.New("Error while unwrapping the key")
+		return &rpcError{Message: "rpc/server:FetchKey() error while unwrapping the key", StatusCode: 1}
 	}
 	var k = KeyInfo{
 		KeyID:      args.KeyID,

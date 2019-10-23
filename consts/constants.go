@@ -30,9 +30,10 @@ const (
 	EnvFileName                                 = "workload-agent.env"
 	DevMapperDirPath                            = "/dev/mapper/"
 	MountPath                                   = "/mnt/workload-agent/crypto/"
-	LogFileName                                 = "workload-agent.log"
 	LogDirPath                                  = "/var/log/workload-agent/"
-	DaemonLogFileName                           = "daemon.log"
+	SecurityLogFile				    = LogDirPath + "workload-agent-security.log"
+        DefaultLogFile				    = LogDirPath + "workload-agent.log"
+	DaemonLogFile				    = LogDirPath + "daemon.log"
 	ConfigFileName                              = "config.yml"
 	ConfigDirPath                               = "/etc/workload-agent/"
 	FlavorSigningCertPath                       = ConfigDirPath + "flavor-signing-cert.pem" //Manually copy Flavor Signing Certificate from WPM to WLA

@@ -1,5 +1,5 @@
 #!/bin/bash
-
+echo "Removing container security components"
 #Copy all the vanilla docker daemon binaries from backup to /usr/bin/ and reconfigure the docker.service file to support vanilla docker
 systemctl stop docker.service
 systemctl stop secure-docker-plugin.service

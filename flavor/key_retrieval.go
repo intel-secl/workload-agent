@@ -8,13 +8,13 @@ package flavor
 import (
 	pinfo "intel/isecl/lib/platform-info/platforminfo"
 	wlsclient "intel/isecl/wlagent/clients"
-	log "github.com/sirupsen/logrus"
 )
 
 // RetrieveKey retrieves an Image decryption key
 // It uses the hardwareUUID that is fetched from the the Platform Info library
 func RetrieveKey(keyID, imageUUID string) ([]byte, bool) {
-
+	log.Trace("flavor/key_retrieval:RetrieveKey Entering")
+	defer log.Trace("flavor/key_retrieval:RetrieveKey Leaving")
 	//check if the key is cached by filtercriteria imageUUID
 	var err error
 	var flavorKeyInfo wlsclient.FlavorKey
@@ -30,7 +30,8 @@ func RetrieveKey(keyID, imageUUID string) ([]byte, bool) {
 	log.Debug("Retrieving host hardware UUID...")
 	hardwareUUID, err := pinfo.HardwareUUID()
 	if err != nil {
-		log.Error("Unable to get the host hardware UUID")
+		log.Error("flavor/key_retrieval.go:RetrieveKey() unable to get the host hardware UUID")
+		log.Tracef("%+v", err)
 		return nil, false
 	}
 	log.Debugf("The host hardware UUID is :%s", hardwareUUID)
@@ -39,7 +40,8 @@ func RetrieveKey(keyID, imageUUID string) ([]byte, bool) {
 	log.Infof("Retrieving image-flavor-key for image %s from WLS", imageUUID)
 	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID)
 	if err != nil {
-		log.Errorf("Error retrieving the image flavor and key: %s", err.Error())
+		log.Errorf("flavor/key_retrieval.go:RetrieveKey() error retrieving the image flavor and key: %s", err.Error())
+		log.Tracef("%+v", err)
 		return nil, false
 	}
 
