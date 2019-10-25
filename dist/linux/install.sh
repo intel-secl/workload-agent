@@ -212,7 +212,7 @@ fi
 directory_layout() {
 export WORKLOAD_AGENT_CONFIGURATION=/etc/workload-agent
 export WORKLOAD_AGENT_CA=$WORKLOAD_AGENT_CONFIGURATION/certs/trustedca
-export WORKLOAD_AGENT_TOKENSIGN=$WORKLOAD_AGENT_CONFIGURATION/certs/tokensign
+export WORKLOAD_AGENT_FLAVORSIGN=$WORKLOAD_AGENT_CONFIGURATION/certs/flavorsign
 export WORKLOAD_AGENT_JWT_CERT=$WORKLOAD_AGENT_CONFIGURATION/certs/trustedjwt
 export WORKLOAD_AGENT_LOGS=/var/log/workload-agent
 export WORKLOAD_AGENT_HOME=/opt/workload-agent
@@ -237,7 +237,7 @@ fi
 echo "Installing workload agent..." >> $logfile
 
 # Create application directories (chown will be repeated near end of this script, after setup)
-for directory in $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_CA $WORKLOAD_AGENT_BIN $WORKLOAD_AGENT_LOGS $WORKLOAD_AGENT_TOKENSIGN $WORKLOAD_AGENT_JWT_CERT; do
+for directory in $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_CA $WORKLOAD_AGENT_BIN $WORKLOAD_AGENT_LOGS $WORKLOAD_AGENT_FLAVORSIGN $WORKLOAD_AGENT_JWT_CERT; do
   # mkdir -p will return 0 if directory exists or is a symlink to an existing directory or directory and parents can be created
   mkdir -p $directory 
   if [ $? -ne 0 ]; then

@@ -403,7 +403,8 @@ func CreateInstanceTrustReport(manifest instance.Manifest, flavor flvr.SignedIma
 	defer log.Trace("wlavm/start:CreateInstanceTrustReport() Leaving")
 
 	//create VM trust report
-	instanceTrustReport, err := verifier.Verify(&manifest, &flavor, consts.FlavorSigningCertPath, config.Configuration.SkipFlavorSignatureVerification)
+	log.Info("wlavm/start:CreateInstanceTrustReport() Creating image trust report")
+	instanceTrustReport, err := verifier.Verify(&manifest, &flavor, consts.FlavorSigningCertDir, consts.TrustedCaCertsDir, config.Configuration.SkipFlavorSignatureVerification)
 	if err != nil {
 		log.WithError(err).Error("wlavm/start.go:CreateInstanceTrustReport() Error creating image trust report")
 		log.Tracef("%+v", err)

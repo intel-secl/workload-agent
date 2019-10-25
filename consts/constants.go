@@ -52,9 +52,7 @@ const (
 	WLABinFilePath                              = "/usr/local/bin/wlagent"
 	AIKPemFileName                              = "aik.pem"
 	TrustedCaCertsDir                           = ConfigDirPath + "certs/trustedca/"
-	TokenSignKeysAndCertDir                     = ConfigDirPath + "certs/tokensign/"
-	TokenSignKeyFile                            = TokenSignKeysAndCertDir + "jwt.key"
-	TokenSignCertFile                           = TokenSignKeysAndCertDir + "jwtsigncert.pem"
+	FlavorSigningCertDir                        = ConfigDirPath + "certs/flavorsign/"
 	TrustedJWTSigningCertsDir                   = ConfigDirPath + "certs/trustedjwt/"
 
 	AAS_URL      = "AAS_API_URL"
