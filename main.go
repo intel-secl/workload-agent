@@ -22,7 +22,7 @@ import (
 	"net/rpc"
 	"os"
 	"strings"
-
+	"time"
 	"intel/isecl/lib/clients"
 	"intel/isecl/lib/clients/aas"
 )
@@ -505,7 +505,11 @@ func runservice() {
 		os.Exit(1)
 	}
 	defer fileWatcher.Close()
-	proc.AddTask()
+	// Passing the false parameter to ensure that fileWatcher task is not added to the wait group if there is pending signal termination
+	_, err = proc.AddTask(false)
+	if err != nil{
+		log.WithError(err).Fatal("main:runservice() could not add the task for filewatcher")
+	}
 	go func() {
 		defer proc.TaskDone()
 		for {
@@ -513,13 +517,17 @@ func runservice() {
 		}
 	}()
 
-	if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
+	if _, err = os.Stat(consts.RunDirPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
 			log.WithError(err).Fatalf("main:runservice() Could not create directory: %s, err: %s", consts.RunDirPath, err)
 		}
 	}
 
-	proc.AddTask()
+	// Passing the false parameter to ensure that fileWatcher task is not added to the wait group if there is pending signal termination
+	_, err = proc.AddTask(false)
+	if err != nil{
+                log.WithError(err).Fatal("main:runservice() could not add the task for rpc service")
+        }
 	go func() {
 		defer proc.TaskDone()
 		for {
@@ -549,5 +557,5 @@ func runservice() {
 		}
 	}()
 	// block until stop channel receives
-	proc.WaitForQuitAndSignalTasks()
+	proc.WaitForQuitAndCleanup(10 * time.Second)
 }

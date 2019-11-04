@@ -8,12 +8,14 @@ import (
 	"encoding/json"
 	"fmt"
 	cLog "intel/isecl/lib/common/log"
+	"intel/isecl/lib/common/proc"
 	"intel/isecl/lib/common/pkg/instance"
 	flvr "intel/isecl/lib/flavor"
 	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/flavor"
 	"intel/isecl/wlagent/util"
 	"intel/isecl/wlagent/wlavm"
+	"github.com/pkg/errors"
 )
 
 var log = cLog.GetDefaultLogger()
@@ -59,6 +61,12 @@ func (e rpcError) Error() string {
 
 // Start forwards the RPC request to wlavm.Start
 func (vm *VirtualMachine) Start(args *DomainXML, reply *bool) error {
+	// Passing the false parameter to ensure the start vm task is not added waitgroup if there is pending signal termination on rpc
+	_, err := proc.AddTask(false)
+	if err != nil{
+		errors.Wrap(err, "rpc/server:Start() Could not add task for vm start")
+	}
+	defer proc.TaskDone()
 	log.Trace("rpc/server:Start() Entering")
 	defer log.Trace("rpc/server:Start() Leaving")
 
@@ -69,6 +77,14 @@ func (vm *VirtualMachine) Start(args *DomainXML, reply *bool) error {
 
 // Stop forwards the RPC request to wlavm.Stop
 func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
+	// Passing the true parameter to ensure the stop vm task is added to waitgroup as this action needs to be completed 
+	// even if there is pending signal termination on rpc
+	_, err := proc.AddTask(true)
+        if err != nil{
+                errors.Wrap(err, "rpc/server:Stop() Could not add task for vm stop")
+        }
+        defer proc.TaskDone()
+
 	log.Trace("rpc/server:Stop() Entering")
 	defer log.Trace("rpc/server:Stop() Leaving")
 
@@ -79,12 +95,20 @@ func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
 
 // CreateInstanceTrustReport forwards the RPC request to wlavm.CreateImageTrustReport
 func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status *bool) error {
+	// Passing the true parameter to ensure that CreateInstanceTrustReport task is added to the waitgroup, as this action needs to be completed
+        // even if there is pending signal termination on rpc 
+        _, err := proc.AddTask(true)
+        if err != nil{
+                errors.Wrap(err, "rpc/server:CreateInstanceTrustReport() Could not add task for CreateInstanceTrustReport")
+        }
+        defer proc.TaskDone()
+
 	log.Trace("rpc/server:CreateInstanceTrustReport() Entering")
 	defer log.Trace("rpc/server:CreateInstanceTrustReport() Leaving")
 
 	var manifestJSON instance.Manifest
 	var imageFlavor flvr.SignedImageFlavor
-	err := json.Unmarshal([]byte(args.Manifest), &manifestJSON)
+	err = json.Unmarshal([]byte(args.Manifest), &manifestJSON)
 	if err != nil {
 		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while unmarshalling manifest", StatusCode: 1}
 	}
@@ -108,6 +132,13 @@ func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status
 
 // FetchFlavor forwards the RPC request to flavor.Fetch
 func (vm *VirtualMachine) FetchFlavor(args *FlavorInfo, outFlavor *flavor.OutFlavor) error {
+	// Passing the false parameter to ensure that FetchFlavor task is not added to the wait group if there is pending signal termination on rpc
+	_, err := proc.AddTask(false)
+        if err != nil{
+                errors.Wrap(err, "rpc/server:CreateInstanceTrustReport() Could not add task for FetchFlavor")
+        }
+        defer proc.TaskDone()
+
 	log.Trace("rpc/server:FetchFlavor() Entering")
 	defer log.Trace("rpc/server:FetchFlavor() Leaving")
 
@@ -123,6 +154,14 @@ func (vm *VirtualMachine) FetchFlavor(args *FlavorInfo, outFlavor *flavor.OutFla
 
 // FetchKey forwards the RPC request to flavor.RetrieveKey
 func (vm *VirtualMachine) FetchKey(args *KeyInfo, outKeyInfo *KeyInfo) error {
+	// Passing the true parameter to ensure that FetchKey is added to the waitgroup  as this action needs to be completed
+        // even if there is pending signal termination on rpc
+
+	_, err := proc.AddTask(true)
+        if err != nil{
+                errors.Wrap(err, "rpc/server:CreateInstanceTrustReport() Could not add task for FetchKey")
+        }
+        defer proc.TaskDone()
 	log.Trace("rpc/server:FetchKey() Entering")
 	defer log.Trace("rpc/server:FetchKey() Leaving")
 
