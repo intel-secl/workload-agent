@@ -472,7 +472,7 @@ func stop() {
 	log.Trace("main:stop() Entering")
 	defer log.Trace("main:stop() Leaving")
 
-	cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStopCmd, 5)
+	cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStopCmd, 12)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Could not stop Workload Agent Service")
 		fmt.Fprintln(os.Stderr, "Error : ", err)
@@ -486,7 +486,7 @@ func removeservice() {
 	log.Trace("main:removeservice() Entering")
 	defer log.Trace("main:removeservice() Leaving")
 
-	_, _, err := exec.RunCommandWithTimeout(consts.ServiceRemoveCmd, 5)
+	_, _, err := exec.RunCommandWithTimeout(consts.ServiceRemoveCmd, 12)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Could not remove Workload Agent Service")
 		fmt.Fprintln(os.Stderr, "Error : ", err)
