@@ -27,7 +27,7 @@ import (
 var Configuration struct {
 	BindingKeySecret string
 	SigningKeySecret string
-
+	CmsTlsCertDigest string
 	Mtwilson struct {
 		APIURL string
 	}
@@ -177,6 +177,12 @@ func SaveConfiguration(c csetup.Context) error {
 	requiredConfigsPresent := true
 
 	requiredConfigs := [...]csetup.EnvVars{
+		{
+			consts.CmsTlsCertDigestEnv,
+			&Configuration.CmsTlsCertDigest,
+			"CMS TLS Cert SHA384 digest",
+			false,
+		},
 		{
 			consts.MTWILSON_API_URL,
 			&Configuration.Mtwilson.APIURL,

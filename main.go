@@ -6,6 +6,8 @@ package main
 
 import (
 	"fmt"
+	"intel/isecl/lib/clients"
+	"intel/isecl/lib/clients/aas"
 	"intel/isecl/lib/common/exec"
 	cLog "intel/isecl/lib/common/log"
 	"intel/isecl/lib/common/proc"
@@ -23,8 +25,6 @@ import (
 	"os"
 	"strings"
 	"time"
-	"intel/isecl/lib/clients"
-	"intel/isecl/lib/clients/aas"
 )
 
 var (
@@ -120,10 +120,11 @@ func main() {
 		setupRunner := &csetup.Runner{
 			Tasks: []csetup.Task{
 				csetup.Download_Ca_Cert{
-					Flags:         flags,
-					CmsBaseURL:    config.Configuration.Cms.BaseURL,
-					CaCertDirPath: consts.TrustedCaCertsDir,
-					ConsoleWriter: os.Stdout,
+					Flags:                flags,
+					CmsBaseURL:           config.Configuration.Cms.BaseURL,
+					CaCertDirPath:        consts.TrustedCaCertsDir,
+					TrustedTlsCertDigest: config.Configuration.CmsTlsCertDigest,
+					ConsoleWriter:        os.Stdout,
 				},
 				setup.SigningKey{
 					T: t,

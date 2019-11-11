@@ -54,7 +54,7 @@ const (
 	TrustedCaCertsDir                           = ConfigDirPath + "certs/trustedca/"
 	FlavorSigningCertDir                        = ConfigDirPath + "certs/flavorsign/"
 	TrustedJWTSigningCertsDir                   = ConfigDirPath + "certs/trustedjwt/"
-
+	CmsTlsCertDigestEnv                         = "CMS_TLS_CERT_SHA384"
 	AAS_URL      = "AAS_API_URL"
 	CMS_BASE_URL = "CMS_BASE_URL"
 )
