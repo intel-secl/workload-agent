@@ -74,12 +74,20 @@ var vmStartTpm tpm.Tpm
 func GetTpmInstance() (tpm.Tpm, error) {
 	log.Trace("util/util:GetTpmInstance() Entering")
 	defer log.Trace("util/util:GetTpmInstance() Leaving")
-
-	if vmStartTpm == nil {
-		log.Debug("util/util:GetTpmInstance() Opening a new connection to the tpm")
-		return tpm.Open()
+	if vmStartTpm != nil {
+		log.Debug("util/util:GetTpmInstance() Returning an existing connection to the tpm")
+		return vmStartTpm, nil
 	}
-	return vmStartTpm, nil
+	return nil, errors.New("util/util:GetTpmInstance() Connection to TPM does not exist")
+}
+
+func GetNewTpmInstance() (tpm.Tpm, error){
+	log.Trace("util/util:GetNewTpmInstance() Entering")
+	defer log.Trace("util/util:GetNewTpmInstance() Leaving")
+	var err error
+	log.Debug("util/util:GetTpmInstance() Opening a new connection to the tpm")
+	vmStartTpm, err = tpm.Open()
+	return vmStartTpm, err
 }
 
 // CloseTpmInstance method is used to close an instance of TPM

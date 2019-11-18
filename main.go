@@ -20,6 +20,7 @@ import (
 	"intel/isecl/wlagent/flavor"
 	wlrpc "intel/isecl/wlagent/rpc"
 	"intel/isecl/wlagent/setup"
+	"intel/isecl/wlagent/util"
 	"net"
 	"net/rpc"
 	"os"
@@ -480,6 +481,7 @@ func stop() {
 		os.Exit(1)
 	}
 	fmt.Println(cmdOutput)
+	util.CloseTpmInstance()
 	fmt.Println("Workload Agent Service Stopped...")
 }
 
@@ -500,6 +502,13 @@ func runservice() {
 	defer log.Trace("main:runservice() Leaving")
 	// Save log configurations
 	//TODO : daemon log configuration - does it need to be passed in?
+
+	// open a connection to TPM
+	_, err := util.GetNewTpmInstance()
+	if err != nil {
+		log.WithError(err).Error("main:runservice() Could not open a new connection to the TPM")
+		os.Exit(1)
+	}
 
 	fileWatcher, err := filewatch.NewWatcher()
 	if err != nil {
