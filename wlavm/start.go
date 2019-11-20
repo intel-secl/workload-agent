@@ -112,10 +112,6 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 			return false
 		}
 		log.Info("wlavm/start:Start() Image is encrypted")
-		// defer the CloseTpmInstance() to take care of closing the Tpm connection
-		// Todo: ISECL-3352 remove when TPM vm is managed by daemon start and stop
-
-		defer util.CloseTpmInstance()
 	}
 
 	var flavorKeyInfo wlsclient.FlavorKey
