@@ -9,9 +9,6 @@ import "crypto"
 // Define constants to be accessed in other packages
 const (
 	MTWILSON_API_URL                            = "MTWILSON_API_URL"
-	MTWILSON_API_USERNAME                       = "MTWILSON_API_USERNAME"
-	MTWILSON_API_PASSWORD                       = "MTWILSON_API_PASSWORD"
-	MTWILSON_TLS_SHA384                         = "MTWILSON_TLS_CERT_SHA384"
 	WLS_API_URL                                 = "WLS_API_URL"
 	WLA_USERNAME                                = "WLA_USERNAME"
 	WLA_PASSWORD                                = "WLA_PASSWORD"
