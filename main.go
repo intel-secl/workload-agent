@@ -305,43 +305,6 @@ func main() {
 			os.Exit(0)
 		}
 
-	case "fetch-key":
-		if len(args[1:]) < 1 {
-			log.Error("main:main() fetch-key: Invalid number of parameters")
-			os.Exit(1)
-		}
-		conn, err := net.Dial("unix", rpcSocketFilePath)
-		if err != nil {
-			log.Error("main:main() fetch-key:  failed to dial wlagent.sock, is wlagent running?")
-			os.Exit(1)
-		}
-
-		// validate key id given as input
-		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			secLog.Error("main:main() fetch-key: Invalid KeyID format")
-			os.Exit(1)
-		}
-
-		client := rpc.NewClient(conn)
-		var outKey wlrpc.KeyInfo
-		var args = wlrpc.KeyInfo{
-			KeyID:   args[1],
-			ImageID: args[2],
-		}
-
-		err = client.Call("VirtualMachine.FetchKey", &args, &outKey)
-		if err != nil {
-			log.Error("main:main() fetch-key: Client call failed")
-			log.Tracef("%+v", err)
-			os.Exit(1)
-		}
-		if !outKey.ReturnCode {
-			os.Exit(1)
-		} else {
-			fmt.Println(outKey.Key)
-			os.Exit(0)
-		}
-
 	case "cache-key":
 		if len(args[1:]) < 2 {
 			log.Error("main:main() cache-key: Invalid number of parameters")

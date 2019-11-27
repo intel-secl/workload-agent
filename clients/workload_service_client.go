@@ -89,7 +89,7 @@ func GetImageFlavor(imageID, flavorPart string) (flavor.SignedImageFlavor, error
 
 	httpResponse, err := SendRequest(httpRequest, true)
 	if err != nil {
-		secLog.WithError(err).Error("client/workload_service_client:PostVMReport() Error in response from WLS GetImageFlavor API")
+		secLog.WithError(err).Error("client/workload_service_client:GetImageFlavor() Error in response from WLS GetImageFlavor API")
 		return flavor, errors.Wrap(err, "client/workload_service_client:GetImageFlavor() Error in response from WLS GetImageFlavor API")
 	}
 
