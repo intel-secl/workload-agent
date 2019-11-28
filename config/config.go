@@ -198,13 +198,13 @@ func SaveConfiguration(c csetup.Context) error {
 		{
 			consts.WLA_USERNAME,
 			&Configuration.Wla.APIUsername,
-			"Workload Service API Username",
+			"Workload Agent Service Username",
 			false,
 		},
 		{
 			consts.WLA_PASSWORD,
 			&Configuration.Wla.APIPassword,
-			"Workload Service API Password",
+			"Workload Agent Service Password",
 			false,
 		},
 		{
