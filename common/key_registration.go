@@ -9,11 +9,11 @@ import (
 	"encoding/json"
 	"encoding/pem"
 
-	exec "intel/isecl/lib/common/exec"
 
 	tpm "intel/isecl/lib/tpm"
 	hvsclient "intel/isecl/wlagent/clients"
 	"intel/isecl/wlagent/consts"
+	"intel/isecl/wlagent/config"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -37,12 +37,6 @@ func CreateRequest(key []byte) (*hvsclient.RegisterKeyInfo, error) {
 		return httpRequestBody, errors.Wrap(err, "common/key_registration:CreateRequest() Error while unmarshalling tpm Certified Key")
 	}
 
-	//get trustagent aik cert location
-	//TODO Vinil
-	aikCertName, err := exec.MkDirFilePathFromEnvVariable(consts.TAConfigDirEnvVar, "aik.pem", true)
-	if err != nil {
-		return httpRequestBody, errors.Wrap(err, "common/key_registration:CreateRequest() Could not get the aik.pem from trustagent configuration directory")
-	}
 	//set tpm version
 	//TODO Vinil
 	if keyInfo.Version == 2 {
@@ -51,7 +45,7 @@ func CreateRequest(key []byte) (*hvsclient.RegisterKeyInfo, error) {
 		tpmVersion = "1.2"
 	}
 
-	aikCert, err := ioutil.ReadFile(aikCertName)
+	aikCert, err := ioutil.ReadFile(config.Configuration.TrustAgent.AikPemFile)
 	if err != nil {
 		return httpRequestBody, errors.Wrap(err, "common/key_registration:CreateRequest() Error reading certificate file. ")
 	}
