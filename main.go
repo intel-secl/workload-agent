@@ -411,7 +411,7 @@ func removeSecureDockerDaemon() {
 func deleteFile(path string) {
 	log.Trace("main/main:deleteFile() Entering")
 	defer log.Trace("main/main:deleteFile() Leaving")
-	log.Info("Deleting : ", path)
+	fmt.Println("Deleting : ", path)
 	// delete file
 	var err = os.RemoveAll(path)
 	if err != nil {

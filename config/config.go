@@ -53,6 +53,7 @@ var Configuration struct {
 	SkipFlavorSignatureVerification bool
 	LogLevel                        logrus.Level
 	ConfigComplete                  bool
+	LogEntryMaxLength               int
 }
 
 var (
@@ -247,16 +248,26 @@ func SaveConfiguration(c csetup.Context) error {
 			fmt.Fprintln(os.Stderr, err)
 		}
 	}
+
 	ll, err := c.GetenvString(consts.LogLevelEnvVar, "Logging Level")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "No logging level specified, using default logging level: Error")
-		Configuration.LogLevel = logrus.ErrorLevel
+		fmt.Println("No logging level specified, using default logging level: Info")
+		Configuration.LogLevel = logrus.InfoLevel
 	}
 	Configuration.LogLevel, err = logrus.ParseLevel(ll)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Invalid logging level specified, using default logging level: Error")
-		Configuration.LogLevel = logrus.ErrorLevel
+		fmt.Fprintln(os.Stderr, "Invalid logging level specified, using default logging level: Info")
+		Configuration.LogLevel = logrus.InfoLevel
 	}
+
+	logEntryMaxLength, err := c.GetenvInt(consts.LogEntryMaxlengthEnv, "Maximum length of each entry in a log")
+	if err == nil && logEntryMaxLength >= 100{
+		Configuration.LogEntryMaxLength = logEntryMaxLength
+	} else {
+		fmt.Println("Invalid Log Entry Max Length defined (should be > 100), using default value:", consts.DefaultLogEntryMaxlength)
+		Configuration.LogEntryMaxLength = consts.DefaultLogEntryMaxlength
+	}
+
 	if requiredConfigsPresent {
 		Configuration.TrustAgent.AikPemFile = filepath.Join(Configuration.TrustAgent.ConfigDir, consts.TAAikPemFileName)
 		Configuration.ConfigComplete = true
@@ -287,8 +298,8 @@ func LogConfiguration(stdOut, logFile, dLogFile bool) {
 	}
 	ioWriterSecurity := io.MultiWriter(ioWriterDefault, secLogFile)
 
-	cLogInt.SetLogger(cLog.DefaultLoggerName, Configuration.LogLevel, nil, ioWriterDefault, false)
-	cLogInt.SetLogger(cLog.SecurityLoggerName, Configuration.LogLevel, nil, ioWriterSecurity, false)
+	cLogInt.SetLogger(cLog.DefaultLoggerName, Configuration.LogLevel, &cLog.LogFormatter{MaxLength: Configuration.LogEntryMaxLength}, ioWriterDefault, false)
+	cLogInt.SetLogger(cLog.SecurityLoggerName, Configuration.LogLevel, &cLog.LogFormatter{MaxLength: Configuration.LogEntryMaxLength}, ioWriterSecurity, false)
 	secLog.Trace("Security log initiated")
 	log.Trace("Loggers setup finished")
 }

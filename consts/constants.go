@@ -13,6 +13,8 @@ const (
 	WLA_USERNAME                                = "WLA_SERVICE_USERNAME"
 	WLA_PASSWORD                                = "WLA_SERVICE_PASSWORD"
 	LogLevelEnvVar                              = "LOG_LEVEL"
+	LogEntryMaxlengthEnv                        = "LOG_ENTRY_MAXLENGTH"
+	DefaultLogEntryMaxlength      	            = 300
 	SkipFlavorSignatureVerification             = "SKIP_FLAVOR_SIGNATURE_VERIFICATION"
 	AikSecretKeyName                            = "aik.secret"
 	TAConfigDirEnvVar                           = "TRUSTAGENT_CONFIGURATION"
