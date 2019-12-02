@@ -6,6 +6,7 @@ package setup
 
 import (
 	csetup "intel/isecl/lib/common/setup"
+	cLog "intel/isecl/lib/common/log"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
@@ -16,6 +17,10 @@ import (
 type BindingKey struct {
 	T tpm.Tpm
 }
+
+var log = cLog.GetDefaultLogger()
+var secLog = cLog.GetSecurityLogger()
+var ErrMessageSetupIncomplete = errors.New("configuration is not complete - setup tasks can be completed only after configuration")
 
 func (bk BindingKey) Run(c csetup.Context) error {
 	log.Trace("setup/create_binding_key:Run() Entering")

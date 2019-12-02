@@ -66,7 +66,7 @@ func main() {
 	log.Trace("main:main() Entering")
 	defer log.Trace("main:main() Leaving")
 	// Save log configurations
-
+	var context csetup.Context
 	inputValArr := []string{os.Args[0]}
 	if valErr := validation.ValidateStrings(inputValArr); valErr != nil {
 		fmt.Fprintln(os.Stderr, "Invalid string format")
@@ -94,18 +94,13 @@ func main() {
 		// TODO : The right way to address this is to pass the arguments from the commandline
 		// to a functon in the workload agent setup package and have it build a slice of tasks
 		// to run.
-		installRunner := &csetup.Runner{
-			Tasks: []csetup.Task{
-				setup.Configurer{},
-			},
-			AskInput: false,
-		}
-		err := installRunner.RunTasks("Configurer")
+		config.LogConfiguration(false, true, false)
+		err := config.SaveConfiguration(context)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "main:main() Error running setup: ", err)
+			fmt.Fprintln(os.Stderr, "main:main() Unable to save configuration in config.yml ")
+			log.WithError(err).Error("main:main() Unable to save configuration in config.yml")
 			os.Exit(1)
 		}
-		config.LogConfiguration(false, true, false)
 		// Workaround for tpm2-abrmd bug in RHEL 7.5
 		t, err := tpm.Open()
 		if err != nil {

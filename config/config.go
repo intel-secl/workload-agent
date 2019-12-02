@@ -136,10 +136,21 @@ func GetAikSecret() ([]byte, error) {
 
 // Save method saves the changes in configuration file made by any of the setup tasks
 func Save() error {
-	file, err := os.OpenFile(configFilePath, os.O_CREATE|os.O_RDWR, 0)
+	file, err := os.OpenFile(configFilePath, os.O_RDWR, 0)
 	defer file.Close()
 	if err != nil {
-		return errors.Wrapf(err, "config/config:Save() Unable to save into config file %s", configFilePath)
+		// we have an error
+		if os.IsNotExist(err) {
+			// error is that the config doesnt yet exist, create it
+			log.Debug("config/config:Save() File does not exist, creating a file... ")
+			file, err = os.Create(configFilePath)
+			if err != nil {
+				return errors.Wrap(err, "config/config:Save() Error in file creation")
+			}
+		} else {
+			// someother I/O related error
+			return errors.Wrap(err, "config/config:Save() I/O related error")
+		}
 	}
 	return yaml.NewEncoder(file).Encode(Configuration)
 }
@@ -251,20 +262,25 @@ func SaveConfiguration(c csetup.Context) error {
 
 	ll, err := c.GetenvString(consts.LogLevelEnvVar, "Logging Level")
 	if err != nil {
-		fmt.Println("No logging level specified, using default logging level: Info")
+		log.Info("No logging level specified, using default logging level: Info")
 		Configuration.LogLevel = logrus.InfoLevel
-	}
-	Configuration.LogLevel, err = logrus.ParseLevel(ll)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Invalid logging level specified, using default logging level: Info")
-		Configuration.LogLevel = logrus.InfoLevel
+	} else if Configuration.LogLevel != 0 {
+		log.Info("No change in logging level")
+	} else {
+		Configuration.LogLevel, err = logrus.ParseLevel(ll)
+		if err != nil {
+			log.Info("Invalid logging level specified, using default logging level: Info")
+			Configuration.LogLevel = logrus.InfoLevel
+		}
 	}
 
 	logEntryMaxLength, err := c.GetenvInt(consts.LogEntryMaxlengthEnv, "Maximum length of each entry in a log")
-	if err == nil && logEntryMaxLength >= 100{
+	if err == nil && logEntryMaxLength >= 100 {
 		Configuration.LogEntryMaxLength = logEntryMaxLength
+	} else if Configuration.LogEntryMaxLength != 0 {
+		log.Info("No change in Log Entry Max Length")
 	} else {
-		fmt.Println("Invalid Log Entry Max Length defined (should be > 100), using default value:", consts.DefaultLogEntryMaxlength)
+		log.Info("Invalid Log Entry Max Length defined (should be > 100), using default value:", consts.DefaultLogEntryMaxlength)
 		Configuration.LogEntryMaxLength = consts.DefaultLogEntryMaxlength
 	}
 
@@ -273,6 +289,7 @@ func SaveConfiguration(c csetup.Context) error {
 		Configuration.ConfigComplete = true
 		return Save()
 	}
+
 	return errors.New("one or more required environment variables for setup not present. log file has details")
 }
 
