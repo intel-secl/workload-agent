@@ -95,6 +95,7 @@ func main() {
 		// to a functon in the workload agent setup package and have it build a slice of tasks
 		// to run.
 		config.LogConfiguration(false, true, false)
+
 		err := config.SaveConfiguration(context)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "main:main() Unable to save configuration in config.yml ")

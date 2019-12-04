@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -52,8 +53,8 @@ var Configuration struct {
 	}
 	SkipFlavorSignatureVerification bool
 	LogLevel                        logrus.Level
-	ConfigComplete                  bool
 	LogEntryMaxLength               int
+	ConfigComplete                  bool
 }
 
 var (
@@ -172,92 +173,73 @@ func SaveConfiguration(c csetup.Context) error {
 	defer log.Trace("config/config:SaveConfiguration() Leaving")
 	var err error
 
-	//clear the ConfigComplete flag and save the file. We will mark it complete on at the end.
-	// we can use the ConfigComplete field to check if the configuration is complete before
-	// running the other tasks.
-	Configuration.ConfigComplete = false
-	err = Save()
-	if err != nil {
-		return errors.Wrap(err, "config/config:SaveConfiguration() unable to save configuration file")
+	tlsCertDigest, err := c.GetenvString(consts.CmsTlsCertDigestEnv, "CMS TLS certificate digest")
+	if err == nil && tlsCertDigest != "" {
+		Configuration.CmsTlsCertDigest = tlsCertDigest
+	} else if strings.TrimSpace(Configuration.CmsTlsCertDigest) == "" {
+		return errors.Wrap(err, "CMS_TLS_CERT_SHA384 is not defined in environment or configuration file")
 	}
 
-	// we are going to check and set the required configuration variables
-	// however, we do not want to error out after each one. We want to provide
-	// entries in the log file indicating which ones are missing. At the
-	// end of this section we will error out. Will use a flag to keep track
-
-	requiredConfigsPresent := true
-
-	requiredConfigs := [...]csetup.EnvVars{
-		{
-			consts.CmsTlsCertDigestEnv,
-			&Configuration.CmsTlsCertDigest,
-			"CMS TLS Cert SHA384 digest",
-			false,
-		},
-		{
-			consts.MTWILSON_API_URL,
-			&Configuration.Mtwilson.APIURL,
-			"Mtwilson URL",
-			false,
-		},
-		{
-			consts.WLS_API_URL,
-			&Configuration.Wls.APIURL,
-			"Workload Service URL",
-			false,
-		},
-		{
-			consts.WLA_USERNAME,
-			&Configuration.Wla.APIUsername,
-			"Workload Agent Service Username",
-			false,
-		},
-		{
-			consts.WLA_PASSWORD,
-			&Configuration.Wla.APIPassword,
-			"Workload Agent Service Password",
-			false,
-		},
-		{
-			consts.TAUserNameEnvVar,
-			&Configuration.TrustAgent.User,
-			"Trust Agent User Name",
-			false,
-		},
-		{
-			consts.TAConfigDirEnvVar,
-			&Configuration.TrustAgent.ConfigDir,
-			"Trust Agent Configuration Directory",
-			false,
-		},
-		{
-			consts.SkipFlavorSignatureVerification,
-			&Configuration.SkipFlavorSignatureVerification,
-			"Flavor Signature Verification Skip",
-			true,
-		},
-		{
-			consts.AAS_URL,
-			&Configuration.Aas.BaseURL,
-			"AAS URL",
-			false,
-		},
-		{
-			consts.CMS_BASE_URL,
-			&Configuration.Cms.BaseURL,
-			"CMS URL",
-			false,
-		},
+	cmsBaseUrl, err := c.GetenvString(consts.CMS_BASE_URL, "CMS Base URL")
+	if err == nil && cmsBaseUrl != "" {
+		Configuration.Cms.BaseURL = cmsBaseUrl
+	} else if strings.TrimSpace(Configuration.Cms.BaseURL) == "" {
+		return errors.Wrap(err, "CMS_BASE_URL is not defined in environment or configuration file")
 	}
 
-	for _, cv := range requiredConfigs {
-		_, _, err = c.OverrideValueFromEnvVar(cv.Name, cv.ConfigVar, cv.Description, cv.EmptyOkay)
-		if err != nil {
-			requiredConfigsPresent = false
-			fmt.Fprintf(os.Stderr, "environment variable %s required - but not set", cv.Name)
-			fmt.Fprintln(os.Stderr, err)
-		}
+	aasAPIUrl, err := c.GetenvString(consts.AAS_URL, "AAS API URL")
+	if err == nil && aasAPIUrl != "" {
+		Configuration.Aas.BaseURL = aasAPIUrl
+	} else if strings.TrimSpace(Configuration.Aas.BaseURL) == "" {
+		return errors.Wrap(err, "AAS_API_URL is not defined in environment or configuration file")
+	}
+
+	wlsAPIUrl, err := c.GetenvString(consts.WLS_API_URL, "Workload Service URL")
+	if err == nil && aasAPIUrl != "" {
+		Configuration.Wls.APIURL = wlsAPIUrl
+	} else if strings.TrimSpace(Configuration.Wls.APIURL) == "" {
+		return errors.Wrap(err, "WLS_API_URL is not defined in environment or configuration file")
+	}
+
+	mtwilsonAPIUrl, err := c.GetenvString(consts.MTWILSON_API_URL, "Verification Service URL")
+	if err == nil && mtwilsonAPIUrl != "" {
+		Configuration.Mtwilson.APIURL = mtwilsonAPIUrl
+	} else if strings.TrimSpace(Configuration.Mtwilson.APIURL) == "" {
+		return errors.Wrap(err, "HVS_URL is not defined in environment or configuration file")
+	}
+
+	wlaAASUser, err := c.GetenvString(consts.WLA_USERNAME, "WLA Service Username")
+	if err == nil && wlaAASUser != "" {
+		Configuration.Wla.APIUsername = wlaAASUser
+	} else if Configuration.Wla.APIUsername == "" {
+		return errors.Wrap(err, "WLA_SERVICE_USERNAME is not defined in environment or configuration file")
+	}
+
+	wlaAASPassword, err := c.GetenvString(consts.WLA_PASSWORD, "WLA Service Password")
+	if err == nil && wlaAASPassword != "" {
+		Configuration.Wla.APIPassword = wlaAASPassword
+	} else if strings.TrimSpace(Configuration.Wla.APIPassword) == "" {
+		return errors.Wrap(err, "WLA_SERVICE_PASSWORD is not defined in environment or configuration file")
+	}
+
+	taUser, err := c.GetenvString(consts.TAUserNameEnvVar, "Trust Agent User Name")
+	if err == nil && taUser != "" {
+		Configuration.TrustAgent.User = taUser
+	} else if strings.TrimSpace(Configuration.TrustAgent.User) == "" {
+		return errors.Wrap(err, "TRUSTAGENT_USER is not defined in environment or configuration file")
+	}
+
+	taConfigDir, err := c.GetenvString(consts.TAConfigDirEnvVar, "Trust Agent User Name")
+	if err == nil && taConfigDir != "" {
+		Configuration.TrustAgent.ConfigDir = taConfigDir
+	} else if strings.TrimSpace(Configuration.TrustAgent.ConfigDir) == "" {
+		return errors.Wrap(err, "TRUSTAGENT_CONFIGURATION is not defined in environment or configuration file")
+	}
+
+	if skipFlavorSignatureVerification, ok := os.LookupEnv(consts.SkipFlavorSignatureVerification); ok{
+		fmt.Printf("%s:\n", "Flavor Signature Verification Skip")
+		Configuration.SkipFlavorSignatureVerification, err = strconv.ParseBool(skipFlavorSignatureVerification)
+		return errors.Wrap(err, "SKIP_FLAVOR_SIGNATURE_VERIFICATION is invalid, should be set either true or false")
 	}
 
 	ll, err := c.GetenvString(consts.LogLevelEnvVar, "Logging Level")
@@ -284,13 +266,12 @@ func SaveConfiguration(c csetup.Context) error {
 		Configuration.LogEntryMaxLength = consts.DefaultLogEntryMaxlength
 	}
 
-	if requiredConfigsPresent {
-		Configuration.TrustAgent.AikPemFile = filepath.Join(Configuration.TrustAgent.ConfigDir, consts.TAAikPemFileName)
-		Configuration.ConfigComplete = true
-		return Save()
-	}
+	Configuration.TrustAgent.AikPemFile = filepath.Join(Configuration.TrustAgent.ConfigDir, consts.TAAikPemFileName)
+	Configuration.ConfigComplete = true
+	fmt.Println("Configuration Loaded")
+	log.Info("config/config:SaveConfiguration() Saving Environment variables inside the configuration file")
+	return Save()
 
-	return errors.New("one or more required environment variables for setup not present. log file has details")
 }
 
 // LogConfiguration is used to save log configurations
