@@ -145,6 +145,10 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	}
 
 	if flavorKeyInfo.Flavor.EncryptionRequired {
+		if len(flavorKeyInfo.Key) == 0{
+			log.Error("wlavm/start.go:Start() Flavor Key is empty")
+			return false
+		}
 		tpmWrappedKey = flavorKeyInfo.Key
 		// unwrap key
 		log.Info("wlavm/start:Start() Unwrapping the key...")
