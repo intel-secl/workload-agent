@@ -372,7 +372,9 @@ cp secure-docker-plugin /usr/bin/
 cp artifact/* /lib/systemd/system/
 
 systemctl daemon-reload
+systemctl enable secure-docker-plugin.service 2>/dev/null
 systemctl start secure-docker-plugin.service
+
 }
 
 
