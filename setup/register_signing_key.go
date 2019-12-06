@@ -41,7 +41,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "setup/register_signing_key.go:Run() error registering signing key ")
 	}
-
+	
 	registerKey, err := hvsclient.CertifyHostSigningKey(httpRequestBody)
 	if err != nil {
 		secLog.WithError(err).Error("setup/register_signing_key.go:Run() error while certify host signing key from hvs")

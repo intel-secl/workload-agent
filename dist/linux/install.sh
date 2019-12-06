@@ -334,9 +334,11 @@ for env_var in $required_vars; do
   check_env_var_present $env_var
 done
 
+setup_complete=0
 # Call workload-agent setup if all the required env variables are set
 if [[ $all_env_vars_present -eq 1 ]]; then
-  wlagent setup | tee -a $logfile
+  wlagent setup | tee -a $logfile; test ${PIPESTATUS[0]} -eq 0
+  setup_complete=$?
 else 
   echo_failure "One or more environment variables are not present. Setup cannot proceed. Aborting..." | tee -a $logfile
   echo_failure "Please export the missing environment variables and run setup again" | tee -a $logfile
@@ -349,7 +351,7 @@ systemctl start workload-agent | tee -a $logfile
 is_docker_installed(){
   which docker 2>/dev/null
   if [ $? -ne 0 ]; then
-    echo "Docker is not installed"
+    echo "Container Security required Docker 19.03 to be installed on this system, but docker is not installerd"
     exit 1
   fi
 }
@@ -412,5 +414,11 @@ if [ "$WA_WITH_CONTAINER_SECURITY" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY" =
   systemctl start docker
   cp uninstall-container-security-dependencies.sh $WORKLOAD_AGENT_HOME/secure-docker-daemon/
 fi
+
+if [ $setup_complete -ne 0 ]; then
+  echo_failure "Installation completed completed with errors. Please check log file" | tee -a $logfile
+  exit 1
+fi
+
 
 echo_success "Installation completed." | tee -a $logfile

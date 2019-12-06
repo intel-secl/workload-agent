@@ -58,11 +58,16 @@ func printUsage() {
 	fmt.Printf("    SigningKey         Generate a TPM signing key\n")
 	fmt.Printf("    BindingKey         Generate a TPM binding key\n")
 	fmt.Printf("    RegisterSigningKey Register a signing key with the host verification service\n")
+        fmt.Printf("                        - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
 	fmt.Printf("    RegisterBindingKey Register a binding key with the host verification service\n")
+	fmt.Printf("                        - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
 }
 
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
+
+	config.LogConfiguration(false, true, false)
+
 	log.Trace("main:main() Entering")
 	defer log.Trace("main:main() Leaving")
 	// Save log configurations
@@ -94,7 +99,6 @@ func main() {
 		// TODO : The right way to address this is to pass the arguments from the commandline
 		// to a functon in the workload agent setup package and have it build a slice of tasks
 		// to run.
-		config.LogConfiguration(false, true, false)
 
 		err := config.SaveConfiguration(context)
 		if err != nil {
@@ -102,6 +106,7 @@ func main() {
 			log.WithError(err).Error("main:main() Unable to save configuration in config.yml")
 			os.Exit(1)
 		}
+		config.LogConfiguration(false, true, false)
 		// Workaround for tpm2-abrmd bug in RHEL 7.5
 		t, err := tpm.Open()
 		if err != nil {
@@ -113,6 +118,19 @@ func main() {
 		if len(args) > 1 {
 			flags = args[2:]
 		}
+		
+		if len(args) >= 2 &&
+                        args[1] != "download_ca_cert" &&
+                        args[1] != "SigningKey" &&
+                        args[1] != "BindingKey" &&
+                        args[1] != "RegisterSigningKey" &&
+                        args[1] != "RegisterBindingKey" &&
+                        args[1] != "all" {
+                        fmt.Fprintln(os.Stderr, "Error: Unknown setup task ", args[1])
+                        printUsage()
+                        os.Exit(1)
+                }
+
 		// Run list of setup tasks one by one
 		setupRunner := &csetup.Runner{
 			Tasks: []csetup.Task{
@@ -427,6 +445,7 @@ func start() {
 	}
 	fmt.Println(cmdOutput)
 	fmt.Println("Workload Agent Service Started...")
+	log.Info("Workload Agent Service Started...")
 }
 
 func stop() {
@@ -442,6 +461,7 @@ func stop() {
 	fmt.Println(cmdOutput)
 	util.CloseTpmInstance()
 	fmt.Println("Workload Agent Service Stopped...")
+	log.Info("Workload Agent Service Stopped...")
 }
 
 func removeservice() {

@@ -4,10 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	csetup "intel/isecl/lib/common/setup"
 	cLog "intel/isecl/lib/common/log"
+	"intel/isecl/lib/clients"
 	"intel/isecl/wlagent/config"
+	"intel/isecl/wlagent/consts"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 
 	"github.com/pkg/errors"
@@ -79,6 +84,7 @@ func CertifyHostBindingKey(key *RegisterKeyInfo) (*BindingKeyCert, error) {
 func certifyHostKey(key *RegisterKeyInfo, endPoint string, keyUsage string) ([]byte, error) {
 	log.Trace("clients/hvs_client:certifyHostKey Entering")
 	defer log.Trace("clients/hvs_client:certifyHostKey Leaving")
+
 	kiJSON, err := json.Marshal(key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "clients/hvs_client.go:certifyHostKey() error marshalling %s key. ", keyUsage)
@@ -95,14 +101,34 @@ func certifyHostKey(key *RegisterKeyInfo, endPoint string, keyUsage string) ([]b
 	if err != nil {
 		return nil, errors.Wrap(err, "clients/hvs_client.go:certifyHostKey() Failed to create request for certifying Binding/Signing Key")
 	}
+
+	var c csetup.Context
+	jwtToken, err := c.GetenvString(consts.BEARER_TOKEN_ENV, "BEARER_TOKEN")
+	if jwtToken == "" || err != nil {
+		fmt.Fprintln(os.Stderr, "BEARER_TOKEN is not defined in environment")
+		return nil, errors.Wrap(err, "BEARER_TOKEN is not defined in environment")
+	}
+
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
-
-	rsp, err := SendRequest(req, false)
-
+	req.Header.Set("Authorization", "Bearer "+ jwtToken)
+	client, err := clients.HTTPClientWithCADir(consts.TrustedCaCertsDir)
+	if err != nil {
+		return nil, errors.Wrap(err, "clients/hvs_client.go:certifyHostKey() Failed to create http client")
+	}
+	rsp, err := client.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "clients/hvs_client.go:certifyHostKey() Error from response")
+	}
 	if rsp == nil {
 		return nil, &Error{Message: fmt.Sprintf("clients/hvs_client.go:certifyHostKey() Failed to register host %s key with HVS . Error : %s", keyUsage, err.Error())}
 	}
-	return rsp, nil
+	defer rsp.Body.Close()
+	body, err := ioutil.ReadAll(rsp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "clients/send_http_request.go:SendRequest() Error from response")
+	}
+
+	return body, nil
 
 }
