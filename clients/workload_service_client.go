@@ -54,11 +54,14 @@ func GetImageFlavorKey(imageUUID, hardwareUUID string) (FlavorKey, error) {
 		return flavorKeyInfo, errors.Wrap(err, "client/workload_service_client:GetImageFlavorKey() Error while getting response from Get Image Flavor-Key from WLS API")
 	}
 
-	//deserialize the response to UserInfo response
-	err = json.Unmarshal(httpResponse, &flavorKeyInfo)
-	if err != nil {
-		return flavorKeyInfo, errors.Wrap(err, "client/workload_service_client:GetImageFlavorKey() Failed to unmarshal response into flavor key info")
+	if httpResponse != nil {
+		//deserialize the response to UserInfo response
+		err = json.Unmarshal(httpResponse, &flavorKeyInfo)
+		if err != nil {
+			return flavorKeyInfo, errors.Wrap(err, "client/workload_service_client:GetImageFlavorKey() Failed to unmarshal response into flavor key info")
+		}
 	}
+	log.Debug("client/workload_service_client:GetImageFlavorKey() Successfully retrieved Flavor-Key")       
 	return flavorKeyInfo, nil
 }
 

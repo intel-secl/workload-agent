@@ -14,6 +14,7 @@ import (
 	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/flavor"
 	"intel/isecl/wlagent/util"
+	wlsclient "intel/isecl/wlagent/clients"
 	"intel/isecl/wlagent/wlavm"
 	"github.com/pkg/errors"
 )
@@ -31,10 +32,9 @@ type ManifestString struct {
 	Manifest string
 }
 
-// FlavorInfo is a struct containing image id and flavor part as arguments to allow invocation over RPC
+// FlavorInfo is a struct containing image id as argument to allow invocation over RPC
 type FlavorInfo struct {
 	ImageID    string
-	FlavorPart string
 }
 
 // KeyInfo is a struct containing image ID and key ID as arguments to allow invocation over RPC
@@ -113,11 +113,21 @@ func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status
 		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while unmarshalling manifest", StatusCode: 1}
 	}
 	imageID := manifestJSON.InstanceInfo.ImageID
-	flavor, ok := flavor.Fetch(imageID, "CONTAINER_IMAGE")
-	if flavor == "" && !ok {
+	flavor, err := wlsclient.GetImageFlavor(imageID, "CONTAINER_IMAGE")
+	if err != nil {
+		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() Error while retrieving the image flavor", StatusCode: 1}
+	}
+
+	if flavor.ImageFlavor.Meta.ID == "" {
+		log.Infof("rpc/server:CreateInstanceTrustReport() Flavor does not exist for the image: %s", imageID)
+		return nil
+	}
+
+	f, _ := json.Marshal(flavor)
+	if string(f) == "" {
 		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while retrieving flavor", StatusCode: 1}
 	}
-	err = json.Unmarshal([]byte(flavor), &imageFlavor)
+	err = json.Unmarshal([]byte(f), &imageFlavor)
 	if err != nil {
 		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while unmarshalling flavor", StatusCode: 1}
 	}
@@ -142,7 +152,7 @@ func (vm *VirtualMachine) FetchFlavor(args *FlavorInfo, outFlavor *flavor.OutFla
 	log.Trace("rpc/server:FetchFlavor() Entering")
 	defer log.Trace("rpc/server:FetchFlavor() Leaving")
 
-	imageFlavor, returnCode := flavor.Fetch(args.ImageID, args.FlavorPart)
+	imageFlavor, returnCode := flavor.Fetch(args.ImageID)
 	var o = flavor.OutFlavor{
 		ReturnCode:  returnCode,
 		ImageFlavor: imageFlavor,

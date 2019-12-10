@@ -277,7 +277,7 @@ func main() {
 		os.Exit(0)
 
 	case "fetch-flavor":
-		if len(args[1:]) < 2 {
+		if len(args[1:]) < 1 {
 			log.Error("main:main() fetch-flavor: Invalid number of parameters")
 			os.Exit(1)
 		}
@@ -294,17 +294,10 @@ func main() {
 			os.Exit(1)
 		}
 
-		inputArr := []string{os.Args[2]}
-		if validateLabelErr := validation.ValidateStrings(inputArr); validateLabelErr != nil {
-			log.Error("main:main() fetch-flavor: Invalid flavor part string format")
-			os.Exit(1)
-		}
-
 		client := rpc.NewClient(conn)
 		var outFlavor flavor.OutFlavor
 		var args = wlrpc.FlavorInfo{
 			ImageID:    args[1],
-			FlavorPart: args[2],
 		}
 
 		err = client.Call("VirtualMachine.FetchFlavor", &args, &outFlavor)
@@ -316,49 +309,6 @@ func main() {
 			os.Exit(1)
 		} else {
 			fmt.Print(outFlavor.ImageFlavor)
-			os.Exit(0)
-		}
-
-	case "cache-key":
-		if len(args[1:]) < 2 {
-			log.Error("main:main() cache-key: Invalid number of parameters")
-			os.Exit(1)
-		}
-
-		conn, err := net.Dial("unix", rpcSocketFilePath)
-		if err != nil {
-			log.Error("main:main() cache-key: Failed to dial wlagent.sock, is wlagent running?")
-			os.Exit(1)
-		}
-
-		// validate key id given as input
-		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			secLog.Error("main:main() cache-key: Invalid Key ID format")
-			os.Exit(1)
-		}
-		// validate image uuid given as input
-		if err = validation.ValidateUUIDv4(args[2]); err != nil {
-			secLog.Error("main:main() cache-key: Invalid imageUUID format")
-			os.Exit(1)
-		}
-
-		client := rpc.NewClient(conn)
-		var outKey wlrpc.KeyInfo
-		var args = wlrpc.KeyInfo{
-			KeyID:   args[1],
-			ImageID: args[2],
-		}
-
-		err = client.Call("VirtualMachine.FetchKey", &args, &outKey)
-		if err != nil {
-			log.Error("main:main() cache-key: Client call failed")
-			log.Tracef("%+v", err)
-			os.Exit(1)
-		}
-		if !outKey.ReturnCode {
-			log.Error("main:main() cache-key: Error while fetching the key")
-			os.Exit(1)
-		} else {
 			os.Exit(0)
 		}
 
