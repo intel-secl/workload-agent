@@ -5,10 +5,12 @@
 package setup
 
 import (
+	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
+	"os"
 
 	"github.com/pkg/errors"
 )
@@ -25,6 +27,7 @@ func (sk SigningKey) Run(c csetup.Context) error {
 		return ErrMessageSetupIncomplete
 	}
 	if sk.Validate(c) == nil {
+		fmt.Fprintln(os.Stdout, "Signing key already created, skipping ...")
 		log.Info("setup/create_signing_key:Run() Signing key already created, skipping ...")
 		return nil
 	}

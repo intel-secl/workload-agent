@@ -5,11 +5,13 @@
 package setup
 
 import (
+	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	cLog "intel/isecl/lib/common/log"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
+	"os"
 
 	"github.com/pkg/errors"
 )
@@ -29,6 +31,7 @@ func (bk BindingKey) Run(c csetup.Context) error {
 		return ErrMessageSetupIncomplete
 	}
 	if bk.Validate(c) == nil {
+		fmt.Fprintln(os.Stdout, "Binding key already created, skipping ...")
 		log.Info("setup/create_binding_key:Run() Binding key already created, skipping ...")
 		return nil
 	}

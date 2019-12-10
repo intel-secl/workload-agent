@@ -34,7 +34,7 @@ vmc-only: wlagent
 	cp out/wlagent out/wla/wlagent && chmod +x out/wla/wlagent
 	makeself out/wla out/workload-agent-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 
 
-all: installer
+all: deploy-artifact
 
 deploy-artifact: installer
 	chmod +x dist/linux/deploy-to-artifactory.sh

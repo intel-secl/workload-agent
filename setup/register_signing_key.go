@@ -5,6 +5,7 @@
 package setup
 
 import (
+	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	hvsclient "intel/isecl/wlagent/clients"
 	"intel/isecl/wlagent/common"
@@ -27,6 +28,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	}
 
 	if rs.Validate(c) == nil {
+		fmt.Fprintln(os.Stdout,"Signing key already registered. Skipping this setup task.")
 		log.Info("setup/register_signing_key:Run() Signing key already registered. Skipping this setup task.")
 		return nil
 	}

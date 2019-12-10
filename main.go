@@ -156,6 +156,8 @@ func main() {
 		err = setupRunner.RunTasks(args[1:]...)
 		if err != nil {
 			log.WithError(err).Error("main:main() Error running setup")
+			log.Tracef("%+v", err)
+			fmt.Fprintf(os.Stderr, "Error running setup tasks. %s\n", err.Error())
 			os.Exit(1)
 		}
 

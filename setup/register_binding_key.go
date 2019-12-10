@@ -9,6 +9,7 @@ package setup
 **/
 
 import (
+	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	hvsclient "intel/isecl/wlagent/clients"
 	"intel/isecl/wlagent/common"
@@ -33,6 +34,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	}
 
 	if rb.Validate(c) == nil {
+		fmt.Fprintln(os.Stdout, "Binding key already registered. Skipping this setup task.")
 		log.Info("setup/register_binding_key:Run() Binding key already registered. Skipping this setup task.")
 		return nil
 	}
