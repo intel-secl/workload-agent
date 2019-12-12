@@ -9,6 +9,7 @@ package wlavm
 import (
 	"intel/isecl/lib/common/exec"
 	"intel/isecl/lib/vml"
+	"intel/isecl/lib/common/log/message"
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/libvirt"
@@ -65,7 +66,7 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	if isVmVolume {
 		var vmMountPath = consts.MountPath + d.GetVMUUID()
 		// Unmount the image
-		log.Info("wlavm/stop:Stop() A dm-crypt volume for the image is created, deleting the vm volume")
+		secLog.Infof("wlavm/stop:Stop() A dm-crypt volume for the image is created, deleting the vm volume %s", message.SU)
 		vml.Unmount(vmMountPath)
 		vml.DeleteVolume(d.GetVMUUID())
 	}
@@ -98,8 +99,11 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	mtx.Lock()
 	defer mtx.Unlock()
 	var imageMountPath = consts.MountPath + d.GetImageUUID()
+	secLog.Infof("wlavm/stop:Stop() Unmounting the image volume: %s, %s", imageMountPath, message.SU)
+
 	// Unmount the image
 	vml.Unmount(imageMountPath)
+	secLog.Infof("wlavm/stop:Stop() Deleting the image volume: %s, %s", d.GetImageUUID(), message.SU)
 	// Close the image volume
 	vml.DeleteVolume(d.GetImageUUID())
 	log.Infof("wlavm/stop:Stop() VM %s stopped", d.GetVMUUID())
@@ -115,6 +119,9 @@ func isVmVolumeEncrypted(vmUUID string) (bool, error) {
 	log.Debugf("wlavm/stop:isVmVolumeEncrypted() Checking for volume with UUID:%s is encrypted", vmUUID)
 	deviceMapperLocation := consts.DevMapperDirPath + vmUUID
 	args := []string{"status", deviceMapperLocation}
+
+
+	secLog.Infof("Checking for volume with UUID:%s is encrypted, %s", vmUUID, message.SU)
 	cmdOutput, err := exec.ExecuteCommand("cryptsetup", args)
 
 	if cmdOutput != "" && strings.Contains(cmdOutput, "inactive") {

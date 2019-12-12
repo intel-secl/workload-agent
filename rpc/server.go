@@ -10,6 +10,8 @@ import (
 	cLog "intel/isecl/lib/common/log"
 	"intel/isecl/lib/common/proc"
 	"intel/isecl/lib/common/pkg/instance"
+	"intel/isecl/lib/common/log/message"
+	"intel/isecl/lib/common/validation"
 	flvr "intel/isecl/lib/flavor"
 	"intel/isecl/wlagent/filewatch"
 	"intel/isecl/wlagent/flavor"
@@ -41,7 +43,6 @@ type FlavorInfo struct {
 type KeyInfo struct {
 	KeyID      string
 	Key        []byte
-	ImageID    string
 	ReturnCode bool
 }
 
@@ -70,6 +71,11 @@ func (vm *VirtualMachine) Start(args *DomainXML, reply *bool) error {
 	log.Trace("rpc/server:Start() Entering")
 	defer log.Trace("rpc/server:Start() Leaving")
 
+	if err = validation.ValidateXMLString(args.XML); err != nil {
+		secLog.Errorf("rpc:server() Start: %s, Invalid domain XML format", message.InvalidInputBadParam)
+		return nil
+	}
+
 	// pass in vm.Watcher to get the instance to the File System Watcher
 	*reply = wlavm.Start(args.XML, vm.Watcher)
 	return nil
@@ -88,6 +94,11 @@ func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
 	log.Trace("rpc/server:Stop() Entering")
 	defer log.Trace("rpc/server:Stop() Leaving")
 
+	if err = validation.ValidateXMLString(args.XML); err != nil {
+		secLog.Errorf("rpc:server() Stop: %s, Invalid domain XML format", message.InvalidInputBadParam)
+		return nil
+	}
+
 	// pass in vm.Watcher to get the instance to the File System Watcher
 	*reply = wlavm.Stop(args.XML, vm.Watcher)
 	return nil
@@ -96,20 +107,22 @@ func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
 // CreateInstanceTrustReport forwards the RPC request to wlavm.CreateImageTrustReport
 func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status *bool) error {
 	// Passing the true parameter to ensure that CreateInstanceTrustReport task is added to the waitgroup, as this action needs to be completed
-        // even if there is pending signal termination on rpc 
-        _, err := proc.AddTask(true)
-        if err != nil{
-                errors.Wrap(err, "rpc/server:CreateInstanceTrustReport() Could not add task for CreateInstanceTrustReport")
-        }
-        defer proc.TaskDone()
+	// even if there is pending signal termination on rpc
+	_, err := proc.AddTask(true)
+	if err != nil{
+        	errors.Wrap(err, "rpc/server:CreateInstanceTrustReport() Could not add task for CreateInstanceTrustReport")
+	}
+	defer proc.TaskDone()
 
 	log.Trace("rpc/server:CreateInstanceTrustReport() Entering")
 	defer log.Trace("rpc/server:CreateInstanceTrustReport() Leaving")
 
 	var manifestJSON instance.Manifest
 	var imageFlavor flvr.SignedImageFlavor
+
 	err = json.Unmarshal([]byte(args.Manifest), &manifestJSON)
 	if err != nil {
+		secLog.Error(message.InvalidInputBadEncoding)
 		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while unmarshalling manifest", StatusCode: 1}
 	}
 	imageID := manifestJSON.InstanceInfo.ImageID
@@ -145,12 +158,18 @@ func (vm *VirtualMachine) FetchFlavor(args *FlavorInfo, outFlavor *flavor.OutFla
 	// Passing the false parameter to ensure that FetchFlavor task is not added to the wait group if there is pending signal termination on rpc
 	_, err := proc.AddTask(false)
         if err != nil{
-                errors.Wrap(err, "rpc/server:CreateInstanceTrustReport() Could not add task for FetchFlavor")
+                errors.Wrap(err, "rpc/server:FetchFlavor() Could not add task for FetchFlavor")
         }
         defer proc.TaskDone()
 
 	log.Trace("rpc/server:FetchFlavor() Entering")
 	defer log.Trace("rpc/server:FetchFlavor() Leaving")
+
+	// validate input
+	if err = validation.ValidateUUIDv4(args.ImageID); err != nil {
+		secLog.Errorf("rpc/server:FetchFlavor() %s, Invalid Image UUID format", message.InvalidInputBadParam)
+		return nil
+	}
 
 	imageFlavor, returnCode := flavor.Fetch(args.ImageID)
 	var o = flavor.OutFlavor{
@@ -165,17 +184,22 @@ func (vm *VirtualMachine) FetchFlavor(args *FlavorInfo, outFlavor *flavor.OutFla
 // FetchKey forwards the RPC request to flavor.RetrieveKey
 func (vm *VirtualMachine) FetchKey(args *KeyInfo, outKeyInfo *KeyInfo) error {
 	// Passing the true parameter to ensure that FetchKey is added to the waitgroup  as this action needs to be completed
-        // even if there is pending signal termination on rpc
+	// even if there is pending signal termination on rpc
 
 	_, err := proc.AddTask(true)
-        if err != nil{
-                errors.Wrap(err, "rpc/server:CreateInstanceTrustReport() Could not add task for FetchKey")
-        }
-        defer proc.TaskDone()
+	if err != nil{
+        	errors.Wrap(err, "rpc/server:FetchKey() Could not add task for FetchKey")
+	}
+	defer proc.TaskDone()
 	log.Trace("rpc/server:FetchKey() Entering")
 	defer log.Trace("rpc/server:FetchKey() Leaving")
 
-	wrappedKey, returnCode := flavor.RetrieveKey(args.KeyID, args.ImageID)
+	if err = validation.ValidateUUIDv4(args.KeyID); err != nil {
+		secLog.Errorf("rpc/server:FetchKey() %s, Invalid Key UUID format", message.InvalidInputBadParam)
+		return nil
+	}
+
+	wrappedKey, returnCode := flavor.RetrieveKey(args.KeyID)
 	key, err := util.UnwrapKey(wrappedKey)
 	if err != nil {
 		return &rpcError{Message: "rpc/server:FetchKey() error while unwrapping the key", StatusCode: 1}

@@ -12,7 +12,7 @@ import (
 
 // RetrieveKey retrieves an Image decryption key
 // It uses the hardwareUUID that is fetched from the the Platform Info library
-func RetrieveKey(keyID, imageUUID string) ([]byte, bool) {
+func RetrieveKey(keyID string) ([]byte, bool) {
 	log.Trace("flavor/key_retrieval:RetrieveKey Entering")
 	defer log.Trace("flavor/key_retrieval:RetrieveKey Leaving")
 	//check if the key is cached by filtercriteria imageUUID
@@ -20,11 +20,12 @@ func RetrieveKey(keyID, imageUUID string) ([]byte, bool) {
 	var flavorKeyInfo wlsclient.FlavorKey
 	var tpmWrappedKey []byte
 
-	if imageUUID == "" {
-		imageUUID = imageKeyID[keyID]
-	} else {
-		imageKeyID[keyID] = imageUUID
+	if (imageKeyID[keyID] == "") {
+		log.Errorf("flavor/key_retrieval.go:RetrieveKey() unable to get the image ID for given key ID %s", keyID)
+                return nil, false
 	}
+	imageUUID := imageKeyID[keyID]
+	imageKeyID[keyID] = ""
 
 	// get host hardware UUID
 	log.Debug("Retrieving host hardware UUID...")

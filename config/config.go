@@ -11,6 +11,7 @@ import (
 	cLog "intel/isecl/lib/common/log"
 	cLogInt "intel/isecl/lib/common/log/setup"
 	csetup "intel/isecl/lib/common/setup"
+	"intel/isecl/lib/common/log/message"
 	"intel/isecl/wlagent/consts"
 	"io"
 	"io/ioutil"
@@ -298,6 +299,6 @@ func LogConfiguration(stdOut, logFile, dLogFile bool) {
 
 	cLogInt.SetLogger(cLog.DefaultLoggerName, Configuration.LogLevel, &cLog.LogFormatter{MaxLength: Configuration.LogEntryMaxLength}, ioWriterDefault, false)
 	cLogInt.SetLogger(cLog.SecurityLoggerName, Configuration.LogLevel, &cLog.LogFormatter{MaxLength: Configuration.LogEntryMaxLength}, ioWriterSecurity, false)
-	secLog.Trace("Security log initiated")
-	log.Trace("Loggers setup finished")
+	secLog.Info(message.LogInit)
+	log.Info(message.LogInit)
 }

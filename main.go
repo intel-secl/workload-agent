@@ -6,13 +6,12 @@ package main
 
 import (
 	"fmt"
-	"intel/isecl/lib/clients"
-	"intel/isecl/lib/clients/aas"
 	"intel/isecl/lib/common/exec"
 	cLog "intel/isecl/lib/common/log"
 	"intel/isecl/lib/common/proc"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/common/validation"
+	"intel/isecl/lib/common/log/message"
 	"intel/isecl/lib/tpm"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
@@ -58,7 +57,7 @@ func printUsage() {
 	fmt.Printf("    SigningKey         Generate a TPM signing key\n")
 	fmt.Printf("    BindingKey         Generate a TPM binding key\n")
 	fmt.Printf("    RegisterSigningKey Register a signing key with the host verification service\n")
-        fmt.Printf("                        - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
+	fmt.Printf("                        - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
 	fmt.Printf("    RegisterBindingKey Register a binding key with the host verification service\n")
 	fmt.Printf("                        - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
 }
@@ -66,7 +65,13 @@ func printUsage() {
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
 
-	config.LogConfiguration(false, true, false)
+	isStdOut := false
+	isWLAConsoleEnabled := os.Getenv("WLA_ENABLE_CONSOLE_LOG")
+	if isWLAConsoleEnabled == "true" {
+		isStdOut = true
+	}
+
+	config.LogConfiguration(isStdOut, true, false)
 
 	log.Trace("main:main() Entering")
 	defer log.Trace("main:main() Leaving")
@@ -81,6 +86,7 @@ func main() {
 	args := os.Args[1:]
 	if len(args) <= 0 {
 		fmt.Println("Command not found. Usage below")
+		secLog.Errorf("Command not found, %s", message.InvalidInputProtocolViolation)
 		printUsage()
 		return
 	}
@@ -106,7 +112,8 @@ func main() {
 			log.WithError(err).Error("main:main() Unable to save configuration in config.yml")
 			os.Exit(1)
 		}
-		config.LogConfiguration(false, true, false)
+		config.LogConfiguration(isStdOut, true, false)
+		secLog.Info("Opening tpm connection", message.SU)
 		// Workaround for tpm2-abrmd bug in RHEL 7.5
 		t, err := tpm.Open()
 		if err != nil {
@@ -157,12 +164,12 @@ func main() {
 		if err != nil {
 			log.WithError(err).Error("main:main() Error running setup")
 			log.Tracef("%+v", err)
-			fmt.Fprintf(os.Stderr, "Error running setup tasks. %s\n", err.Error())
+			fmt.Fprintf(os.Stderr, "Error running setup tasks...\n",)
 			os.Exit(1)
 		}
 
 	case "runservice":
-		config.LogConfiguration(false, true, true)
+		config.LogConfiguration(isStdOut, true, true)
 		runservice()
 
 	case "start":
@@ -186,21 +193,21 @@ func main() {
 
 	case "start-vm":
 		if len(args[1:]) < 1 {
-			log.Error("main:main() start-vm: Invalid number of parameters")
+			log.Errorf("main:main() start-vm: Invalid number of parameters %s", message.InvalidInputProtocolViolation)
 			os.Exit(1)
 		}
 
-		log.Info("main:main() start-vm: workload-agent start called")
+		secLog.Info("main:main() start-vm: workload-agent start called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Error("main:main() start-vm: Failed to dial wlagent.sock, is wlagent running?")
+			secLog.Errorf("main:main() start-vm: Failed to dial wlagent.sock, %s", message.BadConnection)
 			os.Exit(1)
 		}
 		client := rpc.NewClient(conn)
 
 		// validate domainXML input
 		if err = validation.ValidateXMLString(args[1]); err != nil {
-			secLog.Error("main:main() start-vm: Invalid domain XML format")
+			secLog.Errorf("main:main() start-vm: %s, Invalid domain XML format", message.InvalidInputBadParam)
 			os.Exit(1)
 		}
 
@@ -221,19 +228,19 @@ func main() {
 
 	case "stop-vm":
 		if len(args[1:]) < 1 {
-			log.Error("main:main() stop-vm: Invalid number of parameters")
+			secLog.Errorf("main:main() stop-vm: Invalid number of parameters, %s", message.InvalidInputProtocolViolation)
 			os.Exit(1)
 		}
-		log.Info("main/main() stop-vm: workload-agent stop called")
+		secLog.Info("main/main() stop-vm: workload-agent stop called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.Error("main:main() stop-vm: Failed to dial wlagent.sock, is wlagent running?")
+			secLog.Errorf("main:main() stop-vm: Failed to dial wlagent.sock, %s", message.BadConnection)
 			os.Exit(1)
 		}
 
 		// validate domainXML input
 		if err = validation.ValidateXMLString(args[1]); err != nil {
-			secLog.Error("main:main() stop-vm: Invalid domain XML format")
+			secLog.Errorf("main:main() stop-vm: %s, Invalid domain XML format", message.InvalidInputBadParam)
 			os.Exit(1)
 		}
 
@@ -256,13 +263,13 @@ func main() {
 
 	case "create-instance-trust-report":
 		if len(args[1:]) < 1 {
-			log.Info("main:main() create-instance-trust-report Invalid number of parameters")
+			secLog.Infof("main:main() create-instance-trust-report, Invalid number of parameters, %s", message.InvalidInputProtocolViolation)
 			os.Exit(1)
 		}
-		log.Info("main:main()  workload-agent create-instance-trust-report called")
+		secLog.Info("main:main()  workload-agent create-instance-trust-report called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.WithError(err).Error("main:main() create-instance-trust-report: failed to dial wlagent.sock, is wlagent running?")
+			log.WithError(err).Errorf("main:main() create-instance-trust-report: failed to dial wlagent.sock, %s", message.BadConnection)
 			os.Exit(1)
 		}
 		client := rpc.NewClient(conn)
@@ -280,19 +287,19 @@ func main() {
 
 	case "fetch-flavor":
 		if len(args[1:]) < 1 {
-			log.Error("main:main() fetch-flavor: Invalid number of parameters")
+			secLog.Errorf("main:main() fetch-flavor: Invalid number of parameters, %s", message.InvalidInputProtocolViolation)
 			os.Exit(1)
 		}
 
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
-			log.WithError(err).Error("main:main() fetch-flavor: failed to dial wlagent.sock, is wlagent running?")
+			secLog.WithError(err).Errorf("main:main() fetch-flavor: failed to dial wlagent.sock, %s", message.BadConnection)
 			os.Exit(1)
 		}
 
 		// validate input
 		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			log.Error("main:main() fetch-flavor: Invalid imageUUID format")
+			secLog.Errorf("main:main() fetch-flavor: %s, Invalid Image UUID format", message.InvalidInputBadParam)
 			os.Exit(1)
 		}
 
@@ -315,7 +322,6 @@ func main() {
 		}
 
 	case "uninstall":
-		config.LogConfiguration(true, true, false)
 		commandArgs := []string{consts.OptDirPath + "secure-docker-daemon"}
 		_, err := exec.ExecuteCommand("ls", commandArgs)
 		if err == nil {
@@ -329,7 +335,7 @@ func main() {
 		deleteFile(consts.LibvirtHookFilePath)
 		deleteFile(consts.LogDirPath)
 		deleteFile(consts.RunDirPath)
-                deleteFile(consts.MountPath)
+		deleteFile(consts.MountPath)
 		if len(args) > 1 && strings.ToLower(args[1]) == "--purge" {
 			deleteFile(consts.ConfigDirPath)
 		}
@@ -340,26 +346,6 @@ func main() {
 
 	case "help", "-help", "--help":
 		printUsage()
-
-	case "test-aas":
-		aasClient := aas.NewJWTClient(config.Configuration.Aas.BaseURL)
-		fmt.Println(aasClient)
-
-		var err error
-		aasClient.HTTPClient, err = clients.HTTPClientWithCADir(consts.TrustedCaCertsDir)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		aasClient.AddUser(config.Configuration.Wla.APIUsername, config.Configuration.Wla.APIPassword)
-		err = aasClient.FetchAllTokens()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		jwtToken, err := aasClient.GetUserToken(config.Configuration.Wla.APIUsername)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		fmt.Println(string(jwtToken))
 	}
 }
 
@@ -381,8 +367,7 @@ func deleteFile(path string) {
 	// delete file
 	var err = os.RemoveAll(path)
 	if err != nil {
-		log.Error(err)
-		log.Tracef("%+v", err)
+		fmt.Fprintf(os.Stderr,"Error deleting file :%s", path)
 	}
 }
 
@@ -397,7 +382,7 @@ func start() {
 	}
 	fmt.Println(cmdOutput)
 	fmt.Println("Workload Agent Service Started...")
-	log.Info("Workload Agent Service Started...")
+	secLog.Info(message.ServiceStart)
 }
 
 func stop() {
@@ -413,7 +398,7 @@ func stop() {
 	fmt.Println(cmdOutput)
 	util.CloseTpmInstance()
 	fmt.Println("Workload Agent Service Stopped...")
-	log.Info("Workload Agent Service Stopped...")
+	secLog.Info(message.ServiceStop)
 }
 
 func removeservice() {
@@ -426,6 +411,7 @@ func removeservice() {
 		fmt.Fprintln(os.Stderr, "Error : ", err)
 	}
 	fmt.Println("Workload Agent Service Removed...")
+	secLog.Info("Service Removed")
 }
 
 func runservice() {
@@ -438,12 +424,14 @@ func runservice() {
 	_, err := util.GetNewTpmInstance()
 	if err != nil {
 		log.WithError(err).Error("main:runservice() Could not open a new connection to the TPM")
+		secLog.Info(message.AppRuntimeErr)
 		os.Exit(1)
 	}
 
 	fileWatcher, err := filewatch.NewWatcher()
 	if err != nil {
 		log.WithError(err).Error("main:runservice() Could not create File Watcher")
+		secLog.Info(message.AppRuntimeErr)
 		os.Exit(1)
 	}
 	defer fileWatcher.Close()
@@ -469,7 +457,7 @@ func runservice() {
 	_, err = proc.AddTask(false)
 	if err != nil{
                 log.WithError(err).Fatal("main:runservice() could not add the task for rpc service")
-        }
+	}
 	go func() {
 		defer proc.TaskDone()
 		for {
@@ -482,6 +470,7 @@ func runservice() {
 			l, err := net.Listen("unix", RPCSocketFilePath)
 			if err != nil {
 				log.Error(err)
+				secLog.Info(message.AppRuntimeErr)
 				return
 			}
 			r := rpc.NewServer()
@@ -493,6 +482,7 @@ func runservice() {
 			if err != nil {
 				log.WithError(err).Error("main:runservice() Unable to Register vm wathcer")
 				log.Tracef("%+v", err)
+				secLog.Info(message.AppRuntimeErr)
 				return
 			}
 			r.Accept(l)
@@ -500,4 +490,5 @@ func runservice() {
 	}()
 	// block until stop channel receives
 	proc.WaitForQuitAndCleanup(10 * time.Second)
+
 }
