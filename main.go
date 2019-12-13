@@ -113,7 +113,7 @@ func main() {
 			os.Exit(1)
 		}
 		config.LogConfiguration(isStdOut, true, false)
-		secLog.Info("Opening tpm connection", message.SU)
+		secLog.Infof("%s, Opening tpm connection", message.SU)
 		// Workaround for tpm2-abrmd bug in RHEL 7.5
 		t, err := tpm.Open()
 		if err != nil {
@@ -342,6 +342,7 @@ func main() {
 
 	default:
 		fmt.Printf("Unrecognized option : %s\n", arg)
+		secLog.Errorf("%s Command not found", message.InvalidInputProtocolViolation)
 		fallthrough
 
 	case "help", "-help", "--help":

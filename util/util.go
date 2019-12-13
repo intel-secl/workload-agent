@@ -86,7 +86,7 @@ func GetNewTpmInstance() (tpm.Tpm, error){
 	log.Trace("util/util:GetNewTpmInstance() Entering")
 	defer log.Trace("util/util:GetNewTpmInstance() Leaving")
 	var err error
-	secLog.Infof("util/util:GetTpmInstance() Opening a new connection to the tpm %s", message.SU)
+	secLog.Infof("util/util:GetTpmInstance() %s, Opening a new connection to the tpm", message.SU)
 	vmStartTpm, err = tpm.Open()
 	return vmStartTpm, err
 }
@@ -98,7 +98,7 @@ func CloseTpmInstance() {
 
 
 	if vmStartTpm != nil {
-		secLog.Infof("util/util:CloseTpmInstance() Closing connection to the tpm %s", message.SU)
+		secLog.Infof("util/util:CloseTpmInstance() %s, Closing connection to the tpm", message.SU)
 		vmStartTpm.Close()
 	}
 }
@@ -129,7 +129,7 @@ func UnwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 
 	log.Debug("util/util:UnwrapKey() Binding key deserialized")
 	keyAuth, _ := hex.DecodeString(config.Configuration.BindingKeySecret)
-	secLog.Infof("util/util:UnwrapKey() Binding key getting decrypted, %s", message.SU)
+	secLog.Infof("util/util:UnwrapKey() %s, Binding key getting decrypted", message.SU)
 	key, unbindErr := t.Unbind(&certifiedKey, keyAuth, tpmWrappedKey)
 	if unbindErr != nil {
 		return nil, errors.Wrap(unbindErr, "util/util:UnwrapKey() error while unbinding the tpm wrapped key ")

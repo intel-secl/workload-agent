@@ -40,7 +40,7 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 	if err != nil {
 		return nil, err
 	}
-	secLog.Infof("common/key_creation:createKey() Calling CreateCertifiedKey of tpm library to create and certify signing or binding key, %s", message.SU)
+	secLog.Infof("common/key_creation:createKey() %s, Calling CreateCertifiedKey of tpm library to create and certify signing or binding key", message.SU)
 	tpmck, err = t.CreateCertifiedKey(usage, secretbytes, aiksecret)
 	if err != nil {
 		return nil, err

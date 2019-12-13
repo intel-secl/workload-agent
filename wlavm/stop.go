@@ -66,7 +66,7 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	if isVmVolume {
 		var vmMountPath = consts.MountPath + d.GetVMUUID()
 		// Unmount the image
-		secLog.Infof("wlavm/stop:Stop() A dm-crypt volume for the image is created, deleting the vm volume %s", message.SU)
+		secLog.Infof("wlavm/stop:Stop() %s, A dm-crypt volume for the image is created, deleting the vm volume", message.SU)
 		vml.Unmount(vmMountPath)
 		vml.DeleteVolume(d.GetVMUUID())
 	}
@@ -99,11 +99,11 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	mtx.Lock()
 	defer mtx.Unlock()
 	var imageMountPath = consts.MountPath + d.GetImageUUID()
-	secLog.Infof("wlavm/stop:Stop() Unmounting the image volume: %s, %s", imageMountPath, message.SU)
+	secLog.Infof("wlavm/stop:Stop() %s, Unmounting the image volume: %s", message.SU, imageMountPath)
 
 	// Unmount the image
 	vml.Unmount(imageMountPath)
-	secLog.Infof("wlavm/stop:Stop() Deleting the image volume: %s, %s", d.GetImageUUID(), message.SU)
+	secLog.Infof("wlavm/stop:Stop() %s, Deleting the image volume: %s",  message.SU, d.GetImageUUID())
 	// Close the image volume
 	vml.DeleteVolume(d.GetImageUUID())
 	log.Infof("wlavm/stop:Stop() VM %s stopped", d.GetVMUUID())
@@ -121,7 +121,7 @@ func isVmVolumeEncrypted(vmUUID string) (bool, error) {
 	args := []string{"status", deviceMapperLocation}
 
 
-	secLog.Infof("Checking for volume with UUID:%s is encrypted, %s", vmUUID, message.SU)
+	secLog.Infof("wlavm/stop:isVmVolumeEncrypted() %s, Checking for volume with UUID:%s is encrypted", message.SU, vmUUID)
 	cmdOutput, err := exec.ExecuteCommand("cryptsetup", args)
 
 	if cmdOutput != "" && strings.Contains(cmdOutput, "inactive") {

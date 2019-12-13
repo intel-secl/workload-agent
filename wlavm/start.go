@@ -119,7 +119,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	var tpmWrappedKey []byte
 
 	// get host hardware UUID
-	secLog.Infof("wlavm/start.go:Start() Trying to get host hardware UUID, %s", message.SU)
+	secLog.Infof("wlavm/start.go:Start() %s, Trying to get host hardware UUID", message.SU)
 	hardwareUUID, err := pinfo.HardwareUUID()
 	if err != nil {
 		log.WithError(err).Error("wlavm/start.go:Start() Unable to get the host hardware UUID")
@@ -225,7 +225,7 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	// check if sparse file exists, if it does, skip copying the change disk file to mount point
 	_, sparseFleStatErr := os.Stat(vmSparseFilePath)
 	vmVolumeMtx.Lock()
-	secLog.Infof("wlavm/start:vmVolumeManager() Creating VM dm-crypt volume in %s, %s", vmDeviceMapperPath, message.SU)
+	secLog.Infof("wlavm/start:vmVolumeManager() %s, Creating VM dm-crypt volume in %s", message.SU,  vmDeviceMapperPath)
 	err = vml.CreateVolume(vmSparseFilePath, vmDeviceMapperPath, key, size)
 	vmVolumeMtx.Unlock()
 	if err != nil {
@@ -249,14 +249,14 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 
 	// copy the files from vm path
 	args := []string{vmPath, vmMountPath}
-	secLog.Infof("wlavm/start:vmVolumeManager() Copying all the files from %s to vm mount path, %s", vmPath, message.SU)
+	secLog.Infof("wlavm/start:vmVolumeManager() %s, Copying all the files from %s to vm mount path", message.SU, vmPath)
 	_, err = exec.ExecuteCommand("cp", args)
 	if err != nil {
 		return errors.Wrapf(err, "wlavm/start.go:vmVolumeManager() error copying the vm path %s change disk to mount path. %s", vmPath, vmMountPath)
 	}
 
 	// remove the encrypted image file and create a symlink with the dm-crypt volume
-	secLog.Infof("wlavm/start:vmVolumeManager() Deleting change disk: %s, %s", vmPath, message.SU)
+	secLog.Infof("wlavm/start:vmVolumeManager() %s, Deleting change disk: %s",  message.SU, vmPath)
 	err = os.RemoveAll(vmPath)
 	if err != nil {
 		return errors.Wrapf(err, "wlavm/start.go:vmVolumeManager() error deleting the change disk: %s", vmPath)
@@ -275,7 +275,7 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	// Watch the symlink for deletion, and remove the _sparseFile if image is deleted
 	filewatcher.HandleEvent(vmDiskInfoFile, func(e fsnotify.Event) {
 		if e.Op&fsnotify.Remove == fsnotify.Remove {
-			secLog.Infof("wlavm/start:vmVolumeManager() Removing vm mount path at: %s, %s", vmMountPath, message.SU)
+			secLog.Infof("wlavm/start:vmVolumeManager() %s, Removing vm mount path at: %s", message.SU, vmMountPath)
 			os.RemoveAll(vmMountPath)
 		}
 	})
@@ -294,7 +294,7 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	// check if the sprse file already exists, if it does, skip image file decryption
 	_, sparseFileStatErr := os.Stat(sparseFilePath)
 	imgVolumeMtx.Lock()
-	secLog.Infof("wlavm/start:imageVolumeManager() Creating a dm-crypt volume for the image %s, %s", imageUUID, message.SU)
+	secLog.Infof("wlavm/start:imageVolumeManager() %s, Creating a dm-crypt volume for the image %s", message.SU, imageUUID)
 	err = vml.CreateVolume(sparseFilePath, imageDeviceMapperPath, key, size)
 	imgVolumeMtx.Unlock()
 	if err != nil {
@@ -335,7 +335,7 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	log.Info("wlavm/start:imageVolumeManager() Image decrypted successfully")
 	// write the decrypted data into a file in image mount path
 	decryptedImagePath := imageDeviceMapperMountPath + "/" + imageUUID
-	secLog.Infof("wlavm/start:imageVolumeManager() Writing decrypted data in to a file: %s, %s", decryptedImagePath, message.SU)
+	secLog.Infof("wlavm/start:imageVolumeManager() %s, Writing decrypted data in to a file: %s",  message.SU, decryptedImagePath)
 	ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0660)
 	if ioWriteErr != nil {
 		return errors.New("wlavm/start.go:imageVolumeManager() error writing the decrypted data to file")
@@ -367,28 +367,28 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 	}
 
 	// remove the encrypted image file and create a symlink with the dm-crypt volume
-	secLog.Infof("wlavm/start:imageVolumeManager() Deleting the enc image file from :%s, %s", sourceFile, message.SU)
+	secLog.Infof("wlavm/start:imageVolumeManager() %s, Deleting the enc image file from :%s", message.SU, sourceFile)
 	rmErr := os.RemoveAll(sourceFile)
 	if rmErr != nil {
 		return errors.Wrapf(err, "wlavm/start.go:createSymLinkAndChangeOwnership() error deleting the change disk: %s", sourceFile)
 	}
 
 	// create symlink between the image and the dm-crypt volume
-	secLog.Infof("wlavm/start:imageVolumeManager() Creating a symlink between %s and %s, %s", sourceFile, targetFile, message.SU)
+	secLog.Infof("wlavm/start:imageVolumeManager() %s, Creating a symlink between %s and %s",  message.SU, sourceFile, targetFile)
 	err = os.Symlink(targetFile, sourceFile)
 	if err != nil {
 		return errors.Wrapf(err, "wlavm/start.go:createSymLinkAndChangeOwnership() error while creating symbolic link")
 	}
 
 	// change the image symlink file ownership to qemu
-	secLog.Infof("Changing symlink ownership to qemu, %s", message.SU)
+	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing symlink ownership to qemu", message.SU)
 	err = os.Lchown(sourceFile, userID, groupID)
 	if err != nil {
 		return errors.New("wlavm/start.go:createSymLinkAndChangeOwnership() error while trying to change symlink owner to qemu")
 	}
 
 	// Giving read write access to the target file
-	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() Changing permissions to changed disk path: %s, %s", targetFile, message.SU)
+	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing permissions to changed disk path: %s",  message.SU, targetFile)
 	err = os.Chmod(targetFile, 0660)
 	if err != nil {
 		return errors.Wrapf(err, "wlavm/start.go:createSymLinkAndChangeOwnership() error while giving permissions to changed disk path: %s", targetFile)
@@ -396,7 +396,7 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 
 
 	// change the image mount path directory ownership to qemu
-	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() Changing the mount path ownership to qemu, %s", message.SU)
+	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing the mount path ownership to qemu", message.SU)
 	err = osutil.ChownR(mountPath, userID, groupID)
 
 	if err != nil {
@@ -516,7 +516,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 		return nil, errors.Wrap(err, "wlavm/start:createSignatureWithTPM() Error while getting hash of instance report")
 	}
 
-	secLog.Infof("wlavm/start:createSignatureWithTPM() Using TPM to sign the hash, %s", message.SU)
+	secLog.Infof("wlavm/start:createSignatureWithTPM() %s, Using TPM to sign the hash", message.SU)
 	signature, err := t.Sign(&signingKey, keyAuth, alg, h)
 	if err != nil {
 		return nil, errors.Wrap(err, "wlavm/start:createSignatureWithTPM() Error while creating tpm signature")
@@ -531,7 +531,7 @@ func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath, emptyFileNa
 	log.Trace("wlavm/start:checkMountPathExistsAndMountVolume() Entering")
 	defer log.Trace("wlavm/start:checkMountPathExistsAndMountVolume() Leaving")
 
-	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() Mounting the device mapper: %s, %s", deviceMapperPath, message.SU)
+	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() %s, Mounting the device mapper: %s", message.SU, deviceMapperPath)
 	mkdirErr := os.MkdirAll(mountPath, 0655)
 	if mkdirErr != nil {
 		return errors.New("wlavm/start.go:checkMountPathExistsAndMountVolume() error while creating the mount point for the image device mapper")
@@ -539,7 +539,7 @@ func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath, emptyFileNa
 
 	// create an empty image and disk file so that symlinks are not broken after VM stop
 	emptyFilePath := mountPath + "/" + emptyFileName
-	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() Creating an empty file in : %s, %s", emptyFilePath, message.SU)
+	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() %s, Creating an empty file in : %s", message.SU, emptyFilePath)
 	sampleFile, err := os.Create(emptyFilePath)
 	if err != nil {
 		return errors.New("wlavm/start.go:checkMountPathExistsAndMountVolume() error creating a sample file")
@@ -553,13 +553,13 @@ func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath, emptyFileNa
 	}
 
 	// change the image mount path directory ownership to qemu
-	secLog.Infof("Changing the mount path ownership to qemu, %s", message.SU)
+	secLog.Infof("wlavm/start.go:checkMountPathExistsAndMountVolume() %s, Changing the mount path ownership to qemu", message.SU)
 	err = osutil.ChownR(mountPath, userID, groupID)
 	if err != nil {
 		return errors.New("wlavm/start.go:checkMountPathExistsAndMountVolume() error trying to change mount path owner to qemu")
 	}
 
-	secLog.Infof("Mounting the image device mapper %s on %s, %s", deviceMapperPath, mountPath, message.SU)
+	secLog.Infof("wlavm/start.go:checkMountPathExistsAndMountVolume() %s, Mounting the image device mapper %s on %s", message.SU, deviceMapperPath, mountPath)
 	mountErr := vml.Mount(deviceMapperPath, mountPath)
 	if mountErr != nil {
 		if !strings.Contains(mountErr.Error(), "device is already mounted") {
