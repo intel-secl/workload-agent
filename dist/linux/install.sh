@@ -138,7 +138,7 @@ export LOG_ROTATION_PERIOD=${LOG_ROTATION_PERIOD:-monthly}
 export LOG_COMPRESS=${LOG_COMPRESS:-compress}
 export LOG_DELAYCOMPRESS=${LOG_DELAYCOMPRESS:-delaycompress}
 export LOG_COPYTRUNCATE=${LOG_COPYTRUNCATE:-copytruncate}
-export LOG_SIZE=${LOG_SIZE:-1G}
+export LOG_SIZE=${LOG_SIZE:-100M}
 export LOG_OLD=${LOG_OLD:-12}
 
 mkdir -p /etc/logrotate.d
@@ -167,7 +167,6 @@ hash tagent 2>/dev/null ||
 
 
 # Check if yum packages are already installed; if not install them
-pkg_install_logfile=wlagent_pkg_install.log
 yum_packages=(libvirt cryptsetup)
 for i in ${yum_packages[*]}
 do
@@ -175,9 +174,8 @@ do
   if [ "$isinstalled" == "package $i is not installed" ]; then
     # put logs of install into a temporary file. We will copy this file and
     # delete it later.
-    touch $pkg_install_logfile
-    echo "Installing $i" >> $pkg_install_logfile
-    yum -y install $i | tee -a $pkg_install_logfile
+    echo "Installing $i"
+    yum -y install $i
   fi
 done
 if [ ! -d "/etc/libvirt" ]; then
@@ -217,31 +215,17 @@ export WORKLOAD_AGENT_JWT_CERT=$WORKLOAD_AGENT_CONFIGURATION/certs/trustedjwt
 export WORKLOAD_AGENT_LOGS=/var/log/workload-agent
 export WORKLOAD_AGENT_HOME=/opt/workload-agent
 export WORKLOAD_AGENT_BIN=$WORKLOAD_AGENT_HOME/bin
-export INSTALL_LOG_FILE=$WORKLOAD_AGENT_LOGS/install.log
 }
 directory_layout
 
-
-mkdir -p $(dirname $INSTALL_LOG_FILE)
-if [ $? -ne 0 ]; then
-  echo_failure "Cannot create directory: $(dirname $INSTALL_LOG_FILE)"
-  exit 1
-fi
-logfile=$INSTALL_LOG_FILE
-date >> $logfile
-if [ -f $pkg_install_logfile ]; then
-  cat $pkg_install_logfile >> $logfile
-  rm -rf $pkg_install_logfile
-fi
-
-echo "Installing workload agent..." >> $logfile
+echo "Installing workload agent..."
 
 # Create application directories (chown will be repeated near end of this script, after setup)
 for directory in $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_CA $WORKLOAD_AGENT_BIN $WORKLOAD_AGENT_LOGS $WORKLOAD_AGENT_FLAVORSIGN $WORKLOAD_AGENT_JWT_CERT; do
   # mkdir -p will return 0 if directory exists or is a symlink to an existing directory or directory and parents can be created
   mkdir -p $directory 
   if [ $? -ne 0 ]; then
-    echo_failure "Cannot create directory: $directory" | tee -a $logfile
+    echo_failure "Cannot create directory: $directory"
     exit 1
   fi
   chown -R $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $directory
@@ -254,7 +238,7 @@ chown $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $WORKLOAD_AGENT_BIN/wlagent
 ln -sfT $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/wlagent
 
 cp -f workload-agent.service $WORKLOAD_AGENT_HOME
-systemctl enable $WORKLOAD_AGENT_HOME/workload-agent.service | tee -a $logfile
+systemctl enable $WORKLOAD_AGENT_HOME/workload-agent.service
 
 # Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
 cp -f qemu /etc/libvirt/hooks 
@@ -263,7 +247,7 @@ cp -f qemu /etc/libvirt/hooks
 systemctl restart libvirtd
 isactive=$(systemctl is-active libvirtd)
 if [ ! "$isactive" == "active" ]; then
-  echo_warning "libvirtd system service is not active. Exiting" | tee -a $logfile
+  echo_warning "libvirtd system service is not active. Exiting"
   exit 0
 fi
 ## TODO: Above - Should we exit is libvirt restart did not work? 
@@ -272,7 +256,7 @@ fi
 
 # exit workload-agent setup if WORKLOAD_AGENT_NOSETUP is set
 if [ $WLA_NOSETUP == "true" ]; then
-  echo "WLA_NOSETUP is set. So, skipping the workload-agent setup task." | tee -a $logfile
+  echo "WLA_NOSETUP is set. So, skipping the workload-agent setup task."
   exit 0
 fi
 
@@ -304,7 +288,7 @@ check_env_var_present(){
     if [ "${!1:-}" ]; then
       return 0
     else
-      echo_warning "$1 must be set and exported (empty value is okay)" | tee -a $logfile
+      echo_warning "$1 must be set and exported (empty value is okay)"
       all_env_vars_present=0
       return 1
     fi
@@ -313,7 +297,7 @@ check_env_var_present(){
   if [ "${!1:-}" ]; then
     return 0
   else
-    echo_warning "$1 must be set and exported" | tee -a $logfile
+    echo_warning "$1 must be set and exported"
     all_env_vars_present=0
     return 1
   fi
@@ -337,21 +321,21 @@ done
 setup_complete=0
 # Call workload-agent setup if all the required env variables are set
 if [[ $all_env_vars_present -eq 1 ]]; then
-  wlagent setup | tee -a $logfile; test ${PIPESTATUS[0]} -eq 0
+  wlagent setup
   setup_complete=$?
 else 
-  echo_failure "One or more environment variables are not present. Setup cannot proceed. Aborting..." | tee -a $logfile
-  echo_failure "Please export the missing environment variables and run setup again" | tee -a $logfile
+  echo_failure "One or more environment variables are not present. Setup cannot proceed. Aborting..."
+  echo_failure "Please export the missing environment variables and run setup again"
   exit 1
 fi
 
 # Enable systemd service and start it
-systemctl start workload-agent | tee -a $logfile
+systemctl start workload-agent
 
 is_docker_installed(){
   which docker 2>/dev/null
   if [ $? -ne 0 ]; then
-    echo "Container Security required Docker 19.03 to be installed on this system, but docker is not installerd"
+    echo_failure "Container Security requires Docker 19.03 to be installed on this system, but docker is not installed"
     exit 1
   fi
 }
@@ -416,9 +400,9 @@ if [ "$WA_WITH_CONTAINER_SECURITY" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY" =
 fi
 
 if [ $setup_complete -ne 0 ]; then
-  echo_failure "Installation completed completed with errors. Please check log file" | tee -a $logfile
+  echo_failure "Installation completed completed with errors. Please check log file"
   exit 1
 fi
 
 
-echo_success "Installation completed." | tee -a $logfile
+echo_success "Installation completed."
