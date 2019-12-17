@@ -42,24 +42,34 @@ func printVersion() {
 }
 
 func printUsage() {
-	fmt.Printf("Usage:\n\n")
+	fmt.Println("Usage:")
 	fmt.Printf("    %s <command> [arguments]\n\n", os.Args[0])
 	fmt.Printf("Available Commands:\n")
-	fmt.Printf("    help|-help|--help  Show this help message\n")
-	fmt.Printf("    setup [task]       Run setup task\n")
-	fmt.Printf("    start              Start wlagent\n")
-	fmt.Printf("    stop               Stop wlagent\n")
-	fmt.Printf("    status             Reports the status of wlagent service\n")
-	fmt.Printf("    uninstall          Uninstall wlagent\n")
-	fmt.Printf("    uninstall --purge  Uninstalls workload agent and deletes the existing configuration directory\n")
-	fmt.Printf("    version            Reports the version of the workload agent\n\n")
+	fmt.Printf("    help|-help|--help      Show this help message\n")
+	fmt.Printf("    -v|--version           Print version/build information\n")
+	fmt.Printf("    start                  Start wlagent\n")
+	fmt.Printf("    stop                   Stop wlagent\n")
+	fmt.Printf("    status                 Reports the status of wlagent service\n")
+	fmt.Printf("    uninstall  [--purge]   Uninstall workload-agent. --purge option needs to be applied to remove configuration and data files\n")
+	fmt.Printf("    setup [task]           Run setup task\n")
 	fmt.Printf("Available Tasks for setup:\n")
-	fmt.Printf("    SigningKey         Generate a TPM signing key\n")
-	fmt.Printf("    BindingKey         Generate a TPM binding key\n")
-	fmt.Printf("    RegisterSigningKey Register a signing key with the host verification service\n")
-	fmt.Printf("                        - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
-	fmt.Printf("    RegisterBindingKey Register a binding key with the host verification service\n")
-	fmt.Printf("                        - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
+	fmt.Printf("    download_ca_cert       Download CMS root CA certificate\n")
+	fmt.Printf("\t\t                           - Option [--force] overwrites any existing files, and always downloads new root CA cert\n")
+	fmt.Printf("                           - Environment variable CMS_BASE_URL=<url> for CMS API url\n")
+	fmt.Printf("                           - Environment variable CMS_TLS_CERT_SHA384=<CMS TLS cert sha384 hash> to ensure that WLS is talking to the right CMS instance\n")
+	fmt.Printf("    SigningKey             Generate a TPM signing key\n")
+	fmt.Printf("\t\t                           - Option [--force] overwrites any existing files, and always creates a new Signing key\n")
+	fmt.Printf("    BindingKey             Generate a TPM binding key\n")
+	fmt.Printf("\t\t                           - Option [--force] overwrites any existing files, and always creates a new Binding key\n")
+	fmt.Printf("    RegisterSigningKey     Register a signing key with the host verification service\n")
+	fmt.Printf("\t\t                           - Option [--force] Always registers the Signing key with Verification service\n")
+	fmt.Printf("                           - Environment variable MTWILSON_API_URL=<url> for registering the key with Verification service\n")
+	fmt.Printf("                           - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
+	fmt.Printf("    RegisterBindingKey     Register a binding key with the host verification service\n")
+	fmt.Printf("\t\t                           - Option [--force] Always registers the Binding key with Verification service\n")
+	fmt.Printf("                           - Environment variable MTWILSON_API_URL=<url> for registering the key with Verification service\n")
+	fmt.Printf("                           - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
+	fmt.Printf("                           - Environment variable TRUSTAGENT_USERNAME=<TA user> for changing binding key file ownership to TA application user\n")
 }
 
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
@@ -91,7 +101,7 @@ func main() {
 		return
 	}
 	switch arg := strings.ToLower(args[0]); arg {
-	case "--version", "-v", "version":
+	case "--version", "-v":
 		printVersion()
 
 	case "setup":
@@ -150,17 +160,27 @@ func main() {
 				},
 				setup.SigningKey{
 					T: t,
+					Flags: flags,
 				},
 				setup.BindingKey{
 					T: t,
+					Flags: flags,
 				},
-				setup.RegisterBindingKey{},
-				setup.RegisterSigningKey{},
+				setup.RegisterBindingKey{
+					Flags: flags,
+				},
+				setup.RegisterSigningKey{
+					Flags: flags,
+				},
 			},
 			AskInput: false,
 		}
 		defer t.Close()
-		err = setupRunner.RunTasks(args[1:]...)
+		tasklist := []string{}
+		if args[1] != "all" {
+			tasklist = args[1:]
+		}
+		err = setupRunner.RunTasks(tasklist...)
 		if err != nil {
 			log.WithError(err).Error("main:main() Error running setup")
 			log.Tracef("%+v", err)

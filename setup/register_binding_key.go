@@ -9,6 +9,7 @@ package setup
 **/
 
 import (
+	"flag"
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	hvsclient "intel/isecl/wlagent/clients"
@@ -23,17 +24,23 @@ import (
 )
 
 type RegisterBindingKey struct {
+	Flags []string
 }
 
 func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	log.Trace("setup/register_binding_key:Run() Entering")
 	defer log.Trace("setup/register_binding_key:Run() Leaving")
-
+	fs := flag.NewFlagSet("RegisterBindingKey", flag.ContinueOnError)
+	force := fs.Bool("force", false, "Re-register binding key with Verification service")
+	err := fs.Parse(rb.Flags)
+	if err != nil {
+		return errors.Wrap(err, "setup/register_binding_key:Run() Unable to parse flags")
+	}
 	if config.Configuration.ConfigComplete == false {
 		return ErrMessageSetupIncomplete
 	}
 
-	if rb.Validate(c) == nil {
+	if !*force && rb.Validate(c) == nil {
 		fmt.Fprintln(os.Stdout, "Binding key already registered. Skipping this setup task.")
 		log.Info("setup/register_binding_key:Run() Binding key already registered. Skipping this setup task.")
 		return nil

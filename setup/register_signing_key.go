@@ -5,6 +5,7 @@
 package setup
 
 import (
+	"flag"
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	hvsclient "intel/isecl/wlagent/clients"
@@ -17,17 +18,23 @@ import (
 )
 
 type RegisterSigningKey struct {
+	Flags []string
 }
 
 func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	log.Trace("setup/register_signing_key:Run() Entering")
 	defer log.Trace("setup/register_signing_key:Run() Leaving")
-
+	fs := flag.NewFlagSet("SigningKey", flag.ContinueOnError)
+	force := fs.Bool("force", false, "Re-register signing key with Verification service")
+	err := fs.Parse(rs.Flags)
+	if err != nil {
+		return errors.Wrap(err, "setup/register_signing_key:Run(): Unable to parse flags")
+	}
 	if config.Configuration.ConfigComplete == false {
 		return ErrMessageSetupIncomplete
 	}
 
-	if rs.Validate(c) == nil {
+	if !*force && rs.Validate(c) == nil {
 		fmt.Fprintln(os.Stdout,"Signing key already registered. Skipping this setup task.")
 		log.Info("setup/register_signing_key:Run() Signing key already registered. Skipping this setup task.")
 		return nil

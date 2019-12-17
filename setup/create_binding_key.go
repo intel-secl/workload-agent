@@ -5,6 +5,7 @@
 package setup
 
 import (
+	"flag"
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	cLog "intel/isecl/lib/common/log"
@@ -18,6 +19,7 @@ import (
 
 type BindingKey struct {
 	T tpm.Tpm
+	Flags []string
 }
 
 var log = cLog.GetDefaultLogger()
@@ -27,17 +29,23 @@ var ErrMessageSetupIncomplete = errors.New("configuration is not complete - setu
 func (bk BindingKey) Run(c csetup.Context) error {
 	log.Trace("setup/create_binding_key:Run() Entering")
 	defer log.Trace("setup/create_binding_key:Run() Leaving")
+	fs := flag.NewFlagSet("BindingKey", flag.ContinueOnError)
+	force := fs.Bool("force", false, "force recreation, will overwrite any existing signing key")
+	err := fs.Parse(bk.Flags)
+	if err != nil {
+		return errors.Wrap(err, "setup/create_binding_key:Run() Unable to parse flags")
+	}
 	if config.Configuration.ConfigComplete == false {
 		return ErrMessageSetupIncomplete
 	}
-	if bk.Validate(c) == nil {
+	if !*force && bk.Validate(c) == nil {
 		fmt.Fprintln(os.Stdout, "Binding key already created, skipping ...")
 		log.Info("setup/create_binding_key:Run() Binding key already created, skipping ...")
 		return nil
 	}
 	log.Info("setup/create_binding_key:Run() Creating binding key.")
 
-	err := common.GenerateKey(tpm.Binding, bk.T)
+	err = common.GenerateKey(tpm.Binding, bk.T)
 	if err != nil {
 		return errors.Wrap(err, "setup/create_binding_key:Run() Error while generating tpm certified binding key")
 	}

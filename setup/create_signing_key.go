@@ -5,6 +5,7 @@
 package setup
 
 import (
+	"flag"
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/tpm"
@@ -17,23 +18,30 @@ import (
 
 type SigningKey struct {
 	T tpm.Tpm
+	Flags []string
 }
 
 func (sk SigningKey) Run(c csetup.Context) error {
 	log.Trace("setup/create_signing_key:Run() Entering")
 	defer log.Trace("setup/create_signing_key:Run() Leaving")
-
+	fs := flag.NewFlagSet("SigningKey", flag.ContinueOnError)
+	force := fs.Bool("force", false, "force recreation, will overwrite any existing signing key")
+	err := fs.Parse(sk.Flags)
+	if err != nil {
+		return errors.Wrap(err, "setup/create_signing_key:Run() Unable to parse flags")
+	}
+	
 	if config.Configuration.ConfigComplete == false {
 		return ErrMessageSetupIncomplete
 	}
-	if sk.Validate(c) == nil {
+	if !*force && sk.Validate(c) == nil {
 		fmt.Fprintln(os.Stdout, "Signing key already created, skipping ...")
 		log.Info("setup/create_signing_key:Run() Signing key already created, skipping ...")
 		return nil
 	}
 	log.Info("setup/create_signing_key:Run() Creating signing key.")
 
-	err := common.GenerateKey(tpm.Signing, sk.T)
+	err = common.GenerateKey(tpm.Signing, sk.T)
 	if err != nil {
 		return errors.Wrap(err, "setup/create_singing_key:Run() Error while generating tpm certified signing key")
 	}
