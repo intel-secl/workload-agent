@@ -54,8 +54,9 @@ var Configuration struct {
 	}
 	SkipFlavorSignatureVerification bool
 	LogLevel                        logrus.Level
-	LogEntryMaxLength               int
+	LogMaxLength                    int
 	ConfigComplete                  bool
+	LogEnableStdout                 bool
 }
 
 var (
@@ -259,13 +260,23 @@ func SaveConfiguration(c csetup.Context) error {
 
 	logEntryMaxLength, err := c.GetenvInt(consts.LogEntryMaxlengthEnv, "Maximum length of each entry in a log")
 	if err == nil && logEntryMaxLength >= 100 {
-		Configuration.LogEntryMaxLength = logEntryMaxLength
-	} else if Configuration.LogEntryMaxLength != 0 {
+		Configuration.LogMaxLength = logEntryMaxLength
+	} else if Configuration.LogMaxLength != 0 {
 		log.Info("No change in Log Entry Max Length")
 	} else {
 		log.Info("Invalid Log Entry Max Length defined (should be > 100), using default value:", consts.DefaultLogEntryMaxlength)
-		Configuration.LogEntryMaxLength = consts.DefaultLogEntryMaxlength
+		Configuration.LogMaxLength = consts.DefaultLogEntryMaxlength
 	}
+
+	Configuration.LogEnableStdout = false
+	logEnableStdout, err := c.GetenvString("WLA_ENABLE_CONSOLE_LOG", "Workload Agent Enable standard output")
+	if err == nil && logEnableStdout != "" {
+		Configuration.LogEnableStdout, err = strconv.ParseBool(logEnableStdout)
+		if err != nil{
+			log.Info("Error while parsing the variable WLA_ENABLE_CONSOLE_LOG, setting to default value false")
+		}
+	} 
+
 
 	Configuration.TrustAgent.AikPemFile = filepath.Join(Configuration.TrustAgent.ConfigDir, consts.TAAikPemFileName)
 	Configuration.ConfigComplete = true
@@ -276,29 +287,21 @@ func SaveConfiguration(c csetup.Context) error {
 }
 
 // LogConfiguration is used to save log configurations
-func LogConfiguration(stdOut, logFile, dLogFile bool) {
+func LogConfiguration(isStdOut bool) {
 	// creating the log file if not preset
 	var ioWriterDefault io.Writer
 	secLogFile, _ := os.OpenFile(consts.SecurityLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
 	defaultLogFile, _ := os.OpenFile(consts.DefaultLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
-	daemonLogFile, _ := os.OpenFile(consts.DaemonLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
 
 	ioWriterDefault = defaultLogFile
-	if stdOut {
-		ioWriterDefault = os.Stdout
-	}
 
-	if stdOut && logFile {
-		ioWriterDefault = io.MultiWriter(os.Stdout, defaultLogFile)
+	if isStdOut {
+		ioWriterDefault = io.MultiWriter(os.Stdout, ioWriterDefault)
 	}
-
-	if dLogFile {
-		ioWriterDefault = daemonLogFile
-	}
+	
 	ioWriterSecurity := io.MultiWriter(ioWriterDefault, secLogFile)
-
-	cLogInt.SetLogger(cLog.DefaultLoggerName, Configuration.LogLevel, &cLog.LogFormatter{MaxLength: Configuration.LogEntryMaxLength}, ioWriterDefault, false)
-	cLogInt.SetLogger(cLog.SecurityLoggerName, Configuration.LogLevel, &cLog.LogFormatter{MaxLength: Configuration.LogEntryMaxLength}, ioWriterSecurity, false)
+	cLogInt.SetLogger(cLog.DefaultLoggerName, Configuration.LogLevel, &cLog.LogFormatter{MaxLength: Configuration.LogMaxLength}, ioWriterDefault, false)
+	cLogInt.SetLogger(cLog.SecurityLoggerName, Configuration.LogLevel, &cLog.LogFormatter{MaxLength: Configuration.LogMaxLength}, ioWriterSecurity, false)
 	secLog.Info(message.LogInit)
 	log.Info(message.LogInit)
 }

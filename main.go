@@ -75,17 +75,8 @@ func printUsage() {
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
 func main() {
 
-	isStdOut := false
-	isWLAConsoleEnabled := os.Getenv("WLA_ENABLE_CONSOLE_LOG")
-	if isWLAConsoleEnabled == "true" {
-		isStdOut = true
-	}
-
-	config.LogConfiguration(isStdOut, true, false)
-
 	log.Trace("main:main() Entering")
 	defer log.Trace("main:main() Leaving")
-	// Save log configurations
 	var context csetup.Context
 	inputValArr := []string{os.Args[0]}
 	if valErr := validation.ValidateStrings(inputValArr); valErr != nil {
@@ -115,14 +106,13 @@ func main() {
 		// TODO : The right way to address this is to pass the arguments from the commandline
 		// to a functon in the workload agent setup package and have it build a slice of tasks
 		// to run.
-
+		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		err := config.SaveConfiguration(context)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "main:main() Unable to save configuration in config.yml ")
 			log.WithError(err).Error("main:main() Unable to save configuration in config.yml")
 			os.Exit(1)
 		}
-		config.LogConfiguration(isStdOut, true, false)
 		secLog.Infof("%s, Opening tpm connection", message.SU)
 		// Workaround for tpm2-abrmd bug in RHEL 7.5
 		t, err := tpm.Open()
@@ -189,7 +179,6 @@ func main() {
 		}
 
 	case "runservice":
-		config.LogConfiguration(isStdOut, true, true)
 		runservice()
 
 	case "start":
@@ -438,6 +427,7 @@ func removeservice() {
 func runservice() {
 	log.Trace("main:runservice() Entering")
 	defer log.Trace("main:runservice() Leaving")
+	config.LogConfiguration(config.Configuration.LogEnableStdout)
 	// Save log configurations
 	//TODO : daemon log configuration - does it need to be passed in?
 
