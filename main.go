@@ -106,7 +106,7 @@ func main() {
 		// TODO : The right way to address this is to pass the arguments from the commandline
 		// to a functon in the workload agent setup package and have it build a slice of tasks
 		// to run.
-		config.LogConfiguration(config.Configuration.LogEnableStdout)
+		config.LogConfiguration(false)
 		err := config.SaveConfiguration(context)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "main:main() Unable to save configuration in config.yml ")
@@ -124,6 +124,10 @@ func main() {
 		flags := args
 		if len(args) > 1 {
 			flags = args[2:]
+		}else{
+			fmt.Fprintln(os.Stderr, "Error: setup task not mentioned")
+                        printUsage()
+			os.Exit(1)
 		}
 		
 		if len(args) >= 2 &&

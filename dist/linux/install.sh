@@ -321,7 +321,7 @@ done
 setup_complete=0
 # Call workload-agent setup if all the required env variables are set
 if [[ $all_env_vars_present -eq 1 ]]; then
-  wlagent setup
+  wlagent setup all
   setup_complete=$?
 else 
   echo_failure "One or more environment variables are not present. Setup cannot proceed. Aborting..."
