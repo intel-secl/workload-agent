@@ -76,6 +76,11 @@ func Fetch(imageID string) (string, bool) {
 		}
 	}
 
-	f, _ := json.Marshal(flavorKeyInfo.Flavor)
+	f, err := json.Marshal(flavorKeyInfo.Flavor)
+	if err != nil {
+                log.WithError(err).Error("flavor/flavor.go:Fetch() Error while marshalling flavor")
+                return "", false
+        }
+
 	return string(f), true
 }

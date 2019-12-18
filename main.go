@@ -174,6 +174,7 @@ func main() {
 		if args[1] != "all" {
 			tasklist = args[1:]
 		}
+		config.LogConfiguration(false)
 		err = setupRunner.RunTasks(tasklist...)
 		if err != nil {
 			log.WithError(err).Error("main:main() Error running setup")
@@ -183,15 +184,19 @@ func main() {
 		}
 
 	case "runservice":
+		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		runservice()
 
 	case "start":
+		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		start()
 
 	case "stop":
+		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		stop()
 
 	case "status":
+		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		fmt.Println("Workload Agent Status")
 		stdout, stderr, _ := exec.RunCommandWithTimeout(consts.ServiceStatusCmd, 2)
 
@@ -388,31 +393,28 @@ func deleteFile(path string) {
 func start() {
 	log.Trace("main:start() Entering")
 	defer log.Trace("main:start() Leaving")
-	cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStartCmd, 5)
+
+	fmt.Fprintln(os.Stdout, `Forwarding to "systemctl start wlagent"`)
+	_, _, err := exec.RunCommandWithTimeout(consts.ServiceStartCmd, 5)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Could not start Workload Agent Service")
 		fmt.Fprintln(os.Stderr, "Error : ", err)
 		os.Exit(1)
 	}
-	fmt.Println(cmdOutput)
-	fmt.Println("Workload Agent Service Started...")
-	secLog.Info(message.ServiceStart)
 }
 
 func stop() {
 	log.Trace("main:stop() Entering")
 	defer log.Trace("main:stop() Leaving")
+	fmt.Fprintln(os.Stdout, `Forwarding to "systemctl stop wlagent"`)
 
-	cmdOutput, _, err := exec.RunCommandWithTimeout(consts.ServiceStopCmd, 12)
+	_, _, err := exec.RunCommandWithTimeout(consts.ServiceStopCmd, 12)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Could not stop Workload Agent Service")
 		fmt.Fprintln(os.Stderr, "Error : ", err)
 		os.Exit(1)
 	}
-	fmt.Println(cmdOutput)
 	util.CloseTpmInstance()
-	fmt.Println("Workload Agent Service Stopped...")
-	secLog.Info(message.ServiceStop)
 }
 
 func removeservice() {
@@ -431,7 +433,6 @@ func removeservice() {
 func runservice() {
 	log.Trace("main:runservice() Entering")
 	defer log.Trace("main:runservice() Leaving")
-	config.LogConfiguration(config.Configuration.LogEnableStdout)
 	// Save log configurations
 	//TODO : daemon log configuration - does it need to be passed in?
 
@@ -503,7 +504,9 @@ func runservice() {
 			r.Accept(l)
 		}
 	}()
+        secLog.Info(message.ServiceStart)
+
 	// block until stop channel receives
 	proc.WaitForQuitAndCleanup(10 * time.Second)
-
+        secLog.Info(message.ServiceStop)
 }
