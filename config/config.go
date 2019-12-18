@@ -238,10 +238,17 @@ func SaveConfiguration(c csetup.Context) error {
 		return errors.Wrap(err, "TRUSTAGENT_CONFIGURATION is not defined in environment or configuration file")
 	}
 
-	if skipFlavorSignatureVerification, ok := os.LookupEnv(consts.SkipFlavorSignatureVerification); ok{
-		fmt.Printf("%s:\n", "Flavor Signature Verification Skip")
+	if skipFlavorSignatureVerification, err := c.GetenvString(consts.SkipFlavorSignatureVerification,
+		"Skip flavor signature verification"); err == nil{
 		Configuration.SkipFlavorSignatureVerification, err = strconv.ParseBool(skipFlavorSignatureVerification)
-		return errors.Wrap(err, "SKIP_FLAVOR_SIGNATURE_VERIFICATION is invalid, should be set either true or false")
+		if err != nil {
+			log.Warn("SKIP_FLAVOR_SIGNATURE_VERIFICATION is set to invalid value (should be true/false). " +
+				"Setting it to true by default")
+			Configuration.SkipFlavorSignatureVerification = true
+		}
+	} else {
+		log.Info("SKIP_FLAVOR_SIGNATURE_VERIFICATION is not set. Setting it to true by default")
+		Configuration.SkipFlavorSignatureVerification = true
 	}
 
 	ll, err := c.GetenvString(consts.LogLevelEnvVar, "Logging Level")
