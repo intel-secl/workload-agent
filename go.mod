@@ -19,16 +19,16 @@ require (
 	intel/isecl/lib/vml v0.0.0
 )
 
-replace intel/isecl/lib/tpm => gitlab.devtools.intel.com/sst/isecl/lib/tpm.git v1.0/develop
+replace intel/isecl/lib/tpm => github.com/intel-secl/tpm v1.6
 
-replace intel/isecl/lib/vml => gitlab.devtools.intel.com/sst/isecl/lib/volume-management.git v1.0/develop
+replace intel/isecl/lib/vml => github.com/intel-secl/volume-management-library v1.6
 
-replace intel/isecl/lib/common => gitlab.devtools.intel.com/sst/isecl/lib/common.git v1.0/develop
+replace intel/isecl/lib/common => github.com/intel-secl/common v1.6
 
-replace intel/isecl/lib/flavor => gitlab.devtools.intel.com/sst/isecl/lib/flavor.git v1.0/develop
+replace intel/isecl/lib/flavor => github.com/intel-secl/flavor v1.6
 
-replace intel/isecl/lib/verifier => gitlab.devtools.intel.com/sst/isecl/lib/verifier.git v1.0/develop
+replace intel/isecl/lib/verifier => github.com/intel-secl/verifier v1.6
 
-replace intel/isecl/lib/platform-info => gitlab.devtools.intel.com/sst/isecl/lib/platform-info.git v1.0/develop
+replace intel/isecl/lib/platform-info => github.com/intel-secl/platform-info v1.6
 
-replace intel/isecl/lib/clients => gitlab.devtools.intel.com/sst/isecl/lib/clients.git v1.0/develop
+replace intel/isecl/lib/clients => github.com/intel-secl/clients v1.6
