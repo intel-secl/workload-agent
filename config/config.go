@@ -217,7 +217,7 @@ func SaveConfiguration(c csetup.Context) error {
 		return errors.Wrap(err, "WLA_SERVICE_USERNAME is not defined in environment or configuration file")
 	}
 
-	wlaAASPassword, err := c.GetenvString(consts.WLA_PASSWORD, "WLA Service Password")
+	wlaAASPassword, err := c.GetenvSecret(consts.WLA_PASSWORD, "WLA Service Password")
 	if err == nil && wlaAASPassword != "" {
 		Configuration.Wla.APIPassword = wlaAASPassword
 	} else if strings.TrimSpace(Configuration.Wla.APIPassword) == "" {
