@@ -1,6 +1,6 @@
 #!/bin/bash
 ArtifactId=workload-agent
-Version=1.0-SNAPSHOT
+Version=2.0-SNAPSHOT
 GroupId=com.intel.isecl
 MavenRepoPath=/root/.m2/repository/
 cp out/${ArtifactId}-v1.*bin out/${ArtifactId}-${Version}.bin
