@@ -1,42 +1,23 @@
-image: davidczech/go-tpm-sim:latest
-
 before_script:
-  - echo "Acquire::http::Proxy \"${HTTP_PROXY}\";" >> /etc/apt/apt.conf
-  - echo "Acquire::https::Proxy \"${HTTPS_PROXY}\";" >> /etc/apt/apt.conf
-
-  - git config --global http.proxy "${HTTP_PROXY}"
-  - git config --global http."https://${GITLAB_SERVER}".proxy ""
-  - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@${GITLAB_SERVER}".insteadOf "https://${GITLAB_SERVER}"
-
-  - echo "[http \"https://${GITLAB_SERVER}\"]" >> ~/.gitconfig
-  - echo "        proxy = \"\"" >> ~/.gitconfig
+  - git config --global http.proxy http://proxy-us.intel.com:911
+  - git config --global https.proxy http://proxy-us.intel.com:911
+  - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.devtools.intel.com".insteadOf "https://gitlab.devtools.intel.com"
+  - export http_proxy=http://proxy-us.intel.com:911
+  - export https_proxy=http://proxy-us.intel.com:911
+  - export no_proxy=127.0.0.1,localhost,gitlab.devtools.intel.com
   - cd $CI_PROJECT_DIR
-variables:
-  HTTPS_PROXY: "${HTTPS_PROXY}"
-  no_proxy: "${NO_PROXY}"
 
 stages:
   - build
-  - test
 
-test:
-  stage: test
-  tags:
-    - go
-  script:
-    - start12 > /dev/null &
-    - start20 > /dev/null &
-    - start20_legacy > /dev/null &
-    - sleep 3
-    - provision12 1234 5678
-    - provision20 1234 5678
-    - provision20_legacy 1234 5678
-    - go test ./... -coverpkg=./... -coverprofile cover.out
-    - go tool cover -func cover.out
-  
-compile:
-  tags:
-    - go
+build:gta:
   stage: build
+  image: gta-devel
+  tags:
+    - gta
   script:
-    - go build ./...
+    - make package
+  artifacts:
+    paths:
+      - "out/workload-agent-*.bin"
+    expire_in: 1 week

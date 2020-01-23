@@ -9,7 +9,7 @@ import (
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
 	cLog "intel/isecl/lib/common/log"
-	"intel/isecl/lib/tpm"
+	"intel/isecl/lib/tpmprovider"
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
 	"os"
@@ -18,7 +18,7 @@ import (
 )
 
 type BindingKey struct {
-	T tpm.Tpm
+	T tpmprovider.TpmProvider
 	Flags []string
 }
 
@@ -45,7 +45,7 @@ func (bk BindingKey) Run(c csetup.Context) error {
 	}
 	log.Info("setup/create_binding_key:Run() Creating binding key.")
 
-	err = common.GenerateKey(tpm.Binding, bk.T)
+	err = common.GenerateKey(tpmprovider.Binding, bk.T)
 	if err != nil {
 		return errors.Wrap(err, "setup/create_binding_key:Run() Error while generating tpm certified binding key")
 	}
@@ -58,7 +58,7 @@ func (bk BindingKey) Validate(c csetup.Context) error {
 
 	log.Info("setup/create_binding_key:Validate() Validation for binding key.")
 
-	err := common.ValidateKey(tpm.Binding)
+	err := common.ValidateKey(tpmprovider.Binding)
 	if err != nil {
 		return errors.Wrap(err, "setup/create_binding_key:Validate() Error while validating binding key")
 	}

@@ -10,7 +10,7 @@ import (
 	"intel/isecl/lib/common/crypt"
 	cLog "intel/isecl/lib/common/log"
 	"intel/isecl/lib/common/log/message"
-	"intel/isecl/lib/tpm"
+	"intel/isecl/lib/tpmprovider"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
 	"os"
@@ -24,10 +24,10 @@ var log = cLog.GetDefaultLogger()
 var secLog = cLog.GetSecurityLogger()
 
 // tpmCertifiedKeySetup calls the TPM helper library to export a binding or signing keypair
-func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) {
+func createKey(usage int, t tpmprovider.TpmProvider) (tpmck *tpmprovider.CertifiedKey, err error) {
 	log.Trace("common/key_creation:createKey() Entering")
 	defer log.Trace("common/key_creation:createKey() Leaving")
-	if usage != tpm.Binding && usage != tpm.Signing {
+	if usage != tpmprovider.Binding && usage != tpmprovider.Signing {
 		return nil, errors.New("common/key_creation:createKey()  Incorrect KeyUsage parameter - needs to be signing or binding")
 	}
 	secretbytes, err := crypt.GetRandomBytes(secretKeyLength)
@@ -40,17 +40,25 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 	if err != nil {
 		return nil, err
 	}
+
 	secLog.Infof("common/key_creation:createKey() %s, Calling CreateCertifiedKey of tpm library to create and certify signing or binding key", message.SU)
-	tpmck, err = t.CreateCertifiedKey(usage, secretbytes, aiksecret)
+
+	switch (usage){
+	case tpmprovider.Binding:
+		tpmck, err = t.CreateBindingKey(secretbytes, aiksecret)
+	case tpmprovider.Signing:
+		tpmck, err = t.CreateSigningKey(secretbytes, aiksecret)
+	}
+
 	if err != nil {
 		return nil, err
 	}
-
-	switch usage {
-	case tpm.Binding:
-		config.Configuration.BindingKeySecret = hex.EncodeToString(secretbytes)
-	case tpm.Signing:
-		config.Configuration.SigningKeySecret = hex.EncodeToString(secretbytes)
+	
+	switch (usage){
+	case tpmprovider.Binding:
+		config.Configuration.BindingKeySecret  = hex.EncodeToString(secretbytes)
+	case tpmprovider.Signing:
+		config.Configuration.SigningKeySecret  = hex.EncodeToString(secretbytes)
 	}
 
 	config.Save()
@@ -60,7 +68,7 @@ func createKey(usage tpm.Usage, t tpm.Tpm) (tpmck *tpm.CertifiedKey, err error) 
 
 //Todo: for now, this will always overwrite the file. Should be a parameter
 // that forces overwrite of file.
-func writeCertifiedKeyToDisk(tpmck *tpm.CertifiedKey, filepath string) error {
+func writeCertifiedKeyToDisk(tpmck *tpmprovider.CertifiedKey, filepath string) error {
 	log.Trace("common/key_creation:writeCertifiedKeyToDisk() Entering")
 	defer log.Trace("common/key_creation:writeCertifiedKeyToDisk() Leaving")
 
@@ -90,11 +98,11 @@ func writeCertifiedKeyToDisk(tpmck *tpm.CertifiedKey, filepath string) error {
 // It uses the AiKSecret that is saved in the Workload Agent configuration
 // that is obtained from the trust agent, a randomn secret and uses the TPM
 // to generate a keypair that is tied to the TPM
-func GenerateKey(usage tpm.Usage, t tpm.Tpm) error {
+func GenerateKey(usage int, t tpmprovider.TpmProvider) error {
 	log.Trace("common/key_creation:GenerateKey() Entering")
 	defer log.Trace("common/key_creation:GenerateKey() Leaving")
 
-	if t == nil || (usage != tpm.Binding && usage != tpm.Signing) {
+	if t == nil || (usage != tpmprovider.Binding && usage != tpmprovider.Signing) {
 		return errors.New("common/key_creation:GenerateKey() Certified key or connection to TPM library failed")
 	}
 
@@ -107,9 +115,9 @@ func GenerateKey(usage tpm.Usage, t tpm.Tpm) error {
 	// Get the name of signing or binding key files depending on input parameter
 	var filename string
 	switch usage {
-	case tpm.Binding:
+	case tpmprovider.Binding:
 		filename = consts.BindingKeyFileName
-	case tpm.Signing:
+	case tpmprovider.Signing:
 		filename = consts.SigningKeyFileName
 	}
 
@@ -131,16 +139,16 @@ func GenerateKey(usage tpm.Usage, t tpm.Tpm) error {
 // Installed method of the CertifiedKey checks if there is a key already installed.
 // For now, this only checks for the existence of the file and does not check if
 // contents of the file are indeed correct
-func ValidateKey(usage tpm.Usage) error {
+func ValidateKey(usage int) error {
 	log.Trace("common/key_creation:ValidateKey() Entering")
 	defer log.Trace("common/key_creation:ValidateKey() Leaving")
 
 	// Get the name of signing or binding key files depending on input parameter
 	var filename string
 	switch usage {
-	case tpm.Binding:
+	case tpmprovider.Binding:
 		filename = consts.BindingKeyFileName
-	case tpm.Signing:
+	case tpmprovider.Signing:
 		filename = consts.SigningKeyFileName
 	}
 

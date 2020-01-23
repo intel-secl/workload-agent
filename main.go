@@ -12,7 +12,7 @@ import (
 	csetup "intel/isecl/lib/common/setup"
 	"intel/isecl/lib/common/validation"
 	"intel/isecl/lib/common/log/message"
-	"intel/isecl/lib/tpm"
+	"intel/isecl/lib/tpmprovider"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/filewatch"
@@ -113,11 +113,18 @@ func main() {
 			log.WithError(err).Error("main:main() Unable to save configuration in config.yml")
 			os.Exit(1)
 		}
+
 		secLog.Infof("%s, Opening tpm connection", message.SU)
 		// Workaround for tpm2-abrmd bug in RHEL 7.5
-		t, err := tpm.Open()
+		tpmFactory, err := tpmprovider.NewTpmFactory()
 		if err != nil {
-			secLog.WithError(err).Error("main:main() Error while opening a connection to TPM.")
+			fmt.Println("Error while creating the tpm factory.")
+			os.Exit(1)
+		}
+
+		t, err := tpmFactory.NewTpmProvider()
+		if err != nil {
+			fmt.Println("Error while opening a connection to TPM.")
 			os.Exit(1)
 		}
 
@@ -437,7 +444,7 @@ func runservice() {
 	//TODO : daemon log configuration - does it need to be passed in?
 
 	// open a connection to TPM
-	_, err := util.GetNewTpmInstance()
+	_, err := util.GetTpmInstance()
 	if err != nil {
 		log.WithError(err).Error("main:runservice() Could not open a new connection to the TPM")
 		secLog.Info(message.AppRuntimeErr)

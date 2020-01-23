@@ -31,8 +31,8 @@ const (
 	MountPath                                   = "/mnt/workload-agent/crypto/"
 	LogDirPath                                  = "/var/log/workload-agent/"
 	SecurityLogFile                             = LogDirPath + "workload-agent-security.log"
-	DefaultLogFile		                    = LogDirPath + "workload-agent.log"
-	DaemonLogFile		                    = LogDirPath + "daemon.log"
+	DefaultLogFile                              = LogDirPath + "workload-agent.log"
+	DaemonLogFile                               = LogDirPath + "daemon.log"
 	ConfigFileName                              = "config.yml"
 	ConfigDirPath                               = "/etc/workload-agent/"
 	FlavorSigningCertPath                       = ConfigDirPath + "flavor-signing-cert.pem" //Manually copy Flavor Signing Certificate from WPM to WLA
@@ -49,7 +49,6 @@ const (
 	PemCertificateHeader                        = "CERTIFICATE"
 	HashingAlgorithm                crypto.Hash = crypto.SHA384
 	WLABinFilePath                              = "/usr/local/bin/wlagent"
-	AIKPemFileName                              = "aik.pem"
 	TrustedCaCertsDir                           = ConfigDirPath + "certs/trustedca/"
 	FlavorSigningCertDir                        = ConfigDirPath + "certs/flavorsign/"
 	TrustedJWTSigningCertsDir                   = ConfigDirPath + "certs/trustedjwt/"

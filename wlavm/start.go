@@ -18,7 +18,7 @@ import (
 	"intel/isecl/lib/common/log/message"
 	flvr "intel/isecl/lib/flavor"
 	pinfo "intel/isecl/lib/platform-info/platforminfo"
-	"intel/isecl/lib/tpm"
+	"intel/isecl/lib/tpmprovider"
 	"intel/isecl/lib/verifier"
 	"intel/isecl/lib/vml"
 	wlsclient "intel/isecl/wlagent/clients"
@@ -475,7 +475,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	log.Trace("wlavm/start:createSignatureWithTPM() Entering")
 	defer log.Trace("wlavm/start:createSignatureWithTPM() Leaving")
 
-	var signingKey tpm.CertifiedKey
+	var signingKey tpmprovider.CertifiedKey
 
 	// Get the Signing Key that is stored on disk
 	log.Debug("wlavm/start:createSignatureWithTPM() Getting the signing key from WA config path")
@@ -505,11 +505,6 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 		return nil, errors.Wrap(err, "wlavm/start.go:createSignatureWithTPM() Error attempting to create signature - could not open TPM")
 	}
 
-	if t.Version() == tpm.V12 {
-		// tpm 1.2 only supports SHA1, so override the algorithm that we get here
-		alg = crypto.SHA1
-	}
-
 	log.Debug("wlavm/start:createSignatureWithTPM() Computing the hash of the report to be signed by the TPM")
 	h, err := crypt.GetHashData(data, alg)
 	if err != nil {
@@ -517,7 +512,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	}
 
 	secLog.Infof("wlavm/start:createSignatureWithTPM() %s, Using TPM to sign the hash", message.SU)
-	signature, err := t.Sign(&signingKey, keyAuth, alg, h)
+	signature, err := t.Sign(&signingKey, keyAuth, h)
 	if err != nil {
 		return nil, errors.Wrap(err, "wlavm/start:createSignatureWithTPM() Error while creating tpm signature")
 	}

@@ -27,7 +27,7 @@ installer: wlagent
 	cp dist/linux/uninstall-container-security-dependencies.sh out/wla/uninstall-container-security-dependencies.sh && chmod +x out/wla/uninstall-container-security-dependencies.sh
 	makeself out/wla out/workload-agent-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 
 
-vmc-only: wlagent
+package: wlagent
 	mkdir -p out/wla
 	cp dist/linux/install.sh out/wla/install.sh && chmod +x out/wla/install.sh
 	cp dist/linux/workload-agent.service out/wla/workload-agent.service

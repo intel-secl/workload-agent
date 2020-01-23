@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	cLog "intel/isecl/lib/common/log"
 	"intel/isecl/lib/common/log/message"
-	"intel/isecl/lib/tpm"
+	"intel/isecl/lib/tpmprovider"
 	"intel/isecl/wlagent/config"
 	"intel/isecl/wlagent/consts"
 	"io/ioutil"
@@ -69,27 +69,37 @@ func SaveImageVMAssociation() error {
 	return nil
 }
 
-var vmStartTpm tpm.Tpm
+var vmStartTpm tpmprovider.TpmProvider
 
 // GetTpmInstance method is used to get an instance of TPM to perform various tpm operations
-func GetTpmInstance() (tpm.Tpm, error) {
+func GetTpmInstance() (tpmprovider.TpmProvider, error) {
 	log.Trace("util/util:GetTpmInstance() Entering")
 	defer log.Trace("util/util:GetTpmInstance() Leaving")
-	if vmStartTpm != nil {
+	if vmStartTpm == nil {
+		tpmFactory, err := tpmprovider.NewTpmFactory()
+		if err != nil {
+			return nil, errors.Wrap(err, "util/util:GetTpmInstance() Could not create TPM Factory ")
+		}
+
+		vmStartTpm, err = tpmFactory.NewTpmProvider()
+		if err != nil {
+			return nil, errors.Wrap(err, "util/util:GetTpmInstance() Could not create TPM ")
+		}
+	} else {
 		log.Debug("util/util:GetTpmInstance() Returning an existing connection to the tpm")
-		return vmStartTpm, nil
 	}
-	return nil, errors.New("util/util:GetTpmInstance() Connection to TPM does not exist")
+
+	return vmStartTpm, nil
 }
 
-func GetNewTpmInstance() (tpm.Tpm, error){
-	log.Trace("util/util:GetNewTpmInstance() Entering")
-	defer log.Trace("util/util:GetNewTpmInstance() Leaving")
-	var err error
-	secLog.Infof("util/util:GetTpmInstance() %s, Opening a new connection to the tpm", message.SU)
-	vmStartTpm, err = tpm.Open()
-	return vmStartTpm, err
-}
+// func GetNewTpmInstance() (tpm.Tpm, error){
+// 	log.Trace("util/util:GetNewTpmInstance() Entering")
+// 	defer log.Trace("util/util:GetNewTpmInstance() Leaving")
+// 	var err error
+// 	secLog.Infof("util/util:GetTpmInstance() %s, Opening a new connection to the tpm", message.SU)
+// 	vmStartTpm, err = tpm.Open()
+// 	return vmStartTpm, err
+// }
 
 // CloseTpmInstance method is used to close an instance of TPM
 func CloseTpmInstance() {
@@ -108,7 +118,7 @@ func UnwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	log.Trace("util/util:UnwrapKey() Entering")
 	defer log.Trace("util/util:UnwrapKey() Leaving")
 
-	var certifiedKey tpm.CertifiedKey
+	var certifiedKey tpmprovider.CertifiedKey
 	t, err := GetTpmInstance()
 	if err != nil {
 		return nil, errors.Wrap(err, "util/util:UnwrapKey() Could not establish connection to TPM ")
