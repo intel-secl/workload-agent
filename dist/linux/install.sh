@@ -84,13 +84,14 @@ fi
 cd "$( dirname "$0" )"
 
 # load installer environment file, if present
-if [ -f ~/workload-agent.env ]; then
-  echo "Loading environment variables from $(cd ~ && pwd)/workload-agent.env"
-  . ~/workload-agent.env
-  env_file_exports=$(cat ~/workload-agent.env | grep -E '^[A-Z0-9_]+\s*=' | cut -d = -f 1)
+# TODO: ISECL-8364 Resolve flow/steps for using 'env' files when installing workload-agent
+if [ -f ~/trustagent.env ]; then
+  echo "Loading environment variables from $(cd ~ && pwd)/trustagent.env"
+  . ~/trustagent.env
+  env_file_exports=$(cat ~/trustagent.env | grep -E '^[A-Z0-9_]+\s*=' | cut -d = -f 1)
   if [ -n "$env_file_exports" ]; then eval export $env_file_exports; fi
 else
-  echo "workload-agent.env not found. Using existing exported variables or default ones"
+  echo "trustagent.env not found. Using existing exported variables or default ones"
 fi
 
 export LOG_LEVEL=${LOG_LEVEL:-"info"}
@@ -196,8 +197,8 @@ if [ "$(whoami)" == "root" ]; then
   # create a trustagent user if there isn't already one created
   TRUSTAGENT_USERNAME=${TRUSTAGENT_USERNAME}
   if [[ -z $TRUSTAGENT_USERNAME ]]; then
-    echo_failure "TRUSTAGENT_USERNAME must be exported and not empty"
-    exit 1
+    echo "Using default TRUSTAGENT_USERNAME value 'tagent'"
+    TRUSTAGENT_USERNAME=tagent
   fi
   id -u $TRUSTAGENT_USERNAME
   if [[ $? -eq 1 ]]; then
@@ -313,7 +314,7 @@ check_env_var_present(){
 
 all_env_vars_present=1
 
-required_vars="MTWILSON_API_URL WLS_API_URL WLA_SERVICE_USERNAME WLA_SERVICE_PASSWORD TRUSTAGENT_CONFIGURATION TRUSTAGENT_USERNAME CMS_TLS_CERT_SHA384 AAS_API_URL CMS_BASE_URL"
+required_vars="MTWILSON_API_URL WLS_API_URL WLA_SERVICE_USERNAME WLA_SERVICE_PASSWORD CMS_TLS_CERT_SHA384 AAS_API_URL CMS_BASE_URL"
 for env_var in $required_vars; do
   check_env_var_present $env_var
 done

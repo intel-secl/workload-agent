@@ -56,4 +56,6 @@ const (
 	AAS_URL                                     = "AAS_API_URL"
 	CMS_BASE_URL                                = "CMS_BASE_URL"
 	BEARER_TOKEN_ENV                            = "BEARER_TOKEN"
+	DEFAULT_TRUSTAGENT_USER                     = "tagent"
+	DEFAULT_TRUSTAGENT_CONFIGURATION            = "/opt/trustagent/configuration"
 )
