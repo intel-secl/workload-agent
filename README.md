@@ -19,6 +19,8 @@
 - makeself
 - `go` version >= `go1.11.4` & <= `go1.12.12`
 - docker 18.06 or higher
+- libvirt
+- cryptsetup
 
 # Step By Step Build Instructions
 

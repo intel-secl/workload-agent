@@ -19,7 +19,8 @@
 # Create application directories
 # Copy workload agent installer to workload-agent bin directory and create a symlink
 # Call workload-agent setup
-# Install and setup libvirt
+
+# Do these when installing vm usecase
 # Copy isecl-hook script to libvirt hooks directory
 # Restart the libvirt service after copying qemu hook
 
@@ -167,29 +168,6 @@ hash tagent 2>/dev/null ||
 }
 
 
-# Check if yum packages are already installed; if not install them
-yum_packages=(libvirt cryptsetup)
-for i in ${yum_packages[*]}
-do
-  isinstalled=$(rpm -q $i)
-  if [ "$isinstalled" == "package $i is not installed" ]; then
-    # put logs of install into a temporary file. We will copy this file and
-    # delete it later.
-    echo "Installing $i"
-    yum -y install $i
-  fi
-done
-if [ ! -d "/etc/libvirt" ]; then
-  echo_failure "libvirt directory not present. Exiting"
-  exit 1
-fi
-
-mkdir -p "/etc/libvirt/hooks"
-if [ ! -d "/etc/libvirt/hooks" ];  then
-  echo_failure "Not able to create hooks directory. Exiting"
-  exit 1
-fi
-
 # Use tagent user
 #### Using trustagent user here as trustagent needs permissions to access files from workload agent
 #### for eg signing binding keys. As tagent is a prerequisite for workload-agent, tagent user can be used here
@@ -240,19 +218,6 @@ ln -sfT $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/wlagent
 
 cp -f workload-agent.service $WORKLOAD_AGENT_HOME
 systemctl enable $WORKLOAD_AGENT_HOME/workload-agent.service
-
-# Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
-cp -f qemu /etc/libvirt/hooks 
-
-# Restart the libvirt service after copying qemu hook and check if it's running
-systemctl restart libvirtd
-isactive=$(systemctl is-active libvirtd)
-if [ ! "$isactive" == "active" ]; then
-  echo_warning "libvirtd system service is not active. Exiting"
-  exit 0
-fi
-## TODO: Above - Should we exit is libvirt restart did not work? 
-## Maybe we should have a seperate setup.sh that can just do the setup tasks. 
 
 
 # exit workload-agent setup if WORKLOAD_AGENT_NOSETUP is set
@@ -398,6 +363,36 @@ if [ "$WA_WITH_CONTAINER_SECURITY" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY" =
   systemctl daemon-reload
   systemctl start docker
   cp uninstall-container-security-dependencies.sh $WORKLOAD_AGENT_HOME/secure-docker-daemon/
+else
+  yum_packages=(libvirt cryptsetup)
+  for i in ${yum_packages[*]}
+  do
+    isinstalled=$(rpm -q $i)
+    if [ "$isinstalled" == "package $i is not installed" ]; then
+      echo_warning "Prerequisite $i is not installed"
+    fi
+  done
+
+  isinstalled=$(rpm -q libvirt)
+  if [ "$isinstalled" == "package $i is not installed" ]; then 
+    echo_warning "failed to setup libvirt hook: libvirt not installed"
+    echo_warning "setup libvirt hook with $WORKLOAD_AGENT_HOME/qemu"
+    cp -f qemu $WORKLOAD_AGENT_HOME
+  else
+    mkdir -p /etc/libvirt/hooks
+    # Copy isecl-hook script to libvirt hooks directory. The name of hooks should be qemu
+    cp -f qemu /etc/libvirt/hooks
+
+    # Restart the libvirt service after copying qemu hook and check if it's running
+    systemctl restart libvirtd
+    isactive=$(systemctl is-active libvirtd)
+    if [ ! "$isactive" == "active" ]; then
+      echo_warning "libvirtd system service is not active. Exiting"
+      exit 0
+    fi
+    ## TODO: Above - Should we exit if libvirt restart does not work? 
+    ## Maybe we should have a separated setup.sh that can just do the setup tasks. 
+  fi
 fi
 
 if [ $setup_complete -ne 0 ]; then
