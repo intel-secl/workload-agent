@@ -25,7 +25,6 @@ func RetrieveKey(keyID string) ([]byte, bool) {
                 return nil, false
 	}
 	imageUUID := imageKeyID[keyID]
-	imageKeyID[keyID] = ""
 
 	// get host hardware UUID
 	log.Debug("Retrieving host hardware UUID...")
