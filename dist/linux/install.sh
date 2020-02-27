@@ -216,8 +216,8 @@ cp -f wlagent $WORKLOAD_AGENT_BIN
 chown $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $WORKLOAD_AGENT_BIN/wlagent
 ln -sfT $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/wlagent
 
-cp -f workload-agent.service $WORKLOAD_AGENT_HOME
-systemctl enable $WORKLOAD_AGENT_HOME/workload-agent.service
+cp -f wlagent.service $WORKLOAD_AGENT_HOME
+systemctl enable $WORKLOAD_AGENT_HOME/wlagent.service
 
 
 # exit workload-agent setup if WORKLOAD_AGENT_NOSETUP is set
@@ -296,7 +296,7 @@ else
 fi
 
 # Enable systemd service and start it
-systemctl start workload-agent
+systemctl start wlagent
 
 is_docker_installed(){
   which docker 2>/dev/null

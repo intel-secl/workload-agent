@@ -50,7 +50,7 @@ func printUsage() {
 	fmt.Printf("    start                  Start wlagent\n")
 	fmt.Printf("    stop                   Stop wlagent\n")
 	fmt.Printf("    status                 Reports the status of wlagent service\n")
-	fmt.Printf("    uninstall  [--purge]   Uninstall workload-agent. --purge option needs to be applied to remove configuration and data files\n")
+	fmt.Printf("    uninstall  [--purge]   Uninstall wlagent. --purge option needs to be applied to remove configuration and data files\n")
 	fmt.Printf("    setup [task]           Run setup task\n")
 	fmt.Printf("Available Tasks for setup:\n")
 	fmt.Printf("    download_ca_cert       Download CMS root CA certificate\n")
@@ -207,7 +207,7 @@ func main() {
 		fmt.Println("Workload Agent Status")
 		stdout, stderr, _ := exec.RunCommandWithTimeout(consts.ServiceStatusCmd, 2)
 
-		// When stopped, 'systemctl status workload-agent' will return '3' and print
+		// When stopped, 'systemctl status wlagent' will return '3' and print
 		// the status message to stdout.  Other errors (ex 'systemctl status xyz') will return
 		// an error code (ex. 4) and write to stderr.  Alwyas print stdout and print
 		// stderr if present.
@@ -222,7 +222,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		secLog.Info("main:main() start-vm: workload-agent start called")
+		secLog.Info("main:main() start-vm: wlagent start-vm called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
 			secLog.Errorf("main:main() start-vm: Failed to dial wlagent.sock, %s", message.BadConnection)
@@ -256,7 +256,7 @@ func main() {
 			secLog.Errorf("main:main() stop-vm: Invalid number of parameters, %s", message.InvalidInputProtocolViolation)
 			os.Exit(1)
 		}
-		secLog.Info("main/main() stop-vm: workload-agent stop called")
+		secLog.Info("main/main() stop-vm: wlagent stop-vm called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
 			secLog.Errorf("main:main() stop-vm: Failed to dial wlagent.sock, %s", message.BadConnection)
@@ -291,7 +291,7 @@ func main() {
 			secLog.Infof("main:main() create-instance-trust-report, Invalid number of parameters, %s", message.InvalidInputProtocolViolation)
 			os.Exit(1)
 		}
-		secLog.Info("main:main()  workload-agent create-instance-trust-report called")
+		secLog.Info("main:main()  wlagent create-instance-trust-report called")
 		conn, err := net.Dial("unix", rpcSocketFilePath)
 		if err != nil {
 			log.WithError(err).Errorf("main:main() create-instance-trust-report: failed to dial wlagent.sock, %s", message.BadConnection)
