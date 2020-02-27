@@ -7,6 +7,7 @@ VERSION := $(or ${GITTAG}, v0.0.0)
 .PHONY: wlagent, installer, all, clean, vmc-only
 
 wlagent:
+	export CGO_CFLAGS_ALLOW="-f.*"; \
 	env GOOS=linux GOSUMDB=off GOPROXY=direct go build -ldflags "-X main.Version=$(VERSION)-$(GITCOMMIT) -X main.Branch=$(GITBRANCH) -X main.Time=$(TIMESTAMP)"  -o out/wlagent main.go
 
 installer: wlagent
