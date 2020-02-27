@@ -18,7 +18,7 @@ require (
 	intel/isecl/lib/vml v0.0.0
 )
 
-replace intel/isecl/lib/tpmprovider => gitlab.devtools.intel.com/sst/isecl/lib/tpm-provider.git v2.0/develop
+replace intel/isecl/lib/tpmprovider => gitlab.devtools.intel.com/sst/isecl/lib/tpm-provider.git v2.1/develop
 
 replace intel/isecl/lib/vml => gitlab.devtools.intel.com/sst/isecl/lib/volume-management.git v2.0/develop
 
