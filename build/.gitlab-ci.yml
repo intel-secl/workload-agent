@@ -1,10 +1,10 @@
 before_script:
-  - git config --global http.proxy http://proxy-us.intel.com:911
-  - git config --global https.proxy http://proxy-us.intel.com:911
-  - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.devtools.intel.com".insteadOf "https://gitlab.devtools.intel.com"
-  - export http_proxy=http://proxy-us.intel.com:911
-  - export https_proxy=http://proxy-us.intel.com:911
-  - export no_proxy=127.0.0.1,localhost,gitlab.devtools.intel.com
+  - git config --global http.proxy ${HTTP_PROXY}
+  - git config --global https.proxy ${HTTPS_PROXY}
+  - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@${GITLAB_SERVER}".insteadOf "https://${GITLAB_SERVER}"
+  - export http_proxy=${HTTP_PROXY}
+  - export https_proxy=${HTTPS_PROXY}
+  - export no_proxy=${NO_PROXY}
   - cd $CI_PROJECT_DIR
 
 stages:
