@@ -7,12 +7,12 @@ VERSION := $(or ${GITTAG}, v0.0.0)
 .PHONY: wlagent, installer, all, clean, vmc-only
 
 wlagent:
-	env GOOS=linux go build -ldflags "-X main.Version=$(VERSION)-$(GITCOMMIT) -X main.Branch=$(GITBRANCH) -X main.Time=$(TIMESTAMP)"  -o out/wlagent main.go
+	env GOOS=linux GOSUMDB=off GOPROXY=direct go build -ldflags "-X main.Version=$(VERSION)-$(GITCOMMIT) -X main.Branch=$(GITBRANCH) -X main.Time=$(TIMESTAMP)"  -o out/wlagent main.go
 
 installer: wlagent
 	mkdir -p out/wla
 	cp dist/linux/install.sh out/wla/install.sh && chmod +x out/wla/install.sh
-	cp dist/linux/workload-agent.service out/wla/workload-agent.service
+	cp dist/linux/wlagent.service out/wla/wlagent.service
 	cp libvirt/qemu out/wla/qemu && chmod +x out/wla/qemu
 	cp out/wlagent out/wla/wlagent && chmod +x out/wla/wlagent
 	chmod +x dist/linux/build-container-security-dependencies.sh
@@ -27,10 +27,10 @@ installer: wlagent
 	cp dist/linux/uninstall-container-security-dependencies.sh out/wla/uninstall-container-security-dependencies.sh && chmod +x out/wla/uninstall-container-security-dependencies.sh
 	makeself out/wla out/workload-agent-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 
 
-vmc-only: wlagent
+package: wlagent
 	mkdir -p out/wla
 	cp dist/linux/install.sh out/wla/install.sh && chmod +x out/wla/install.sh
-	cp dist/linux/workload-agent.service out/wla/workload-agent.service
+	cp dist/linux/wlagent.service out/wla/wlagent.service
 	cp libvirt/qemu out/wla/qemu && chmod +x out/wla/qemu
 	cp out/wlagent out/wla/wlagent && chmod +x out/wla/wlagent
 	makeself out/wla out/workload-agent-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 

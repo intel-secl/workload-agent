@@ -107,7 +107,7 @@ func certifyHostKey(key *RegisterKeyInfo, endPoint string, keyUsage string) ([]b
 	}
 
 	var c csetup.Context
-	jwtToken, err := c.GetenvString(consts.BEARER_TOKEN_ENV, "BEARER_TOKEN")
+	jwtToken, err := c.GetenvSecret(consts.BEARER_TOKEN_ENV, "BEARER_TOKEN")
 	if jwtToken == "" || err != nil {
 		fmt.Fprintln(os.Stderr, "BEARER_TOKEN is not defined in environment")
 		return nil, errors.Wrap(err, "BEARER_TOKEN is not defined in environment")

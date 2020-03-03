@@ -3,3 +3,4 @@ src/wlagent
 wlagent
 /cover.out
 go.sum
+/secure_docker_daemon*

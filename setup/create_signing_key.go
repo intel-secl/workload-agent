@@ -8,7 +8,7 @@ import (
 	"flag"
 	"fmt"
 	csetup "intel/isecl/lib/common/setup"
-	"intel/isecl/lib/tpm"
+	"intel/isecl/lib/tpmprovider"
 	"intel/isecl/wlagent/common"
 	"intel/isecl/wlagent/config"
 	"os"
@@ -17,7 +17,7 @@ import (
 )
 
 type SigningKey struct {
-	T tpm.Tpm
+	T tpmprovider.TpmProvider
 	Flags []string
 }
 
@@ -41,7 +41,7 @@ func (sk SigningKey) Run(c csetup.Context) error {
 	}
 	log.Info("setup/create_signing_key:Run() Creating signing key.")
 
-	err = common.GenerateKey(tpm.Signing, sk.T)
+	err = common.GenerateKey(tpmprovider.Signing, sk.T)
 	if err != nil {
 		return errors.Wrap(err, "setup/create_singing_key:Run() Error while generating tpm certified signing key")
 	}
@@ -54,7 +54,7 @@ func (sk SigningKey) Validate(c csetup.Context) error {
 
 	log.Info("setup/create_signing_key:Validate() Validation for signing key.")
 
-	err := common.ValidateKey(tpm.Signing)
+	err := common.ValidateKey(tpmprovider.Signing)
 	if err != nil {
 		return errors.Wrap(err, "setup/create_singing_key:Validate() Error while validating signing key")
 	}

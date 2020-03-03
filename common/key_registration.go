@@ -10,7 +10,7 @@ import (
 	"encoding/pem"
 
 
-	tpm "intel/isecl/lib/tpm"
+	"intel/isecl/lib/tpmprovider"
 	hvsclient "intel/isecl/wlagent/clients"
 	"intel/isecl/wlagent/consts"
 	"intel/isecl/wlagent/config"
@@ -28,7 +28,7 @@ func CreateRequest(key []byte) (*hvsclient.RegisterKeyInfo, error) {
 	defer log.Trace("common/key_registration:CreateRequest() Leaving")
 
 	var httpRequestBody *hvsclient.RegisterKeyInfo
-	var keyInfo tpm.CertifiedKey
+	var keyInfo tpmprovider.CertifiedKey
 	var tpmVersion string
 	var err error
 
@@ -39,7 +39,7 @@ func CreateRequest(key []byte) (*hvsclient.RegisterKeyInfo, error) {
 
 	//set tpm version
 	//TODO Vinil
-	if keyInfo.Version == 2 {
+	if keyInfo.Version == tpmprovider.V20 {
 		tpmVersion = "2.0"
 	} else {
 		tpmVersion = "1.2"
@@ -63,7 +63,7 @@ func CreateRequest(key []byte) (*hvsclient.RegisterKeyInfo, error) {
 		PublicKeyModulus:       keyInfo.PublicKey,
 		TpmCertifyKey:          keyInfo.KeyAttestation[2:],
 		TpmCertifyKeySignature: keyInfo.KeySignature,
-		AikDerCertificate:      aikDer.Bytes,
+		AikDerCertificate:      aikCert, //aikDer.Bytes,
 		NameDigest:             append(keyInfo.KeyName[1:], make([]byte, 34)...),
 		TpmVersion:             tpmVersion,
 		OsType:                 strings.Title(runtime.GOOS),

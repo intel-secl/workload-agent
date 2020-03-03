@@ -224,18 +224,24 @@ func SaveConfiguration(c csetup.Context) error {
 		return errors.Wrap(err, "WLA_SERVICE_PASSWORD is not defined in environment or configuration file")
 	}
 
+	// See if the 'TRUSTAGENT_USER' name has been exported to the env.  This is the name
+	// of the Linux user that the trust-agent service runs under (and requires access
+	// to /etc/workload-agent/bindingkey.pem to serve to hvs).  If the name is not in the 
+	// environment, assume the default value 'tagent'.
 	taUser, err := c.GetenvString(consts.TAUserNameEnvVar, "Trust Agent User Name")
 	if err == nil && taUser != "" {
 		Configuration.TrustAgent.User = taUser
 	} else if strings.TrimSpace(Configuration.TrustAgent.User) == "" {
-		return errors.Wrap(err, "TRUSTAGENT_USER is not defined in environment or configuration file")
+		log.Info("TRUSTAGENT_USER is not defined in the environment, using default '%s'", consts.DEFAULT_TRUSTAGENT_USER)
+		Configuration.TrustAgent.User = consts.DEFAULT_TRUSTAGENT_USER
 	}
 
-	taConfigDir, err := c.GetenvString(consts.TAConfigDirEnvVar, "Trust Agent User Name")
+	taConfigDir, err := c.GetenvString(consts.TAConfigDirEnvVar, "Trust Agent Configuration Directory")
 	if err == nil && taConfigDir != "" {
 		Configuration.TrustAgent.ConfigDir = taConfigDir
 	} else if strings.TrimSpace(Configuration.TrustAgent.ConfigDir) == "" {
-		return errors.Wrap(err, "TRUSTAGENT_CONFIGURATION is not defined in environment or configuration file")
+		log.Info("TRUSTAGENT_CONFIGURATION is not defined in the environment, using default '%s'", consts.DEFAULT_TRUSTAGENT_CONFIGURATION)
+		Configuration.TrustAgent.ConfigDir = consts.DEFAULT_TRUSTAGENT_CONFIGURATION
 	}
 
 	if skipFlavorSignatureVerification, err := c.GetenvString(consts.SkipFlavorSignatureVerification,
