@@ -5,7 +5,6 @@
 package util
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	cLog "intel/isecl/lib/common/log"
 	"intel/isecl/lib/common/log/message"
@@ -138,9 +137,8 @@ func UnwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	}
 
 	log.Debug("util/util:UnwrapKey() Binding key deserialized")
-	keyAuth, _ := hex.DecodeString(config.Configuration.BindingKeySecret)
 	secLog.Infof("util/util:UnwrapKey() %s, Binding key getting decrypted", message.SU)
-	key, unbindErr := t.Unbind(&certifiedKey, keyAuth, tpmWrappedKey)
+	key, unbindErr := t.Unbind(&certifiedKey, config.Configuration.BindingKeySecret, tpmWrappedKey)
 	if unbindErr != nil {
 		return nil, errors.Wrap(unbindErr, "util/util:UnwrapKey() error while unbinding the tpm wrapped key ")
 	}

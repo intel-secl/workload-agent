@@ -5,7 +5,6 @@
 package config
 
 import (
-	"encoding/hex"
 	"fmt"
 	"intel/isecl/lib/common/exec"
 	cLog "intel/isecl/lib/common/log"
@@ -124,7 +123,7 @@ func (e CommandError) Error() string {
 }
 
 // GetAikSecret function returns the AIK Secret as a byte array running the tagent export config command
-func GetAikSecret() ([]byte, error) {
+func GetAikSecret() (string, error) {
 	log.Trace("config/config:GetAikSecret() Entering")
 	defer log.Trace("config/config:GetAikSecret() Leaving")
 
@@ -132,9 +131,9 @@ func GetAikSecret() ([]byte, error) {
 	aikSecret, stderr, err := exec.RunCommandWithTimeout(consts.TAConfigAikSecretCmd, 2)
 	if err != nil {
 		log.WithError(&CommandError{IssuedCommand: consts.TAConfigAikSecretCmd, StdError: stderr}).Error("GetAikSecret: Command Failed. Details follow")
-		return nil, err
+		return "", err
 	}
-	return hex.DecodeString(strings.TrimSpace(aikSecret))
+	return strings.TrimSpace(aikSecret), nil
 }
 
 // Save method saves the changes in configuration file made by any of the setup tasks

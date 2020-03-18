@@ -8,7 +8,6 @@ package wlavm
 
 import (
 	"crypto"
-	"encoding/hex"
 	"encoding/json"
 
 	"intel/isecl/lib/common/crypt"
@@ -490,12 +489,12 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 		return nil, err
 	}
 
-	// Get the secret associated when the SigningKey was created.
-	log.Debug("wlavm/start:createSignatureWithTPM() Retrieving the signing key secret form WA configuration")
-	keyAuth, err := hex.DecodeString(config.Configuration.SigningKeySecret)
-	if err != nil {
-		return nil, errors.Wrap(err, "wlavm/start.go:createSignatureWithTPM() Error retrieving the signing key secret from configuration")
-	}
+	// // Get the secret associated when the SigningKey was created.
+	// log.Debug("wlavm/start:createSignatureWithTPM() Retrieving the signing key secret form WA configuration")
+	// keyAuth, err := hex.DecodeString(config.Configuration.SigningKeySecret)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "wlavm/start.go:createSignatureWithTPM() Error retrieving the signing key secret from configuration")
+	// }
 
 	// Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
 	tpmMtx.Lock()
@@ -512,7 +511,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	}
 
 	secLog.Infof("wlavm/start:createSignatureWithTPM() %s, Using TPM to sign the hash", message.SU)
-	signature, err := t.Sign(&signingKey, keyAuth, h)
+	signature, err := t.Sign(&signingKey, config.Configuration.BindingKeySecret, h)
 	if err != nil {
 		return nil, errors.Wrap(err, "wlavm/start:createSignatureWithTPM() Error while creating tpm signature")
 	}
