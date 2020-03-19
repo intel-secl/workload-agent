@@ -54,6 +54,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	var skipImageVolumeCreation = false
 	var err error
 	var skipManifestAndReportCreation = false
+	var isImageEncrypted bool
 
 	log.Info("wlavm/start:Start() Parsing domain XML to get image UUID, image path, VM UUID, VM path and disk size")
 	d, err := libvirt.NewDomainParser(domainXMLContent, libvirt.Start)
@@ -101,17 +102,14 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 			return false
 		}
 		log.Info("wlavm/start:Start() Image is not a symlink, so checking is image is encrypted...")
-		isImageEncrypted, err := crypt.EncryptionHeaderExists(imagePath)
-		if !isImageEncrypted {
-			log.Info("wlavm/start:Start() Image is not encrypted, returning to the hook")
-			return true
-		}
+		isImageEncrypted, err = crypt.EncryptionHeaderExists(imagePath)
+
 		if err != nil {
 			log.Errorf("wlavm/start.go:Start() Error while trying to check if the image is encrypted: %s", err.Error())
 			log.Tracef("%+v", err)
 			return false
 		}
-		log.Info("wlavm/start:Start() Image is encrypted")
+		log.Info("wlavm/start:Start() Image encryption status : ", isImageEncrypted)
 	}
 
 	var flavorKeyInfo wlsclient.FlavorKey
@@ -133,6 +131,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	// but still worth exploring for performance reasons as we want to minimize
 	// making http client calls to external servers.
 	log.Infof("wlavm/start:Start() Retrieving image-flavor-key for image %s from WLS", imageUUID)
+
 	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID)
 	if err != nil {
 		secLog.WithError(err).Error("wlavm/start.go:Start() Error retrieving the image flavor and key")
@@ -187,7 +186,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	}
 	//create VM manifest
 	log.Info("wlavm/start:Start() Creating VM Manifest")
-	manifest, err := vml.CreateVMManifest(vmUUID, hardwareUUID, imageUUID, true)
+	manifest, err := vml.CreateVMManifest(vmUUID, hardwareUUID, imageUUID, isImageEncrypted)
 	if err != nil {
 		log.WithError(err).Error("wlavm/start.go:Start() Error creating the VM manifest")
 		return false
