@@ -64,6 +64,7 @@ func CertifyHostSigningKey(key *RegisterKeyInfo) (*SigningKeyCert, error) {
 	}
 	err = json.Unmarshal(rsp, &keyCert)
 	if err != nil {
+		log.Debugf("Could not unmarshal json from /rpc/certify-host-signing-key: %s", string(rsp))
 		return nil, errors.Wrap(err, "clients/hvs_client.go:CertifyHostSigningKey() error decoding signing key certificate")
 	}
 	return &keyCert, nil
@@ -80,6 +81,7 @@ func CertifyHostBindingKey(key *RegisterKeyInfo) (*BindingKeyCert, error) {
 	}
 	err = json.Unmarshal(rsp, &keyCert)
 	if err != nil {
+		log.Debugf("Could not unmarshal json from /rpc/certify-host-binding-key: %s", string(rsp))
 		return nil, errors.Wrap(err, "clients/hvs_client.go:CertifyHostBindingKey() error decoding binding key certificate.")
 	}
 	return &keyCert, nil
