@@ -36,11 +36,7 @@ package: wlagent
 	cp out/wlagent out/wla/wlagent && chmod +x out/wla/wlagent
 	makeself out/wla out/workload-agent-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 
 
-all: deploy-artifact
-
-deploy-artifact: installer
-	chmod +x dist/linux/deploy-to-artifactory.sh
-	dist/linux/deploy-to-artifactory.sh
+all: installer
 
 clean: 
 	rm -rf out/
