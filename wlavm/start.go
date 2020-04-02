@@ -12,9 +12,9 @@ import (
 
 	"intel/isecl/lib/common/crypt"
 	"intel/isecl/lib/common/exec"
+	"intel/isecl/lib/common/log/message"
 	osutil "intel/isecl/lib/common/os"
 	"intel/isecl/lib/common/pkg/instance"
-	"intel/isecl/lib/common/log/message"
 	flvr "intel/isecl/lib/flavor"
 	pinfo "intel/isecl/lib/platform-info/platforminfo"
 	"intel/isecl/lib/tpmprovider"
@@ -40,7 +40,7 @@ import (
 var (
 	imgVolumeMtx sync.Mutex
 	vmVolumeMtx  sync.Mutex
-	tpmMtx sync.Mutex
+	tpmMtx       sync.Mutex
 )
 
 // Start method is used perform the VM confidentiality check before lunching the VM
@@ -144,7 +144,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	}
 
 	if flavorKeyInfo.Flavor.EncryptionRequired {
-		if len(flavorKeyInfo.Key) == 0{
+		if len(flavorKeyInfo.Key) == 0 {
 			log.Error("wlavm/start.go:Start() Flavor Key is empty")
 			return false
 		}
@@ -223,7 +223,7 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	// check if sparse file exists, if it does, skip copying the change disk file to mount point
 	_, sparseFleStatErr := os.Stat(vmSparseFilePath)
 	vmVolumeMtx.Lock()
-	secLog.Infof("wlavm/start:vmVolumeManager() %s, Creating VM dm-crypt volume in %s", message.SU,  vmDeviceMapperPath)
+	secLog.Infof("wlavm/start:vmVolumeManager() %s, Creating VM dm-crypt volume in %s", message.SU, vmDeviceMapperPath)
 	err = vml.CreateVolume(vmSparseFilePath, vmDeviceMapperPath, key, size)
 	vmVolumeMtx.Unlock()
 	if err != nil {
@@ -254,7 +254,7 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	}
 
 	// remove the encrypted image file and create a symlink with the dm-crypt volume
-	secLog.Infof("wlavm/start:vmVolumeManager() %s, Deleting change disk: %s",  message.SU, vmPath)
+	secLog.Infof("wlavm/start:vmVolumeManager() %s, Deleting change disk: %s", message.SU, vmPath)
 	err = os.RemoveAll(vmPath)
 	if err != nil {
 		return errors.Wrapf(err, "wlavm/start.go:vmVolumeManager() error deleting the change disk: %s", vmPath)
@@ -333,7 +333,7 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	log.Info("wlavm/start:imageVolumeManager() Image decrypted successfully")
 	// write the decrypted data into a file in image mount path
 	decryptedImagePath := imageDeviceMapperMountPath + "/" + imageUUID
-	secLog.Infof("wlavm/start:imageVolumeManager() %s, Writing decrypted data in to a file: %s",  message.SU, decryptedImagePath)
+	secLog.Infof("wlavm/start:imageVolumeManager() %s, Writing decrypted data in to a file: %s", message.SU, decryptedImagePath)
 	ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0660)
 	if ioWriteErr != nil {
 		return errors.New("wlavm/start.go:imageVolumeManager() error writing the decrypted data to file")
@@ -372,7 +372,7 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 	}
 
 	// create symlink between the image and the dm-crypt volume
-	secLog.Infof("wlavm/start:imageVolumeManager() %s, Creating a symlink between %s and %s",  message.SU, sourceFile, targetFile)
+	secLog.Infof("wlavm/start:imageVolumeManager() %s, Creating a symlink between %s and %s", message.SU, sourceFile, targetFile)
 	err = os.Symlink(targetFile, sourceFile)
 	if err != nil {
 		return errors.Wrapf(err, "wlavm/start.go:createSymLinkAndChangeOwnership() error while creating symbolic link")
@@ -386,12 +386,11 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 	}
 
 	// Giving read write access to the target file
-	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing permissions to changed disk path: %s",  message.SU, targetFile)
+	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing permissions to changed disk path: %s", message.SU, targetFile)
 	err = os.Chmod(targetFile, 0660)
 	if err != nil {
 		return errors.Wrapf(err, "wlavm/start.go:createSymLinkAndChangeOwnership() error while giving permissions to changed disk path: %s", targetFile)
 	}
-
 
 	// change the image mount path directory ownership to qemu
 	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing the mount path ownership to qemu", message.SU)
@@ -510,7 +509,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	}
 
 	secLog.Infof("wlavm/start:createSignatureWithTPM() %s, Using TPM to sign the hash", message.SU)
-	signature, err := t.Sign(&signingKey, config.Configuration.BindingKeySecret, h)
+	signature, err := t.Sign(&signingKey, config.Configuration.SigningKeySecret, h)
 	if err != nil {
 		return nil, errors.Wrap(err, "wlavm/start:createSignatureWithTPM() Error while creating tpm signature")
 	}
