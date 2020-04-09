@@ -7,12 +7,12 @@ package common
 import (
 	"encoding/hex"
 	"encoding/json"
-	"intel/isecl/lib/common/crypt"
-	cLog "intel/isecl/lib/common/log"
-	"intel/isecl/lib/common/log/message"
-	"intel/isecl/lib/tpmprovider"
-	"intel/isecl/wlagent/config"
-	"intel/isecl/wlagent/consts"
+	"intel/isecl/lib/common/v2/crypt"
+	cLog "intel/isecl/lib/common/v2/log"
+	"intel/isecl/lib/common/v2/log/message"
+	"intel/isecl/lib/tpmprovider/v2"
+	"intel/isecl/wlagent/v2/config"
+	"intel/isecl/wlagent/v2/consts"
 	"os"
 
 	"github.com/pkg/errors"

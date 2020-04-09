@@ -7,11 +7,11 @@ package setup
 import (
 	"flag"
 	"fmt"
-	csetup "intel/isecl/lib/common/setup"
-	hvsclient "intel/isecl/wlagent/clients"
-	"intel/isecl/wlagent/common"
-	"intel/isecl/wlagent/config"
-	"intel/isecl/wlagent/consts"
+	csetup "intel/isecl/lib/common/v2/setup"
+	hvsclient "intel/isecl/wlagent/v2/clients"
+	"intel/isecl/wlagent/v2/common"
+	"intel/isecl/wlagent/v2/config"
+	"intel/isecl/wlagent/v2/consts"
 	"os"
 
 	"github.com/pkg/errors"

@@ -6,12 +6,12 @@ package config
 
 import (
 	"fmt"
-	"intel/isecl/lib/common/exec"
-	cLog "intel/isecl/lib/common/log"
-	cLogInt "intel/isecl/lib/common/log/setup"
-	csetup "intel/isecl/lib/common/setup"
-	"intel/isecl/lib/common/log/message"
-	"intel/isecl/wlagent/consts"
+	"intel/isecl/lib/common/v2/exec"
+	cLog "intel/isecl/lib/common/v2/log"
+	cLogInt "intel/isecl/lib/common/v2/log/setup"
+	csetup "intel/isecl/lib/common/v2/setup"
+	"intel/isecl/lib/common/v2/log/message"
+	"intel/isecl/wlagent/v2/consts"
 	"io"
 	"io/ioutil"
 	"os"

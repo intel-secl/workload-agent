@@ -6,7 +6,7 @@ package filewatch
 
 import (
 	"fmt"
-	cLog "intel/isecl/lib/common/log"
+	cLog "intel/isecl/lib/common/v2/log"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"

@@ -6,8 +6,8 @@
 package flavor
 
 import (
-	pinfo "intel/isecl/lib/platform-info/platforminfo"
-	wlsclient "intel/isecl/wlagent/clients"
+	pinfo "intel/isecl/lib/platform-info/v2/platforminfo"
+	wlsclient "intel/isecl/wlagent/v2/clients"
 )
 
 // RetrieveKey retrieves an Image decryption key

@@ -7,8 +7,8 @@ package clients
 import (
 	"bytes"
 	"encoding/json"
-	"intel/isecl/lib/flavor"
-	"intel/isecl/wlagent/config"
+	"intel/isecl/lib/flavor/v2"
+	"intel/isecl/wlagent/v2/config"
 	"net/http"
 	"net/url"
 

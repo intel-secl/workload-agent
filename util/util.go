@@ -6,11 +6,11 @@ package util
 
 import (
 	"encoding/json"
-	cLog "intel/isecl/lib/common/log"
-	"intel/isecl/lib/common/log/message"
-	"intel/isecl/lib/tpmprovider"
-	"intel/isecl/wlagent/config"
-	"intel/isecl/wlagent/consts"
+	cLog "intel/isecl/lib/common/v2/log"
+	"intel/isecl/lib/common/v2/log/message"
+	"intel/isecl/lib/tpmprovider/v2"
+	"intel/isecl/wlagent/v2/config"
+	"intel/isecl/wlagent/v2/consts"
 	"io/ioutil"
 	"os"
 	"sync"

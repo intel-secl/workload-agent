@@ -9,11 +9,11 @@ import (
 	"net/http"
 	"sync"
 
-	"intel/isecl/wlagent/config"
-	"intel/isecl/wlagent/consts"
+	"intel/isecl/wlagent/v2/config"
+	"intel/isecl/wlagent/v2/consts"
 
-	"intel/isecl/lib/clients"
-	"intel/isecl/lib/clients/aas"
+	"intel/isecl/lib/clients/v2"
+	"intel/isecl/lib/clients/v2/aas"
 
 	"github.com/pkg/errors"
 )
