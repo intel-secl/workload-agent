@@ -7,6 +7,7 @@ package rpc
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	cLog "intel/isecl/lib/common/v2/log"
 	"intel/isecl/lib/common/v2/proc"
 	"intel/isecl/lib/common/v2/pkg/instance"
@@ -23,7 +24,7 @@ import (
 
 var log = cLog.GetDefaultLogger()
 var secLog = cLog.GetSecurityLogger()
-
+var tpmMtx sync.Mutex
 // DomainXML is a struct containing domain XML as argument to allow invocation over RPC
 type DomainXML struct {
 	XML string
@@ -204,9 +205,16 @@ func (vm *VirtualMachine) FetchKey(args *KeyInfo, outKeyInfo *KeyInfo) error {
 	}
 
 	wrappedKey, returnCode := flavor.RetrieveKey(args.KeyID)
+	log.Debugf("rpc/server:FetchKey() returnCode: %v", returnCode)
+	if !returnCode{
+		return &rpcError{Message: "rpc/server:FetchKey() Error while retrieving the key", StatusCode: 1}
+	}
+	tpmMtx.Lock()
 	key, err := util.UnwrapKey(wrappedKey)
+	tpmMtx.Unlock()
 	if err != nil {
-		return &rpcError{Message: "rpc/server:FetchKey() error while unwrapping the key", StatusCode: 1}
+		log.Errorf("rpc/server:FetchKey() Error while unwrapping the key %+v", err)
+		return &rpcError{Message: "rpc/server:FetchKey() Error while unwrapping the key", StatusCode: 1}
 	}
 	var k = KeyInfo{
 		KeyID:      args.KeyID,
