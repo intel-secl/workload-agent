@@ -20,7 +20,7 @@ require (
 
 replace intel/isecl/lib/tpmprovider/v2 => github.com/intel-secl/tpm-provider/v2 v2.1.0
 
-replace intel/isecl/lib/vml/v2 => github.com/intel-secl/volume-management/v2 v2.1.0
+replace intel/isecl/lib/vml/v2 => github.com/intel-secl/volume-management-library/v2 v2.1.0
 
 replace intel/isecl/lib/common/v2 => github.com/intel-secl/common/v2 v2.1.0
 
