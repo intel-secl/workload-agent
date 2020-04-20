@@ -18,16 +18,16 @@ require (
 	intel/isecl/lib/vml/v2 v2.1.0
 )
 
-replace intel/isecl/lib/tpmprovider/v2 => gitlab.devtools.intel.com/sst/isecl/lib/tpm-provider.git/v2 v2.1.0
+replace intel/isecl/lib/tpmprovider/v2 => github.com/intel-secl/tpm-provider/v2 v2.1.0
 
-replace intel/isecl/lib/vml/v2 => gitlab.devtools.intel.com/sst/isecl/lib/volume-management.git/v2 v2.1.0
+replace intel/isecl/lib/vml/v2 => github.com/intel-secl/volume-management/v2 v2.1.0
 
-replace intel/isecl/lib/common/v2 => gitlab.devtools.intel.com/sst/isecl/lib/common.git/v2 v2.1.0
+replace intel/isecl/lib/common/v2 => github.com/intel-secl/common/v2 v2.1.0
 
-replace intel/isecl/lib/flavor/v2 => gitlab.devtools.intel.com/sst/isecl/lib/flavor.git/v2 v2.1.0
+replace intel/isecl/lib/flavor/v2 => github.com/intel-secl/flavor/v2 v2.1.0
 
-replace intel/isecl/lib/verifier/v2 => gitlab.devtools.intel.com/sst/isecl/lib/verifier.git/v2 v2.1.0
+replace intel/isecl/lib/verifier/v2 => github.com/intel-secl/verifier/v2 v2.1.0
 
-replace intel/isecl/lib/platform-info/v2 => gitlab.devtools.intel.com/sst/isecl/lib/platform-info.git/v2 v2.1.0
+replace intel/isecl/lib/platform-info/v2 => github.com/intel-secl/platform-info/v2 v2.1.0
 
-replace intel/isecl/lib/clients/v2 => gitlab.devtools.intel.com/sst/isecl/lib/clients.git/v2 v2.1.0
+replace intel/isecl/lib/clients/v2 => github.com/intel-secl/clients/v2 v2.1.0
