@@ -7,8 +7,8 @@ package clients
 import (
 	"bytes"
 	"encoding/json"
-	"intel/isecl/lib/flavor"
-	"intel/isecl/wlagent/config"
+	"intel/isecl/lib/flavor/v2"
+	"intel/isecl/wlagent/v2/config"
 	"net/http"
 	"net/url"
 
@@ -19,7 +19,7 @@ import (
 type FlavorKey struct {
 	Flavor    flavor.Image `json:"flavor"`
 	Signature string       `json:"signature"`
-	Key       []byte       `json:"key"`
+	Key       []byte       `json:"key,omitempty"`
 }
 
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
@@ -55,7 +55,8 @@ func GetImageFlavorKey(imageUUID, hardwareUUID string) (FlavorKey, error) {
 	}
 
 	if httpResponse != nil {
-		//deserialize the response to UserInfo response
+		//deserialize the response to flavorKeyInfo response
+		log.Debug("Http response is :", string(httpResponse))
 		err = json.Unmarshal(httpResponse, &flavorKeyInfo)
 		if err != nil {
 			return flavorKeyInfo, errors.Wrap(err, "client/workload_service_client:GetImageFlavorKey() Failed to unmarshal response into flavor key info")

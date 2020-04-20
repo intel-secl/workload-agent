@@ -5,13 +5,12 @@
 package util
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	cLog "intel/isecl/lib/common/log"
-	"intel/isecl/lib/common/log/message"
-	"intel/isecl/lib/tpmprovider"
-	"intel/isecl/wlagent/config"
-	"intel/isecl/wlagent/consts"
+	cLog "intel/isecl/lib/common/v2/log"
+	"intel/isecl/lib/common/v2/log/message"
+	"intel/isecl/lib/tpmprovider/v2"
+	"intel/isecl/wlagent/v2/config"
+	"intel/isecl/wlagent/v2/consts"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -117,6 +116,10 @@ func CloseTpmInstance() {
 func UnwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	log.Trace("util/util:UnwrapKey() Entering")
 	defer log.Trace("util/util:UnwrapKey() Leaving")
+	
+	if (len(tpmWrappedKey) == 0){
+		return nil, errors.New("util/util:UnwrapKey() tpm wrapped key is empty")
+	}
 
 	var certifiedKey tpmprovider.CertifiedKey
 	t, err := GetTpmInstance()
@@ -138,9 +141,8 @@ func UnwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	}
 
 	log.Debug("util/util:UnwrapKey() Binding key deserialized")
-	keyAuth, _ := hex.DecodeString(config.Configuration.BindingKeySecret)
 	secLog.Infof("util/util:UnwrapKey() %s, Binding key getting decrypted", message.SU)
-	key, unbindErr := t.Unbind(&certifiedKey, keyAuth, tpmWrappedKey)
+	key, unbindErr := t.Unbind(&certifiedKey, config.Configuration.BindingKeySecret, tpmWrappedKey)
 	if unbindErr != nil {
 		return nil, errors.Wrap(unbindErr, "util/util:UnwrapKey() error while unbinding the tpm wrapped key ")
 	}

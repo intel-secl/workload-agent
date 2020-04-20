@@ -6,9 +6,9 @@ package flavor
 
 import (
 	"encoding/json"
-	cLog "intel/isecl/lib/common/log"
-	pinfo "intel/isecl/lib/platform-info/platforminfo"
-	wlsclient "intel/isecl/wlagent/clients"
+	cLog "intel/isecl/lib/common/v2/log"
+	pinfo "intel/isecl/lib/platform-info/v2/platforminfo"
+	wlsclient "intel/isecl/wlagent/v2/clients"
 	"strings"
 )
 

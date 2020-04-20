@@ -5,8 +5,8 @@
 package wlavm
 
 import (
-	cLog "intel/isecl/lib/common/log"
-	"intel/isecl/wlagent/util"
+	cLog "intel/isecl/lib/common/v2/log"
+	"intel/isecl/wlagent/v2/util"
 	"sync"
 
 	"github.com/pkg/errors"

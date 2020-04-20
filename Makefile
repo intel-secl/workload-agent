@@ -7,6 +7,7 @@ VERSION := $(or ${GITTAG}, v0.0.0)
 .PHONY: wlagent, installer, all, clean, vmc-only
 
 wlagent:
+	export CGO_CFLAGS_ALLOW="-f.*"; \
 	env GOOS=linux GOSUMDB=off GOPROXY=direct go build -ldflags "-X main.Version=$(VERSION)-$(GITCOMMIT) -X main.Branch=$(GITBRANCH) -X main.Time=$(TIMESTAMP)"  -o out/wlagent main.go
 
 installer: wlagent
@@ -35,11 +36,7 @@ package: wlagent
 	cp out/wlagent out/wla/wlagent && chmod +x out/wla/wlagent
 	makeself out/wla out/workload-agent-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 
 
-all: deploy-artifact
-
-deploy-artifact: installer
-	chmod +x dist/linux/deploy-to-artifactory.sh
-	dist/linux/deploy-to-artifactory.sh
+all: installer
 
 clean: 
 	rm -rf out/

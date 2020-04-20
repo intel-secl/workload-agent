@@ -8,25 +8,24 @@ package wlavm
 
 import (
 	"crypto"
-	"encoding/hex"
 	"encoding/json"
 
-	"intel/isecl/lib/common/crypt"
-	"intel/isecl/lib/common/exec"
-	osutil "intel/isecl/lib/common/os"
-	"intel/isecl/lib/common/pkg/instance"
-	"intel/isecl/lib/common/log/message"
-	flvr "intel/isecl/lib/flavor"
-	pinfo "intel/isecl/lib/platform-info/platforminfo"
-	"intel/isecl/lib/tpmprovider"
-	"intel/isecl/lib/verifier"
-	"intel/isecl/lib/vml"
-	wlsclient "intel/isecl/wlagent/clients"
-	"intel/isecl/wlagent/config"
-	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/filewatch"
-	"intel/isecl/wlagent/libvirt"
-	"intel/isecl/wlagent/util"
+	"intel/isecl/lib/common/v2/crypt"
+	"intel/isecl/lib/common/v2/exec"
+	osutil "intel/isecl/lib/common/v2/os"
+	"intel/isecl/lib/common/v2/pkg/instance"
+	"intel/isecl/lib/common/v2/log/message"
+	flvr "intel/isecl/lib/flavor/v2"
+	pinfo "intel/isecl/lib/platform-info/v2/platforminfo"
+	"intel/isecl/lib/tpmprovider/v2"
+	"intel/isecl/lib/verifier/v2"
+	"intel/isecl/lib/vml/v2"
+	wlsclient "intel/isecl/wlagent/v2/clients"
+	"intel/isecl/wlagent/v2/config"
+	"intel/isecl/wlagent/v2/consts"
+	"intel/isecl/wlagent/v2/filewatch"
+	"intel/isecl/wlagent/v2/libvirt"
+	"intel/isecl/wlagent/v2/util"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -41,7 +40,7 @@ import (
 var (
 	imgVolumeMtx sync.Mutex
 	vmVolumeMtx  sync.Mutex
-	tpmMtx sync.Mutex
+	tpmMtx       sync.Mutex
 )
 
 // Start method is used perform the VM confidentiality check before lunching the VM
@@ -55,6 +54,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	var skipImageVolumeCreation = false
 	var err error
 	var skipManifestAndReportCreation = false
+	var isImageEncrypted bool
 
 	log.Info("wlavm/start:Start() Parsing domain XML to get image UUID, image path, VM UUID, VM path and disk size")
 	d, err := libvirt.NewDomainParser(domainXMLContent, libvirt.Start)
@@ -102,17 +102,14 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 			return false
 		}
 		log.Info("wlavm/start:Start() Image is not a symlink, so checking is image is encrypted...")
-		isImageEncrypted, err := crypt.EncryptionHeaderExists(imagePath)
-		if !isImageEncrypted {
-			log.Info("wlavm/start:Start() Image is not encrypted, returning to the hook")
-			return true
-		}
+		isImageEncrypted, err = crypt.EncryptionHeaderExists(imagePath)
+
 		if err != nil {
 			log.Errorf("wlavm/start.go:Start() Error while trying to check if the image is encrypted: %s", err.Error())
 			log.Tracef("%+v", err)
 			return false
 		}
-		log.Info("wlavm/start:Start() Image is encrypted")
+		log.Info("wlavm/start:Start() Image encryption status : ", isImageEncrypted)
 	}
 
 	var flavorKeyInfo wlsclient.FlavorKey
@@ -134,6 +131,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	// but still worth exploring for performance reasons as we want to minimize
 	// making http client calls to external servers.
 	log.Infof("wlavm/start:Start() Retrieving image-flavor-key for image %s from WLS", imageUUID)
+
 	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID)
 	if err != nil {
 		secLog.WithError(err).Error("wlavm/start.go:Start() Error retrieving the image flavor and key")
@@ -146,7 +144,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	}
 
 	if flavorKeyInfo.Flavor.EncryptionRequired {
-		if len(flavorKeyInfo.Key) == 0{
+		if len(flavorKeyInfo.Key) == 0 {
 			log.Error("wlavm/start.go:Start() Flavor Key is empty")
 			return false
 		}
@@ -188,7 +186,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	}
 	//create VM manifest
 	log.Info("wlavm/start:Start() Creating VM Manifest")
-	manifest, err := vml.CreateVMManifest(vmUUID, hardwareUUID, imageUUID, true)
+	manifest, err := vml.CreateVMManifest(vmUUID, hardwareUUID, imageUUID, isImageEncrypted)
 	if err != nil {
 		log.WithError(err).Error("wlavm/start.go:Start() Error creating the VM manifest")
 		return false
@@ -225,7 +223,7 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	// check if sparse file exists, if it does, skip copying the change disk file to mount point
 	_, sparseFleStatErr := os.Stat(vmSparseFilePath)
 	vmVolumeMtx.Lock()
-	secLog.Infof("wlavm/start:vmVolumeManager() %s, Creating VM dm-crypt volume in %s", message.SU,  vmDeviceMapperPath)
+	secLog.Infof("wlavm/start:vmVolumeManager() %s, Creating VM dm-crypt volume in %s", message.SU, vmDeviceMapperPath)
 	err = vml.CreateVolume(vmSparseFilePath, vmDeviceMapperPath, key, size)
 	vmVolumeMtx.Unlock()
 	if err != nil {
@@ -256,7 +254,7 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	}
 
 	// remove the encrypted image file and create a symlink with the dm-crypt volume
-	secLog.Infof("wlavm/start:vmVolumeManager() %s, Deleting change disk: %s",  message.SU, vmPath)
+	secLog.Infof("wlavm/start:vmVolumeManager() %s, Deleting change disk: %s", message.SU, vmPath)
 	err = os.RemoveAll(vmPath)
 	if err != nil {
 		return errors.Wrapf(err, "wlavm/start.go:vmVolumeManager() error deleting the change disk: %s", vmPath)
@@ -335,7 +333,7 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	log.Info("wlavm/start:imageVolumeManager() Image decrypted successfully")
 	// write the decrypted data into a file in image mount path
 	decryptedImagePath := imageDeviceMapperMountPath + "/" + imageUUID
-	secLog.Infof("wlavm/start:imageVolumeManager() %s, Writing decrypted data in to a file: %s",  message.SU, decryptedImagePath)
+	secLog.Infof("wlavm/start:imageVolumeManager() %s, Writing decrypted data in to a file: %s", message.SU, decryptedImagePath)
 	ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0660)
 	if ioWriteErr != nil {
 		return errors.New("wlavm/start.go:imageVolumeManager() error writing the decrypted data to file")
@@ -374,7 +372,7 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 	}
 
 	// create symlink between the image and the dm-crypt volume
-	secLog.Infof("wlavm/start:imageVolumeManager() %s, Creating a symlink between %s and %s",  message.SU, sourceFile, targetFile)
+	secLog.Infof("wlavm/start:imageVolumeManager() %s, Creating a symlink between %s and %s", message.SU, sourceFile, targetFile)
 	err = os.Symlink(targetFile, sourceFile)
 	if err != nil {
 		return errors.Wrapf(err, "wlavm/start.go:createSymLinkAndChangeOwnership() error while creating symbolic link")
@@ -388,12 +386,11 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 	}
 
 	// Giving read write access to the target file
-	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing permissions to changed disk path: %s",  message.SU, targetFile)
+	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing permissions to changed disk path: %s", message.SU, targetFile)
 	err = os.Chmod(targetFile, 0660)
 	if err != nil {
 		return errors.Wrapf(err, "wlavm/start.go:createSymLinkAndChangeOwnership() error while giving permissions to changed disk path: %s", targetFile)
 	}
-
 
 	// change the image mount path directory ownership to qemu
 	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing the mount path ownership to qemu", message.SU)
@@ -490,12 +487,12 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 		return nil, err
 	}
 
-	// Get the secret associated when the SigningKey was created.
-	log.Debug("wlavm/start:createSignatureWithTPM() Retrieving the signing key secret form WA configuration")
-	keyAuth, err := hex.DecodeString(config.Configuration.SigningKeySecret)
-	if err != nil {
-		return nil, errors.Wrap(err, "wlavm/start.go:createSignatureWithTPM() Error retrieving the signing key secret from configuration")
-	}
+	// // Get the secret associated when the SigningKey was created.
+	// log.Debug("wlavm/start:createSignatureWithTPM() Retrieving the signing key secret form WA configuration")
+	// keyAuth, err := hex.DecodeString(config.Configuration.SigningKeySecret)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "wlavm/start.go:createSignatureWithTPM() Error retrieving the signing key secret from configuration")
+	// }
 
 	// Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
 	tpmMtx.Lock()
@@ -512,7 +509,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	}
 
 	secLog.Infof("wlavm/start:createSignatureWithTPM() %s, Using TPM to sign the hash", message.SU)
-	signature, err := t.Sign(&signingKey, keyAuth, h)
+	signature, err := t.Sign(&signingKey, config.Configuration.SigningKeySecret, h)
 	if err != nil {
 		return nil, errors.Wrap(err, "wlavm/start:createSignatureWithTPM() Error while creating tpm signature")
 	}

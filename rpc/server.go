@@ -7,23 +7,24 @@ package rpc
 import (
 	"encoding/json"
 	"fmt"
-	cLog "intel/isecl/lib/common/log"
-	"intel/isecl/lib/common/proc"
-	"intel/isecl/lib/common/pkg/instance"
-	"intel/isecl/lib/common/log/message"
-	"intel/isecl/lib/common/validation"
-	flvr "intel/isecl/lib/flavor"
-	"intel/isecl/wlagent/filewatch"
-	"intel/isecl/wlagent/flavor"
-	"intel/isecl/wlagent/util"
-	wlsclient "intel/isecl/wlagent/clients"
-	"intel/isecl/wlagent/wlavm"
+	"sync"
+	cLog "intel/isecl/lib/common/v2/log"
+	"intel/isecl/lib/common/v2/proc"
+	"intel/isecl/lib/common/v2/pkg/instance"
+	"intel/isecl/lib/common/v2/log/message"
+	"intel/isecl/lib/common/v2/validation"
+	flvr "intel/isecl/lib/flavor/v2"
+	"intel/isecl/wlagent/v2/filewatch"
+	"intel/isecl/wlagent/v2/flavor"
+	"intel/isecl/wlagent/v2/util"
+	wlsclient "intel/isecl/wlagent/v2/clients"
+	"intel/isecl/wlagent/v2/wlavm"
 	"github.com/pkg/errors"
 )
 
 var log = cLog.GetDefaultLogger()
 var secLog = cLog.GetSecurityLogger()
-
+var tpmMtx sync.Mutex
 // DomainXML is a struct containing domain XML as argument to allow invocation over RPC
 type DomainXML struct {
 	XML string
@@ -204,9 +205,16 @@ func (vm *VirtualMachine) FetchKey(args *KeyInfo, outKeyInfo *KeyInfo) error {
 	}
 
 	wrappedKey, returnCode := flavor.RetrieveKey(args.KeyID)
+	log.Debugf("rpc/server:FetchKey() returnCode: %v", returnCode)
+	if !returnCode{
+		return &rpcError{Message: "rpc/server:FetchKey() Error while retrieving the key", StatusCode: 1}
+	}
+	tpmMtx.Lock()
 	key, err := util.UnwrapKey(wrappedKey)
+	tpmMtx.Unlock()
 	if err != nil {
-		return &rpcError{Message: "rpc/server:FetchKey() error while unwrapping the key", StatusCode: 1}
+		log.Errorf("rpc/server:FetchKey() Error while unwrapping the key %+v", err)
+		return &rpcError{Message: "rpc/server:FetchKey() Error while unwrapping the key", StatusCode: 1}
 	}
 	var k = KeyInfo{
 		KeyID:      args.KeyID,

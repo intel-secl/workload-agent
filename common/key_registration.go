@@ -10,10 +10,10 @@ import (
 	"encoding/pem"
 
 
-	"intel/isecl/lib/tpmprovider"
-	hvsclient "intel/isecl/wlagent/clients"
-	"intel/isecl/wlagent/consts"
-	"intel/isecl/wlagent/config"
+	"intel/isecl/lib/tpmprovider/v2"
+	hvsclient "intel/isecl/wlagent/v2/clients"
+	"intel/isecl/wlagent/v2/consts"
+	"intel/isecl/wlagent/v2/config"
 	"io/ioutil"
 	"os"
 	"runtime"
