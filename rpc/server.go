@@ -7,24 +7,24 @@ package rpc
 import (
 	"encoding/json"
 	"fmt"
-	"sync"
 	cLog "intel/isecl/lib/common/v2/log"
-	"intel/isecl/lib/common/v2/proc"
-	"intel/isecl/lib/common/v2/pkg/instance"
 	"intel/isecl/lib/common/v2/log/message"
+	"intel/isecl/lib/common/v2/pkg/instance"
+	"intel/isecl/lib/common/v2/proc"
 	"intel/isecl/lib/common/v2/validation"
 	flvr "intel/isecl/lib/flavor/v2"
+	wlsclient "intel/isecl/wlagent/v2/clients"
 	"intel/isecl/wlagent/v2/filewatch"
 	"intel/isecl/wlagent/v2/flavor"
 	"intel/isecl/wlagent/v2/util"
-	wlsclient "intel/isecl/wlagent/v2/clients"
 	"intel/isecl/wlagent/v2/wlavm"
+
 	"github.com/pkg/errors"
 )
 
 var log = cLog.GetDefaultLogger()
 var secLog = cLog.GetSecurityLogger()
-var tpmMtx sync.Mutex
+
 // DomainXML is a struct containing domain XML as argument to allow invocation over RPC
 type DomainXML struct {
 	XML string
@@ -37,7 +37,7 @@ type ManifestString struct {
 
 // FlavorInfo is a struct containing image id as argument to allow invocation over RPC
 type FlavorInfo struct {
-	ImageID    string
+	ImageID string
 }
 
 // KeyInfo is a struct containing image ID and key ID as arguments to allow invocation over RPC
@@ -65,7 +65,7 @@ func (e rpcError) Error() string {
 func (vm *VirtualMachine) Start(args *DomainXML, reply *bool) error {
 	// Passing the false parameter to ensure the start vm task is not added waitgroup if there is pending signal termination on rpc
 	_, err := proc.AddTask(false)
-	if err != nil{
+	if err != nil {
 		errors.Wrap(err, "rpc/server:Start() Could not add task for vm start")
 	}
 	defer proc.TaskDone()
@@ -84,13 +84,13 @@ func (vm *VirtualMachine) Start(args *DomainXML, reply *bool) error {
 
 // Stop forwards the RPC request to wlavm.Stop
 func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
-	// Passing the true parameter to ensure the stop vm task is added to waitgroup as this action needs to be completed 
+	// Passing the true parameter to ensure the stop vm task is added to waitgroup as this action needs to be completed
 	// even if there is pending signal termination on rpc
 	_, err := proc.AddTask(true)
-        if err != nil{
-                errors.Wrap(err, "rpc/server:Stop() Could not add task for vm stop")
-        }
-        defer proc.TaskDone()
+	if err != nil {
+		errors.Wrap(err, "rpc/server:Stop() Could not add task for vm stop")
+	}
+	defer proc.TaskDone()
 
 	log.Trace("rpc/server:Stop() Entering")
 	defer log.Trace("rpc/server:Stop() Leaving")
@@ -110,8 +110,8 @@ func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status
 	// Passing the true parameter to ensure that CreateInstanceTrustReport task is added to the waitgroup, as this action needs to be completed
 	// even if there is pending signal termination on rpc
 	_, err := proc.AddTask(true)
-	if err != nil{
-        	errors.Wrap(err, "rpc/server:CreateInstanceTrustReport() Could not add task for CreateInstanceTrustReport")
+	if err != nil {
+		errors.Wrap(err, "rpc/server:CreateInstanceTrustReport() Could not add task for CreateInstanceTrustReport")
 	}
 	defer proc.TaskDone()
 
@@ -138,9 +138,9 @@ func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status
 	}
 
 	f, err := json.Marshal(flavor)
-        if err != nil {
-                return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while marshalling flavor", StatusCode: 1}
-        }
+	if err != nil {
+		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while marshalling flavor", StatusCode: 1}
+	}
 
 	if string(f) == "" {
 		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while retrieving flavor", StatusCode: 1}
@@ -162,10 +162,10 @@ func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status
 func (vm *VirtualMachine) FetchFlavor(args *FlavorInfo, outFlavor *flavor.OutFlavor) error {
 	// Passing the false parameter to ensure that FetchFlavor task is not added to the wait group if there is pending signal termination on rpc
 	_, err := proc.AddTask(false)
-        if err != nil{
-                errors.Wrap(err, "rpc/server:FetchFlavor() Could not add task for FetchFlavor")
-        }
-        defer proc.TaskDone()
+	if err != nil {
+		errors.Wrap(err, "rpc/server:FetchFlavor() Could not add task for FetchFlavor")
+	}
+	defer proc.TaskDone()
 
 	log.Trace("rpc/server:FetchFlavor() Entering")
 	defer log.Trace("rpc/server:FetchFlavor() Leaving")
@@ -192,8 +192,8 @@ func (vm *VirtualMachine) FetchKey(args *KeyInfo, outKeyInfo *KeyInfo) error {
 	// even if there is pending signal termination on rpc
 
 	_, err := proc.AddTask(true)
-	if err != nil{
-        	errors.Wrap(err, "rpc/server:FetchKey() Could not add task for FetchKey")
+	if err != nil {
+		errors.Wrap(err, "rpc/server:FetchKey() Could not add task for FetchKey")
 	}
 	defer proc.TaskDone()
 	log.Trace("rpc/server:FetchKey() Entering")
@@ -206,16 +206,17 @@ func (vm *VirtualMachine) FetchKey(args *KeyInfo, outKeyInfo *KeyInfo) error {
 
 	wrappedKey, returnCode := flavor.RetrieveKey(args.KeyID)
 	log.Debugf("rpc/server:FetchKey() returnCode: %v", returnCode)
-	if !returnCode{
+	if !returnCode {
 		return &rpcError{Message: "rpc/server:FetchKey() Error while retrieving the key", StatusCode: 1}
 	}
-	tpmMtx.Lock()
+	wlavm.TpmMtx.Lock()
 	key, err := util.UnwrapKey(wrappedKey)
-	tpmMtx.Unlock()
+	wlavm.TpmMtx.Unlock()
 	if err != nil {
 		log.Errorf("rpc/server:FetchKey() Error while unwrapping the key %+v", err)
 		return &rpcError{Message: "rpc/server:FetchKey() Error while unwrapping the key", StatusCode: 1}
 	}
+
 	var k = KeyInfo{
 		KeyID:      args.KeyID,
 		Key:        key,

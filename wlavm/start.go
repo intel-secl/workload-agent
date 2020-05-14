@@ -12,9 +12,9 @@ import (
 
 	"intel/isecl/lib/common/v2/crypt"
 	"intel/isecl/lib/common/v2/exec"
+	"intel/isecl/lib/common/v2/log/message"
 	osutil "intel/isecl/lib/common/v2/os"
 	"intel/isecl/lib/common/v2/pkg/instance"
-	"intel/isecl/lib/common/v2/log/message"
 	flvr "intel/isecl/lib/flavor/v2"
 	pinfo "intel/isecl/lib/platform-info/v2/platforminfo"
 	"intel/isecl/lib/tpmprovider/v2"
@@ -40,7 +40,7 @@ import (
 var (
 	imgVolumeMtx sync.Mutex
 	vmVolumeMtx  sync.Mutex
-	tpmMtx       sync.Mutex
+	TpmMtx       sync.Mutex
 )
 
 // Start method is used perform the VM confidentiality check before lunching the VM
@@ -151,14 +151,14 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 		tpmWrappedKey = flavorKeyInfo.Key
 		// unwrap key
 		log.Info("wlavm/start:Start() Unwrapping the key...")
-		tpmMtx.Lock()
+		TpmMtx.Lock()
 		key, unWrapErr := util.UnwrapKey(tpmWrappedKey)
+		TpmMtx.Unlock()
 		if unWrapErr != nil {
-			tpmMtx.Unlock()
 			secLog.WithError(err).Error("wlavm/start.go:Start() Error unwrapping the key")
 			return false
 		}
-		tpmMtx.Unlock()
+
 		if !skipImageVolumeCreation {
 			log.Info("wlavm/start:Start() Creating and mounting image dm-crypt volume")
 			err = imageVolumeManager(imageUUID, imagePath, size, key)
@@ -495,8 +495,8 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	// }
 
 	// Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
-	tpmMtx.Lock()
-	defer tpmMtx.Unlock()
+	TpmMtx.Lock()
+	defer TpmMtx.Unlock()
 	t, err := util.GetTpmInstance()
 	if err != nil {
 		return nil, errors.Wrap(err, "wlavm/start.go:createSignatureWithTPM() Error attempting to create signature - could not open TPM")

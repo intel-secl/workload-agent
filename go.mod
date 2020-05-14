@@ -31,3 +31,5 @@ replace intel/isecl/lib/verifier/v2 => github.com/intel-secl/verifier/v2 v2.1.0
 replace intel/isecl/lib/platform-info/v2 => github.com/intel-secl/platform-info/v2 v2.1.0
 
 replace intel/isecl/lib/clients/v2 => github.com/intel-secl/clients/v2 v2.1.0
+
+go 1.13
