@@ -8,12 +8,11 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-
+	wlaModel "github.com/intel-secl/intel-secl/v3/pkg/model/wlagent"
 
 	"intel/isecl/lib/tpmprovider/v2"
-	hvsclient "intel/isecl/wlagent/v2/clients"
-	"intel/isecl/wlagent/v2/consts"
 	"intel/isecl/wlagent/v2/config"
+	"intel/isecl/wlagent/v2/consts"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -23,11 +22,11 @@ import (
 )
 
 // CreateRequest method constructs the payload for signing-key/binding-key registration.
-func CreateRequest(key []byte) (*hvsclient.RegisterKeyInfo, error) {
+func CreateRequest(key []byte) (*wlaModel.RegisterKeyInfo, error) {
 	log.Trace("common/key_registration:CreateRequest() Entering")
 	defer log.Trace("common/key_registration:CreateRequest() Leaving")
 
-	var httpRequestBody *hvsclient.RegisterKeyInfo
+	var httpRequestBody *wlaModel.RegisterKeyInfo
 	var keyInfo tpmprovider.CertifiedKey
 	var tpmVersion string
 	var err error
@@ -59,11 +58,11 @@ func CreateRequest(key []byte) (*hvsclient.RegisterKeyInfo, error) {
 	// so that HVS can register the key.
 	// ISECL - 3506 opened to address this issue later
 	//construct request body
-	httpRequestBody = &hvsclient.RegisterKeyInfo{
+	httpRequestBody = &wlaModel.RegisterKeyInfo{
 		PublicKeyModulus:       keyInfo.PublicKey,
 		TpmCertifyKey:          keyInfo.KeyAttestation[2:],
 		TpmCertifyKeySignature: keyInfo.KeySignature,
-		AikDerCertificate:      aikCert, //aikDer.Bytes,
+		AikDerCertificate:      aikDer.Bytes,
 		NameDigest:             append(keyInfo.KeyName[1:], make([]byte, 34)...),
 		TpmVersion:             tpmVersion,
 		OsType:                 strings.Title(runtime.GOOS),

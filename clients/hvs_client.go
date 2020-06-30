@@ -8,9 +8,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	csetup "intel/isecl/lib/common/v2/setup"
-	cLog "intel/isecl/lib/common/v2/log"
+	wlaModel "github.com/intel-secl/intel-secl/v3/pkg/model/wlagent"
 	"intel/isecl/lib/clients/v2"
+	cLog "intel/isecl/lib/common/v2/log"
+	csetup "intel/isecl/lib/common/v2/setup"
 	"intel/isecl/wlagent/v2/config"
 	"intel/isecl/wlagent/v2/consts"
 	"io/ioutil"
@@ -31,32 +32,16 @@ type Error struct {
 	Message    string
 }
 
-type RegisterKeyInfo struct {
-	PublicKeyModulus       []byte `json:"public_key_modulus,omitempty"`
-	TpmCertifyKey          []byte `json:"tpm_certify_key,omitempty"`
-	TpmCertifyKeySignature []byte `json:"tpm_certify_key_signature,omitempty"`
-	AikDerCertificate      []byte `json:"aik_der_certificate,omitempty"`
-	NameDigest             []byte `json:"name_digest,omitempty"`
-	TpmVersion             string `json:"tpm_version,omitempty"`
-	OsType                 string `json:"operating_system,omitempty"`
-}
-
-type BindingKeyCert struct {
-	BindingKeyCertificate []byte `json:"binding_key_der_certificate,omitempty"`
-}
-type SigningKeyCert struct {
-	SigningKeyCertificate []byte `json:"signing_key_der_certificate,omitempty"`
-}
-
 func (e Error) Error() string {
 	return fmt.Sprintf("hvs-client: failed (HTTP Status Code: %d)\nMessage: %s", e.StatusCode, e.Message)
 }
 
+
 // CertifyHostSigningKey sends a POST to /certify-host-signing-key to register signing key with HVS
-func CertifyHostSigningKey(key *RegisterKeyInfo) (*SigningKeyCert, error) {
+func CertifyHostSigningKey(key *wlaModel.RegisterKeyInfo) (*wlaModel.SigningKeyCert, error) {
 	log.Trace("clients/hvs_client:CertifyHostSigningKey() Entering")
 	defer log.Trace("clients/hvs_client:CertifyHostSigningKey() Leaving")
-	var keyCert SigningKeyCert
+	var keyCert wlaModel.SigningKeyCert
 
 	rsp, err := certifyHostKey(key, "/rpc/certify-host-signing-key", "signing")
 	if err != nil {
@@ -71,10 +56,10 @@ func CertifyHostSigningKey(key *RegisterKeyInfo) (*SigningKeyCert, error) {
 }
 
 // CertifyHostBindingKey sends a POST to /certify-host-binding-key to register binding key with HVS
-func CertifyHostBindingKey(key *RegisterKeyInfo) (*BindingKeyCert, error) {
+func CertifyHostBindingKey(key *wlaModel.RegisterKeyInfo) (*wlaModel.BindingKeyCert, error) {
 	log.Trace("clients/hvs_client:CertifyHostBindingKey Entering")
 	defer log.Trace("clients/hvs_client:CertifyHostBindingKey Leaving")
-	var keyCert BindingKeyCert
+	var keyCert wlaModel.BindingKeyCert
 	rsp, err := certifyHostKey(key, "/rpc/certify-host-binding-key", "binding")
 	if err != nil {
 		return nil, errors.Wrap(err, "clients/hvs_client.go:CertifyHostBindingKey() error registering binding key with HVS")
@@ -87,7 +72,7 @@ func CertifyHostBindingKey(key *RegisterKeyInfo) (*BindingKeyCert, error) {
 	return &keyCert, nil
 }
 
-func certifyHostKey(key *RegisterKeyInfo, endPoint string, keyUsage string) ([]byte, error) {
+func certifyHostKey(key *wlaModel.RegisterKeyInfo, endPoint string, keyUsage string) ([]byte, error) {
 	log.Trace("clients/hvs_client:certifyHostKey Entering")
 	defer log.Trace("clients/hvs_client:certifyHostKey Leaving")
 
