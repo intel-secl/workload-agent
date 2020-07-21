@@ -5,6 +5,7 @@ before_script:
   - export http_proxy=${HTTP_PROXY}
   - export https_proxy=${HTTPS_PROXY}
   - export no_proxy=${NO_PROXY}
+  - git config --global --unset url."ssh://git@${GITLAB_SERVER}:29418".insteadOf
   - git config --list
   - env
   - cd $CI_PROJECT_DIR
