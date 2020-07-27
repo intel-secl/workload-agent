@@ -24,10 +24,17 @@ echo "Successfully built secure docker daemon"
 
 cd $CURR_DIR
 ##Install secure-docker-daemon plugin
+<<<<<<< HEAD
+git clone https://github.com/intel-secl/secure-docker-plugin 2>/dev/null 
+cd $SECURE_DOCKER_PLUGIN_DIR
+git fetch
+git checkout v2.2.0
+=======
 git clone https://gitlab.devtools.intel.com/sst/isecl/secure-docker-plugin.git 2>/dev/null 
 cd $SECURE_DOCKER_PLUGIN_DIR
 git fetch
 git checkout v2.2/develop
+>>>>>>> Add build target to create installer without secure-docker-daemon
 git pull
 
 make

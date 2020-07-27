@@ -5,13 +5,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"intel/isecl/lib/common/v2/exec"
 	cLog "intel/isecl/lib/common/v2/log"
+	"intel/isecl/lib/common/v2/log/message"
 	"intel/isecl/lib/common/v2/proc"
 	csetup "intel/isecl/lib/common/v2/setup"
 	"intel/isecl/lib/common/v2/validation"
-	"intel/isecl/lib/common/v2/log/message"
 	"intel/isecl/lib/tpmprovider/v2"
 	"intel/isecl/wlagent/v2/config"
 	"intel/isecl/wlagent/v2/consts"
@@ -50,6 +51,7 @@ func printUsage() {
 	fmt.Printf("    start                  Start wlagent\n")
 	fmt.Printf("    stop                   Stop wlagent\n")
 	fmt.Printf("    status                 Reports the status of wlagent service\n")
+	fmt.Printf("    fetch-key-url <keyUrl>      Fetch a key from the keyUrl\n")
 	fmt.Printf("    uninstall  [--purge]   Uninstall wlagent. --purge option needs to be applied to remove configuration and data files\n")
 	fmt.Printf("    setup [task]           Run setup task\n")
 	fmt.Printf("Available Tasks for setup:\n")
@@ -131,23 +133,23 @@ func main() {
 		flags := args
 		if len(args) > 1 {
 			flags = args[2:]
-		}else{
+		} else {
 			fmt.Fprintln(os.Stderr, "Error: setup task not mentioned")
-                        printUsage()
+			printUsage()
 			os.Exit(1)
 		}
-		
+
 		if len(args) >= 2 &&
-                        args[1] != "download_ca_cert" &&
-                        args[1] != "SigningKey" &&
-                        args[1] != "BindingKey" &&
-                        args[1] != "RegisterSigningKey" &&
-                        args[1] != "RegisterBindingKey" &&
-                        args[1] != "all" {
-                        fmt.Fprintln(os.Stderr, "Error: Unknown setup task ", args[1])
-                        printUsage()
-                        os.Exit(1)
-                }
+			args[1] != "download_ca_cert" &&
+			args[1] != "SigningKey" &&
+			args[1] != "BindingKey" &&
+			args[1] != "RegisterSigningKey" &&
+			args[1] != "RegisterBindingKey" &&
+			args[1] != "all" {
+			fmt.Fprintln(os.Stderr, "Error: Unknown setup task ", args[1])
+			printUsage()
+			os.Exit(1)
+		}
 
 		// Run list of setup tasks one by one
 		setupRunner := &csetup.Runner{
@@ -160,11 +162,11 @@ func main() {
 					ConsoleWriter:        os.Stdout,
 				},
 				setup.SigningKey{
-					T: t,
+					T:     t,
 					Flags: flags,
 				},
 				setup.BindingKey{
-					T: t,
+					T:     t,
 					Flags: flags,
 				},
 				setup.RegisterBindingKey{
@@ -186,7 +188,7 @@ func main() {
 		if err != nil {
 			log.WithError(err).Error("main:main() Error running setup")
 			log.Tracef("%+v", err)
-			fmt.Fprintf(os.Stderr, "Error running setup tasks...\n",)
+			fmt.Fprintf(os.Stderr, "Error running setup tasks...\n")
 			os.Exit(1)
 		}
 
@@ -331,7 +333,7 @@ func main() {
 		client := rpc.NewClient(conn)
 		var outFlavor flavor.OutFlavor
 		var args = wlrpc.FlavorInfo{
-			ImageID:    args[1],
+			ImageID: args[1],
 		}
 
 		err = client.Call("VirtualMachine.FetchFlavor", &args, &outFlavor)
@@ -345,6 +347,38 @@ func main() {
 			fmt.Print(outFlavor.ImageFlavor)
 			os.Exit(0)
 		}
+
+	case "fetch-key-url":
+		if len(args[1:]) < 1 {
+			secLog.Errorf("main:main() fetch-key-url: Invalid number of parameters, %s", message.InvalidInputProtocolViolation)
+			os.Exit(1)
+		}
+
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			secLog.WithError(err).Errorf("main:main() fetch-key-url: failed to dial wlagent.sock, %s", message.BadConnection)
+			os.Exit(1)
+		}
+
+		client := rpc.NewClient(conn)
+		var keyOut wlrpc.KeyOnly
+		var args = wlrpc.TransferURL{
+			URL: args[1],
+		}
+
+		err = client.Call("VirtualMachine.FetchKeyWithURL", &args, &keyOut)
+		if err != nil {
+			log.Error("main:main() fetch-key-url: Client call failed")
+			log.Tracef("%+v", err)
+			os.Exit(1)
+		}
+
+		retKey, err := json.Marshal(keyOut)
+		if err != nil {
+			log.Error("main:main() fetch-key-url while marshalling key")
+		}
+		fmt.Println(string(retKey))
+		os.Exit(0)
 
 	case "uninstall":
 		commandArgs := []string{consts.OptDirPath + "secure-docker-daemon"}
@@ -393,7 +427,7 @@ func deleteFile(path string) {
 	// delete file
 	var err = os.RemoveAll(path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr,"Error deleting file :%s", path)
+		fmt.Fprintf(os.Stderr, "Error deleting file :%s", path)
 	}
 }
 
@@ -460,7 +494,7 @@ func runservice() {
 	defer fileWatcher.Close()
 	// Passing the false parameter to ensure that fileWatcher task is not added to the wait group if there is pending signal termination
 	_, err = proc.AddTask(false)
-	if err != nil{
+	if err != nil {
 		log.WithError(err).Fatal("main:runservice() could not add the task for filewatcher")
 	}
 	go func() {
@@ -478,8 +512,8 @@ func runservice() {
 
 	// Passing the false parameter to ensure that fileWatcher task is not added to the wait group if there is pending signal termination
 	_, err = proc.AddTask(false)
-	if err != nil{
-                log.WithError(err).Fatal("main:runservice() could not add the task for rpc service")
+	if err != nil {
+		log.WithError(err).Fatal("main:runservice() could not add the task for rpc service")
 	}
 	go func() {
 		defer proc.TaskDone()
@@ -511,9 +545,9 @@ func runservice() {
 			r.Accept(l)
 		}
 	}()
-        secLog.Info(message.ServiceStart)
+	secLog.Info(message.ServiceStart)
 
 	// block until stop channel receives
 	proc.WaitForQuitAndCleanup(10 * time.Second)
-        secLog.Info(message.ServiceStop)
+	secLog.Info(message.ServiceStop)
 }

@@ -27,10 +27,10 @@ type OutFlavor struct {
 	ImageFlavor string
 }
 
-func getKeyID(keyURL string) string {
+func getKeyID(keyUrl string) string {
 
-	keyURLSplit := strings.Split(keyURL, "/")
-	keyID := keyURLSplit[len(keyURLSplit)-2]
+	keyUrlSplit := strings.Split(keyUrl, "/")
+	keyID := keyUrlSplit[len(keyUrlSplit)-2]
 	return keyID
 }
 
@@ -70,7 +70,7 @@ func Fetch(imageID string) (string, bool) {
 	if flavorKeyInfo.Flavor.EncryptionRequired {
 		keyID := getKeyID(flavorKeyInfo.Flavor.Encryption.KeyURL)
 		imageKeyID[keyID] = imageID
-		if len(flavorKeyInfo.Key) == 0{
+		if len(flavorKeyInfo.Key) == 0 {
 			secLog.Error("Could not retrieve flavor Key, Host is untrusted or key doesnt exist with associated flavor")
 			return "", false
 		}
@@ -78,9 +78,9 @@ func Fetch(imageID string) (string, bool) {
 
 	f, err := json.Marshal(flavorKeyInfo.Flavor)
 	if err != nil {
-                log.WithError(err).Error("flavor/flavor.go:Fetch() Error while marshalling flavor")
-                return "", false
-        }
+		log.WithError(err).Error("flavor/flavor.go:Fetch() Error while marshalling flavor")
+		return "", false
+	}
 
 	return string(f), true
 }

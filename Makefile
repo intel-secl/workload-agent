@@ -28,6 +28,14 @@ installer: wlagent
 	cp dist/linux/uninstall-container-security-dependencies.sh out/wla/uninstall-container-security-dependencies.sh && chmod +x out/wla/uninstall-container-security-dependencies.sh
 	makeself out/wla out/workload-agent-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 
 
+installer-no-docker: wlagent
+	mkdir -p out/wla
+	cp dist/linux/install.sh out/wla/install.sh && chmod +x out/wla/install.sh
+	cp dist/linux/wlagent.service out/wla/wlagent.service
+	cp libvirt/qemu out/wla/qemu && chmod +x out/wla/qemu
+	cp out/wlagent out/wla/wlagent && chmod +x out/wla/wlagent
+	makeself out/wla out/workload-agent-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 
+
 package: wlagent
 	mkdir -p out/wla
 	cp dist/linux/install.sh out/wla/install.sh && chmod +x out/wla/install.sh

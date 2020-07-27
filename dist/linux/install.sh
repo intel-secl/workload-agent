@@ -331,38 +331,43 @@ systemctl start secure-docker-plugin.service
 
 
 #Install secure docker daemon with WA only if WA_WITH_CONTAINER_SECURITY is enabled in workload-agent.env
+#and SKIP_SECURE_DOCKER_DAEMON is not enabled in wpm.env
 if [ "$WA_WITH_CONTAINER_SECURITY" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY" == "Y" ] || [ "$WA_WITH_CONTAINER_SECURITY" == "yes" ]; then
-  is_docker_installed
-
-  which cryptsetup 2>/dev/null
-  if [ $? -ne 0 ]; then
-    yum install -y cryptsetup
-  fi  
-  echo "Installing secure docker daemon"
-  systemctl stop docker
-
-  mkdir -p $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup
-  cp /usr/bin/docker $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-  chown -R root:root docker-daemon/
-  
-  cp -f docker-daemon/docker /usr/bin/
-  which /usr/bin/dockerd-ce 2>/dev/null
-  if [ $? -ne 0 ]; then
-    cp /usr/bin/dockerd $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-    cp -f docker-daemon/dockerd-ce /usr/bin/dockerd
+  if [ "$SKIP_SECURE_DOCKER_DAEMON" = "y" ] || [ "$SKIP_SECURE_DOCKER_DAEMON" = "Y" ] || [ "$SKIP_SECURE_DOCKER_DAEMON" = "yes" ]; then
+    echo "Skipping secure-docker-daemon installation"
   else
-    cp /usr/bin/dockerd-ce $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-    cp -f docker-daemon/dockerd-ce /usr/bin/dockerd-ce
+    is_docker_installed
+
+    which cryptsetup 2>/dev/null
+    if [ $? -ne 0 ]; then
+      yum install -y cryptsetup
+    fi  
+    echo "Installing secure docker daemon"
+    systemctl stop docker
+    
+    mkdir -p $WORKLOAD_AGENT_HOME/secure-docker-daemon/bin
+    cp /usr/bin/docker $WORKLOAD_AGENT_HOME/secure-docker-daemon/bin/
+    chown -R root:root docker-daemon/
+    
+    cp -f docker-daemon/docker /usr/bin/
+    which /usr/bin/dockerd-ce 2>/dev/null
+    if [ $? -ne 0 ]; then
+      cp /usr/bin/dockerd $WORKLOAD_AGENT_HOME/secure-docker-daemon/bin/
+      cp -f docker-daemon/dockerd-ce /usr/bin/dockerd
+    else
+      cp /usr/bin/dockerd-ce $WORKLOAD_AGENT_HOME/secure-docker-daemon/bin/
+      cp -f docker-daemon/dockerd-ce /usr/bin/dockerd-ce
+    fi
+
+    install_secure_docker_plugin
+
+    echo "Starting secure docker engine"
+    mkdir -p /etc/docker
+    cp daemon.json /etc/docker/ 
+    systemctl daemon-reload
+    systemctl start docker
+    cp uninstall-container-security-dependencies.sh $WORKLOAD_AGENT_HOME/secure-docker-daemon/
   fi
-
-  install_secure_docker_plugin
-
-  echo "Starting secure docker engine"
-  mkdir -p /etc/docker
-  cp daemon.json /etc/docker/ 
-  systemctl daemon-reload
-  systemctl start docker
-  cp uninstall-container-security-dependencies.sh $WORKLOAD_AGENT_HOME/secure-docker-daemon/
 else
   yum_packages=(libvirt cryptsetup)
   for i in ${yum_packages[*]}
@@ -399,6 +404,5 @@ if [ $setup_complete -ne 0 ]; then
   echo_failure "Installation completed completed with errors. Please check log file"
   exit 1
 fi
-
 
 echo_success "Installation completed."
