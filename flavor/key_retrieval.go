@@ -6,6 +6,7 @@
 package flavor
 
 import (
+	wlsModel "github.com/intel-secl/intel-secl/v3/pkg/model/wls"
 	pinfo "intel/isecl/lib/platform-info/v2/platforminfo"
 	wlsclient "intel/isecl/wlagent/v2/clients"
 )
@@ -17,7 +18,7 @@ func RetrieveKey(keyID string) ([]byte, bool) {
 	defer log.Trace("flavor/key_retrieval:RetrieveKey Leaving")
 	//check if the key is cached by filtercriteria imageUUID
 	var err error
-	var flavorKeyInfo wlsclient.FlavorKey
+	var flavorKeyInfo wlsModel.FlavorKey
 	var tpmWrappedKey []byte
 
 	if imageKeyID[keyID] == "" {
@@ -71,7 +72,7 @@ func RetrieveKeyWithURL(keyUrl string) ([]byte, bool) {
 	defer log.Trace("flavor/key_retrieval:RetrieveKeyWithURL Leaving")
 	//check if the key is cached by filtercriteria imageUUID
 	var err error
-	var receivedKey wlsclient.ReturnKey
+	var receivedKey wlsModel.ReturnKey
 
 	// get host hardware UUID
 	log.Debug("Retrieving host hardware UUID...")

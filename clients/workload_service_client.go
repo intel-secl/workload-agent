@@ -5,117 +5,63 @@
 package clients
 
 import (
-	"bytes"
-	"encoding/json"
-	"intel/isecl/lib/flavor/v2"
+	"github.com/intel-secl/intel-secl/v3/pkg/clients/wlsclient"
+	wlsModel "github.com/intel-secl/intel-secl/v3/pkg/model/wls"
 	"intel/isecl/wlagent/v2/config"
-	"net/http"
+	"intel/isecl/wlagent/v2/consts"
 	"net/url"
 
 	"github.com/pkg/errors"
 )
 
-//FlavorKey is a representation of flavor-key information
-type FlavorKey struct {
-	Flavor    flavor.Image `json:"flavor"`
-	Signature string       `json:"signature"`
-	Key       []byte       `json:"key,omitempty"`
-}
-
-// RequestKey struct defines input parameters to retrieve a key
-type RequestKey struct {
-	HwId   string `json:"hardware_uuid"`
-	KeyUrl string `json:"key_url"`
-}
-
-// ReturnKey to return key Json
-type ReturnKey struct {
-	Key []byte `json:"key"`
-}
-
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
-func GetImageFlavorKey(imageUUID, hardwareUUID string) (FlavorKey, error) {
+func GetImageFlavorKey(imageUUID, hardwareUUID string) (wlsModel.FlavorKey, error) {
 	log.Trace("clients/workload_service_client:GetImageFlavorKey() Entering")
 	defer log.Trace("clients/workload_service_client:GetImageFlavorKey() Leaving")
-	var flavorKeyInfo FlavorKey
-
-	requestURL, err := url.Parse(config.Configuration.Wls.APIURL)
+	var flavorKeyInfo wlsModel.FlavorKey
+	wlsClientFactory, err := wlsclient.NewWLSClientFactory(config.Configuration.Wls.APIURL, config.Configuration.Aas.BaseURL,
+		config.Configuration.Wla.APIUsername, config.Configuration.Wla.APIPassword, consts.TrustedCaCertsDir)
 	if err != nil {
-		return flavorKeyInfo, errors.New("client/workload_service_client:GetImageFlavorKey() error retrieving WLS API URL")
+		return flavorKeyInfo, errors.Wrap(err, "Error while instantiating WLSClientFactory")
+
 	}
 
-	requestURL, err = url.Parse(requestURL.String() + "images/" + imageUUID + "/flavor-key?hardware_uuid=" + hardwareUUID)
+	flavorsClient, err := wlsClientFactory.FlavorsClient()
 	if err != nil {
-		return flavorKeyInfo, errors.New("client/workload_service_client:GetImageFlavorKey() error forming GET flavor-key for image API URL")
+		return flavorKeyInfo, errors.Wrap(err, "Error while instantiating FlavorsClient")
 	}
 
-	httpRequest, err := http.NewRequest("GET", requestURL.String(), nil)
+	flavorKeyInfo, err = flavorsClient.GetImageFlavorKey(imageUUID, hardwareUUID)
 	if err != nil {
-		return flavorKeyInfo, err
+		return flavorKeyInfo, errors.Wrap(err, "Error while retrieving Flavor-Key")
 	}
 
-	log.Debugf("clients/workload_service_client:GetImageFlavorKey() WLS image-flavor-key retrieval GET request URL: %s", requestURL.String())
-	httpRequest.Header.Set("Accept", "application/json")
-	httpRequest.Header.Set("Content-Type", "application/json")
-	//httpRequest.SetBasicAuth(config.WlaConfig.WlsAPIUsername, config.WlaConfig.WlsAPIPassword)
-
-	httpResponse, err := SendRequest(httpRequest, true)
-	if err != nil {
-		secLog.WithError(err).Error("client/workload_service_client:GetImageFlavorKey() Error while getting response from Get Image Flavor-Key from WLS API")
-		return flavorKeyInfo, errors.Wrap(err, "client/workload_service_client:GetImageFlavorKey() Error while getting response from Get Image Flavor-Key from WLS API")
-	}
-
-	if httpResponse != nil {
-		//deserialize the response to flavorKeyInfo response
-		log.Debug("Http response is :", string(httpResponse))
-		err = json.Unmarshal(httpResponse, &flavorKeyInfo)
-		if err != nil {
-			return flavorKeyInfo, errors.Wrap(err, "client/workload_service_client:GetImageFlavorKey() Failed to unmarshal response into flavor key info")
-		}
-	}
 	log.Debug("client/workload_service_client:GetImageFlavorKey() Successfully retrieved Flavor-Key")
 	return flavorKeyInfo, nil
 }
 
 // GetImageFlavor method is used to get the image flavor from the workload service
-func GetImageFlavor(imageID, flavorPart string) (flavor.SignedImageFlavor, error) {
+func GetImageFlavor(imageID, flavorPart string) (wlsModel.SignedImageFlavor, error) {
 	log.Trace("clients/workload_service_client:GetImageFlavor() Entering")
 	defer log.Trace("clients/workload_service_client:GetImageFlavor() Leaving")
-	var flavor flavor.SignedImageFlavor
+	var flavor wlsModel.SignedImageFlavor
 
-	requestURL, err := url.Parse(config.Configuration.Wls.APIURL)
+	wlsClientFactory, err := wlsclient.NewWLSClientFactory(config.Configuration.Wls.APIURL, config.Configuration.Aas.BaseURL,
+		config.Configuration.Wla.APIUsername, config.Configuration.Wla.APIPassword, consts.TrustedCaCertsDir)
 	if err != nil {
-		return flavor, errors.New("client/workload_service_client:GetImageFlavor() error retrieving WLS API URL")
+		return flavor, errors.Wrap(err, "Error while instantiating WLSClientFactory")
+
 	}
 
-	requestURL, err = url.Parse(requestURL.String() + "images/" + imageID + "/flavors?flavor_part=" + flavorPart)
+	flavorsClient, err := wlsClientFactory.FlavorsClient()
 	if err != nil {
-		return flavor, errors.New("client/workload_service_client:GetImageFlavor() error forming GET flavors for image API URL")
+		return flavor, errors.Wrap(err, "Error while instantiating FlavorsClient")
 	}
 
-	httpRequest, err := http.NewRequest("GET", requestURL.String(), nil)
+	flavor, err = flavorsClient.GetImageFlavor(imageID, flavorPart)
 	if err != nil {
-		return flavor, err
+		return flavor, errors.Wrap(err, "Error while getting ImageFlavor")
 	}
-
-	log.Debugf("clients/workload_service_client:GetImageFlavor() WLS image-flavor retrieval GET request URL: %s", requestURL.String())
-	httpRequest.Header.Set("Accept", "application/json")
-	httpRequest.Header.Set("Content-Type", "application/json")
-
-	httpResponse, err := SendRequest(httpRequest, true)
-	if err != nil {
-		secLog.WithError(err).Error("client/workload_service_client:GetImageFlavor() Error in response from WLS GetImageFlavor API")
-		return flavor, errors.Wrap(err, "client/workload_service_client:GetImageFlavor() Error in response from WLS GetImageFlavor API")
-	}
-
-	// deserialize the response to ImageFlavor response
-	if httpResponse != nil {
-		err = json.Unmarshal(httpResponse, &flavor)
-		if err != nil {
-			return flavor, errors.Wrap(err, "client/workload_service_client:GetImageFlavor() Failed to unmarshal response into flavor")
-		}
-	}
-	log.Debugf("clients/workload_service_client:GetImageFlavor() response from API: %s", string(httpResponse))
 
 	return flavor, nil
 }
@@ -126,40 +72,30 @@ func PostVMReport(report []byte) error {
 	defer log.Trace("clients/workload_service_client:PostVMReport() Leaving")
 	var err error
 
-	//Add client here
-	requestURL, err := url.Parse(config.Configuration.Wls.APIURL)
+	wlsClientFactory, err := wlsclient.NewWLSClientFactory(config.Configuration.Wls.APIURL, config.Configuration.Aas.BaseURL,
+		config.Configuration.Wla.APIUsername, config.Configuration.Wla.APIPassword, consts.TrustedCaCertsDir)
 	if err != nil {
-		return errors.New("client/workload_service_client:PostVMReport() error retrieving WLS API URL")
+		return errors.Wrap(err, "Error while instantiating WLSClientFactory")
+
 	}
 
-	requestURL, err = url.Parse(requestURL.String() + "reports")
+	reportsClient, err := wlsClientFactory.ReportsClient()
 	if err != nil {
-		return errors.New("client/workload_service_client:PostVMReport() error forming reports POST API URL")
+		return errors.Wrap(err, "Error while instantiating ReportsClient")
 	}
 
-	log.Debugf("clients/workload_service_client:PostVMReport() WLS VM reports POST Request URL: %s", requestURL.String())
-	// set POST request Accept and Content-Type headers
-	httpRequest, err := http.NewRequest("POST", requestURL.String(), bytes.NewBuffer(report))
+	err = reportsClient.PostVMReport(report)
 	if err != nil {
-		return errors.Wrap(err, "client/workload_service_client:PostVMReport() Failed to create WLS POST API request for vm reports")
-	}
-	httpRequest.Header.Set("Accept", "application/json")
-	httpRequest.Header.Set("Content-Type", "application/json")
-	//httpRequest.SetBasicAuth(config.WlaConfig.WlsAPIUsername, config.WlaConfig.WlsAPIPassword)
-
-	_, err = SendRequest(httpRequest, true)
-	if err != nil {
-		secLog.WithError(err).Error("client/workload_service_client:PostVMReport() Error while getting response for Post WLS VM reports API")
-		return errors.Wrap(err, "client/workload_service_client:PostVMReport() Error while getting response for Post WLS VM reports API")
+		return errors.Wrap(err, "Error creating instance trust report")
 	}
 	return nil
 }
 
 // GetKeyWithURL method is used to get the image flavor-key from the workload service
-func GetKeyWithURL(keyUrl string, hardwareUUID string) (ReturnKey, error) {
+func GetKeyWithURL(keyUrl string, hardwareUUID string) (wlsModel.ReturnKey, error) {
 	log.Trace("clients/workload_service_client:GetKeyWithURL() Entering")
 	defer log.Trace("clients/workload_service_client:GetKeyWithURL() Leaving")
-	var retKey ReturnKey
+	var retKey wlsModel.ReturnKey
 
 	requestURL, err := url.Parse(config.Configuration.Wls.APIURL)
 	if err != nil {
@@ -170,35 +106,21 @@ func GetKeyWithURL(keyUrl string, hardwareUUID string) (ReturnKey, error) {
 	if err != nil {
 		return retKey, errors.New("client/workload_service_client:GetKeyWithURL() error forming GET key API URL")
 	}
-
-	var rBody = RequestKey{
-		HwId:   hardwareUUID,
-		KeyUrl: keyUrl,
-	}
-	jbody, err := json.Marshal(rBody)
-
-	httpRequest, err := http.NewRequest("POST", requestURL.String(), bytes.NewBuffer([]byte(jbody)))
+	wlsClientFactory, err := wlsclient.NewWLSClientFactory(config.Configuration.Wls.APIURL, config.Configuration.Aas.BaseURL,
+		config.Configuration.Wla.APIUsername, config.Configuration.Wla.APIPassword, consts.TrustedCaCertsDir)
 	if err != nil {
-		return retKey, err
+		return retKey, errors.Wrap(err, "Error while instantiating WLSClientFactory")
+
 	}
 
-	log.Debugf("clients/workload_service_client:GetKeyWithURL() WLS key retrieval GET request URL: %s", requestURL.String())
-	httpRequest.Header.Set("Accept", "application/json")
-	httpRequest.Header.Set("Content-Type", "application/json")
-
-	httpResponse, err := SendRequest(httpRequest, true)
+	keysClient, err := wlsClientFactory.KeysClient()
 	if err != nil {
-		secLog.WithError(err).Error("client/workload_service_client:GetKeyWithURL() Error while getting response from Get Key from WLS API")
-		return retKey, errors.Wrap(err, "client/workload_service_client:GetKeyWithURL() Error while getting response from Key from WLS API")
+		return retKey, errors.Wrap(err, "Error while instantiating KeysClient")
 	}
 
-	if httpResponse != nil {
-		//deserialize the response to UserInfo response
-		log.Debugf("httpResonse: %s", httpResponse)
-		err = json.Unmarshal(httpResponse, &retKey)
-		if err != nil {
-			return retKey, errors.Wrap(err, "client/workload_service_client:GetKeyWithURL() Failed to unmarshal response into key info")
-		}
+	retKey, err = keysClient.GetKeyWithURL(keyUrl, hardwareUUID)
+	if err != nil {
+		return retKey,errors.Wrap(err, "Error while getting key")
 	}
 	log.Debug("client/workload_service_client:GetKeyWithURL() Successfully retrieved Key")
 	return retKey, nil

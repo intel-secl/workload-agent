@@ -6,6 +6,7 @@ package flavor
 
 import (
 	"encoding/json"
+	wlsModel "github.com/intel-secl/intel-secl/v3/pkg/model/wls"
 	cLog "intel/isecl/lib/common/v2/log"
 	pinfo "intel/isecl/lib/platform-info/v2/platforminfo"
 	wlsclient "intel/isecl/wlagent/v2/clients"
@@ -45,7 +46,7 @@ func init() {
 func Fetch(imageID string) (string, bool) {
 	log.Trace("flavor/flavor:Fetch Entering")
 	defer log.Trace("flavor/flavor:Fetch Leaving")
-	var flavorKeyInfo wlsclient.FlavorKey
+	var flavorKeyInfo wlsModel.FlavorKey
 
 	log.Debug("Retrieving host hardware UUID...")
 	hardwareUUID, err := pinfo.HardwareUUID()

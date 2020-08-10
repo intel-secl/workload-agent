@@ -10,12 +10,12 @@ import (
 	"crypto"
 	"encoding/json"
 
+	wlsModel "github.com/intel-secl/intel-secl/v3/pkg/model/wls"
 	"intel/isecl/lib/common/v2/crypt"
 	"intel/isecl/lib/common/v2/exec"
 	"intel/isecl/lib/common/v2/log/message"
 	osutil "intel/isecl/lib/common/v2/os"
 	"intel/isecl/lib/common/v2/pkg/instance"
-	flvr "intel/isecl/lib/flavor/v2"
 	pinfo "intel/isecl/lib/platform-info/v2/platforminfo"
 	"intel/isecl/lib/tpmprovider/v2"
 	"intel/isecl/lib/verifier/v2"
@@ -112,7 +112,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 		log.Info("wlavm/start:Start() Image encryption status : ", isImageEncrypted)
 	}
 
-	var flavorKeyInfo wlsclient.FlavorKey
+	var flavorKeyInfo wlsModel.FlavorKey
 	var tpmWrappedKey []byte
 
 	// get host hardware UUID
@@ -193,7 +193,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	}
 
 	//Create Image trust report
-	status := CreateInstanceTrustReport(manifest, flvr.SignedImageFlavor{flavorKeyInfo.Flavor, flavorKeyInfo.Signature})
+	status := CreateInstanceTrustReport(manifest, wlsModel.SignedImageFlavor{flavorKeyInfo.Flavor, flavorKeyInfo.Signature})
 	if status == false {
 		log.Error("wlavm/start.go:Start() Error while creating image trust report")
 		return false
@@ -402,7 +402,7 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 	return nil
 }
 
-func CreateInstanceTrustReport(manifest instance.Manifest, flavor flvr.SignedImageFlavor) bool {
+func CreateInstanceTrustReport(manifest instance.Manifest, flavor wlsModel.SignedImageFlavor) bool {
 	log.Trace("wlavm/start:CreateInstanceTrustReport() Entering")
 	defer log.Trace("wlavm/start:CreateInstanceTrustReport() Leaving")
 

@@ -7,12 +7,12 @@ package rpc
 import (
 	"encoding/json"
 	"fmt"
+	wlsModel "github.com/intel-secl/intel-secl/v3/pkg/model/wls"
 	cLog "intel/isecl/lib/common/v2/log"
 	"intel/isecl/lib/common/v2/log/message"
 	"intel/isecl/lib/common/v2/pkg/instance"
 	"intel/isecl/lib/common/v2/proc"
 	"intel/isecl/lib/common/v2/validation"
-	flvr "intel/isecl/lib/flavor/v2"
 	wlsclient "intel/isecl/wlagent/v2/clients"
 	"intel/isecl/wlagent/v2/filewatch"
 	"intel/isecl/wlagent/v2/flavor"
@@ -130,7 +130,7 @@ func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status
 	defer log.Trace("rpc/server:CreateInstanceTrustReport() Leaving")
 
 	var manifestJSON instance.Manifest
-	var imageFlavor flvr.SignedImageFlavor
+	var imageFlavor wlsModel.SignedImageFlavor
 
 	err = json.Unmarshal([]byte(args.Manifest), &manifestJSON)
 	if err != nil {
