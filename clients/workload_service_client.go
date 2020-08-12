@@ -10,7 +10,7 @@ import (
 	"intel/isecl/wlagent/v2/config"
 	"intel/isecl/wlagent/v2/consts"
 	"net/url"
-
+	"strings"
 	"github.com/pkg/errors"
 )
 
@@ -33,6 +33,10 @@ func GetImageFlavorKey(imageUUID, hardwareUUID string) (wlsModel.FlavorKey, erro
 
 	flavorKeyInfo, err = flavorsClient.GetImageFlavorKey(imageUUID, hardwareUUID)
 	if err != nil {
+		// Return error as nil in case of http response code 404, to support docker images with no image flavor association
+                if strings.Contains(err.Error(), "404"){
+                        return flavorKeyInfo, nil
+                }
 		return flavorKeyInfo, errors.Wrap(err, "Error while retrieving Flavor-Key")
 	}
 
