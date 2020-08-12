@@ -57,6 +57,17 @@ type rpcError struct {
 	Message    string
 }
 
+//TransferURL ...
+type TransferURL struct {
+	URL string
+}
+
+// KeyOnly ...
+type KeyOnly struct {
+	KeyUrl string `json:"key_url"`
+	Key    []byte `json:"key"`
+}
+
 func (e rpcError) Error() string {
 	return fmt.Sprintf("%d: %s", e.StatusCode, e.Message)
 }
@@ -224,5 +235,34 @@ func (vm *VirtualMachine) FetchKey(args *KeyInfo, outKeyInfo *KeyInfo) error {
 	}
 
 	*outKeyInfo = k
+	return nil
+}
+
+// FetchKeyWithURL forwards the RPC request to flavor.RetrieveKeywithURL
+func (vm *VirtualMachine) FetchKeyWithURL(args *TransferURL, outKey *KeyOnly) error {
+	//func (vm *VirtualMachine) FetchKeyWithURL(args *TransferURL, outKey *[]byte) error {
+	// Passing the true parameter to ensure that FetchKey is added to the waitgroup  as this action needs to be completed
+	// even if there is pending signal termination on rpc
+
+	_, err := proc.AddTask(true)
+	if err != nil {
+		errors.Wrap(err, "rpc/server:FetchKeyWithURL() Could not add task for FetchKeyWithURL")
+	}
+	defer proc.TaskDone()
+	log.Trace("rpc/server:FetchKeyWithURL() Entering")
+	defer log.Trace("rpc/server:FetchKeyWithURL() Leaving")
+
+	wrappedKey, returnCode := flavor.RetrieveKeyWithURL(args.URL)
+	if !returnCode {
+		return &rpcError{Message: "rpc/server:FetchKeyWithURL() error while unwrapping the key", StatusCode: 1}
+	}
+	wlavm.TpmMtx.Lock()
+	key, err := util.UnwrapKey(wrappedKey)
+	wlavm.TpmMtx.Unlock()
+	if err != nil {
+		return &rpcError{Message: "rpc/server:FetchKeyWithURL() error while unwrapping the key", StatusCode: 1}
+	}
+	outKey.KeyUrl = args.URL
+	outKey.Key = key
 	return nil
 }

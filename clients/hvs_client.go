@@ -8,9 +8,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	csetup "intel/isecl/lib/common/v2/setup"
-	cLog "intel/isecl/lib/common/v2/log"
 	"intel/isecl/lib/clients/v2"
+	cLog "intel/isecl/lib/common/v2/log"
+	csetup "intel/isecl/lib/common/v2/setup"
 	"intel/isecl/wlagent/v2/config"
 	"intel/isecl/wlagent/v2/consts"
 	"io/ioutil"
@@ -96,14 +96,14 @@ func certifyHostKey(key *RegisterKeyInfo, endPoint string, keyUsage string) ([]b
 		return nil, errors.Wrapf(err, "clients/hvs_client.go:certifyHostKey() error marshalling %s key. ", keyUsage)
 	}
 
-	certifyKeyURL, err := url.Parse(config.Configuration.Mtwilson.APIURL)
+	certifyKeyUrl, err := url.Parse(config.Configuration.Mtwilson.APIURL)
 	if err != nil {
 		return nil, errors.Wrap(err, "clients/hvs_client.go:certifyHostKey() error parsing base url")
 	}
 
-	certifyKeyURL.Path = path.Join(certifyKeyURL.Path, endPoint)
+	certifyKeyUrl.Path = path.Join(certifyKeyUrl.Path, endPoint)
 
-	req, err := http.NewRequest("POST", certifyKeyURL.String(), bytes.NewBuffer(kiJSON))
+	req, err := http.NewRequest("POST", certifyKeyUrl.String(), bytes.NewBuffer(kiJSON))
 	if err != nil {
 		return nil, errors.Wrap(err, "clients/hvs_client.go:certifyHostKey() Failed to create request for certifying Binding/Signing Key")
 	}
@@ -117,7 +117,7 @@ func certifyHostKey(key *RegisterKeyInfo, endPoint string, keyUsage string) ([]b
 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+ jwtToken)
+	req.Header.Set("Authorization", "Bearer "+jwtToken)
 	client, err := clients.HTTPClientWithCADir(consts.TrustedCaCertsDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "clients/hvs_client.go:certifyHostKey() Failed to create http client")

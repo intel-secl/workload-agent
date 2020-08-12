@@ -22,6 +22,17 @@ type FlavorKey struct {
 	Key       []byte       `json:"key,omitempty"`
 }
 
+// RequestKey struct defines input parameters to retrieve a key
+type RequestKey struct {
+	HwId   string `json:"hardware_uuid"`
+	KeyUrl string `json:"key_url"`
+}
+
+// ReturnKey to return key Json
+type ReturnKey struct {
+	Key []byte `json:"key"`
+}
+
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
 func GetImageFlavorKey(imageUUID, hardwareUUID string) (FlavorKey, error) {
 	log.Trace("clients/workload_service_client:GetImageFlavorKey() Entering")
@@ -62,7 +73,7 @@ func GetImageFlavorKey(imageUUID, hardwareUUID string) (FlavorKey, error) {
 			return flavorKeyInfo, errors.Wrap(err, "client/workload_service_client:GetImageFlavorKey() Failed to unmarshal response into flavor key info")
 		}
 	}
-	log.Debug("client/workload_service_client:GetImageFlavorKey() Successfully retrieved Flavor-Key")       
+	log.Debug("client/workload_service_client:GetImageFlavorKey() Successfully retrieved Flavor-Key")
 	return flavorKeyInfo, nil
 }
 
@@ -142,4 +153,53 @@ func PostVMReport(report []byte) error {
 		return errors.Wrap(err, "client/workload_service_client:PostVMReport() Error while getting response for Post WLS VM reports API")
 	}
 	return nil
+}
+
+// GetKeyWithURL method is used to get the image flavor-key from the workload service
+func GetKeyWithURL(keyUrl string, hardwareUUID string) (ReturnKey, error) {
+	log.Trace("clients/workload_service_client:GetKeyWithURL() Entering")
+	defer log.Trace("clients/workload_service_client:GetKeyWithURL() Leaving")
+	var retKey ReturnKey
+
+	requestURL, err := url.Parse(config.Configuration.Wls.APIURL)
+	if err != nil {
+		return retKey, errors.New("client/workload_service_client:GetKeyWithURL() error retrieving WLS API URL")
+	}
+
+	requestURL, err = url.Parse(requestURL.String() + "keys")
+	if err != nil {
+		return retKey, errors.New("client/workload_service_client:GetKeyWithURL() error forming GET key API URL")
+	}
+
+	var rBody = RequestKey{
+		HwId:   hardwareUUID,
+		KeyUrl: keyUrl,
+	}
+	jbody, err := json.Marshal(rBody)
+
+	httpRequest, err := http.NewRequest("POST", requestURL.String(), bytes.NewBuffer([]byte(jbody)))
+	if err != nil {
+		return retKey, err
+	}
+
+	log.Debugf("clients/workload_service_client:GetKeyWithURL() WLS key retrieval GET request URL: %s", requestURL.String())
+	httpRequest.Header.Set("Accept", "application/json")
+	httpRequest.Header.Set("Content-Type", "application/json")
+
+	httpResponse, err := SendRequest(httpRequest, true)
+	if err != nil {
+		secLog.WithError(err).Error("client/workload_service_client:GetKeyWithURL() Error while getting response from Get Key from WLS API")
+		return retKey, errors.Wrap(err, "client/workload_service_client:GetKeyWithURL() Error while getting response from Key from WLS API")
+	}
+
+	if httpResponse != nil {
+		//deserialize the response to UserInfo response
+		log.Debugf("httpResonse: %s", httpResponse)
+		err = json.Unmarshal(httpResponse, &retKey)
+		if err != nil {
+			return retKey, errors.Wrap(err, "client/workload_service_client:GetKeyWithURL() Failed to unmarshal response into key info")
+		}
+	}
+	log.Debug("client/workload_service_client:GetKeyWithURL() Successfully retrieved Key")
+	return retKey, nil
 }
