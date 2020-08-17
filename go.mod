@@ -13,12 +13,12 @@ require (
 	intel/isecl/lib/common/v2 v2.2.0
 	intel/isecl/lib/flavor/v2 v2.2.0
 	intel/isecl/lib/platform-info/v2 v2.2.0
-	intel/isecl/lib/tpmprovider/v2 v2.2.0
+	intel/isecl/lib/tpmprovider/v2 v2.2.1
 	intel/isecl/lib/verifier/v2 v2.2.0
 	intel/isecl/lib/vml/v2 v2.2.0
 )
 
-replace intel/isecl/lib/tpmprovider/v2 => github.com/intel-secl/tpm-provider/v2 v2.2.0
+replace intel/isecl/lib/tpmprovider/v2 => gitlab.devtools.intel.com/sst/isecl/lib/tpm-provider.git/v2 v2.2.1/develop
 
 replace intel/isecl/lib/vml/v2 => github.com/intel-secl/volume-management-library/v2 v2.2.0
 
