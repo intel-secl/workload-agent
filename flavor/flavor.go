@@ -7,9 +7,9 @@ package flavor
 import (
 	"encoding/json"
 	wlsModel "github.com/intel-secl/intel-secl/v3/pkg/model/wls"
-	cLog "intel/isecl/lib/common/v2/log"
-	pinfo "intel/isecl/lib/platform-info/v2/platforminfo"
-	wlsclient "intel/isecl/wlagent/v2/clients"
+	cLog "intel/isecl/lib/common/v3/log"
+	pinfo "intel/isecl/lib/platform-info/v3/platforminfo"
+	wlsclient "intel/isecl/wlagent/v3/clients"
 	"strings"
 )
 

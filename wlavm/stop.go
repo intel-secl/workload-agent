@@ -7,12 +7,12 @@
 package wlavm
 
 import (
-	"intel/isecl/lib/common/v2/exec"
-	"intel/isecl/lib/vml/v2"
-	"intel/isecl/lib/common/v2/log/message"
-	"intel/isecl/wlagent/v2/consts"
-	"intel/isecl/wlagent/v2/filewatch"
-	"intel/isecl/wlagent/v2/libvirt"
+	"intel/isecl/lib/common/v3/exec"
+	"intel/isecl/lib/vml/v3"
+	"intel/isecl/lib/common/v3/log/message"
+	"intel/isecl/wlagent/v3/consts"
+	"intel/isecl/wlagent/v3/filewatch"
+	"intel/isecl/wlagent/v3/libvirt"
 	"os"
 	"strings"
 	"sync"

@@ -7,8 +7,8 @@ package clients
 import (
 	"github.com/intel-secl/intel-secl/v3/pkg/clients/wlsclient"
 	wlsModel "github.com/intel-secl/intel-secl/v3/pkg/model/wls"
-	"intel/isecl/wlagent/v2/config"
-	"intel/isecl/wlagent/v2/consts"
+	"intel/isecl/wlagent/v3/config"
+	"intel/isecl/wlagent/v3/consts"
 	"net/url"
 	"strings"
 	"github.com/pkg/errors"

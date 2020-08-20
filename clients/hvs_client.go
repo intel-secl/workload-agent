@@ -10,10 +10,10 @@ import (
 	"github.com/intel-secl/intel-secl/v3/pkg/clients/hvsclient"
 	wlaModel "github.com/intel-secl/intel-secl/v3/pkg/model/wlagent"
 	"github.com/pkg/errors"
-	cLog "intel/isecl/lib/common/v2/log"
-	csetup "intel/isecl/lib/common/v2/setup"
-	"intel/isecl/wlagent/v2/config"
-	"intel/isecl/wlagent/v2/consts"
+	cLog "intel/isecl/lib/common/v3/log"
+	csetup "intel/isecl/lib/common/v3/setup"
+	"intel/isecl/wlagent/v3/config"
+	"intel/isecl/wlagent/v3/consts"
 	"os"
 )
 

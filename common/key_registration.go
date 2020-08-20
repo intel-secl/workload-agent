@@ -10,9 +10,9 @@ import (
 	"encoding/pem"
 	wlaModel "github.com/intel-secl/intel-secl/v3/pkg/model/wlagent"
 
-	"intel/isecl/lib/tpmprovider/v2"
-	"intel/isecl/wlagent/v2/config"
-	"intel/isecl/wlagent/v2/consts"
+	"intel/isecl/lib/tpmprovider/v3"
+	"intel/isecl/wlagent/v3/config"
+	"intel/isecl/wlagent/v3/consts"
 	"io/ioutil"
 	"os"
 	"runtime"
