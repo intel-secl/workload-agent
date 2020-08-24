@@ -116,20 +116,6 @@ func main() {
 			os.Exit(1)
 		}
 
-		secLog.Infof("%s, Opening tpm connection", message.SU)
-		// Workaround for tpm2-abrmd bug in RHEL 7.5
-		tpmFactory, err := tpmprovider.NewTpmFactory()
-		if err != nil {
-			fmt.Println("Error while creating the tpm factory.")
-			os.Exit(1)
-		}
-
-		t, err := tpmFactory.NewTpmProvider()
-		if err != nil {
-			fmt.Println("Error while opening a connection to TPM.")
-			os.Exit(1)
-		}
-
 		flags := args
 		if len(args) > 1 {
 			flags = args[2:]
@@ -150,6 +136,21 @@ func main() {
 			printUsage()
 			os.Exit(1)
 		}
+
+		secLog.Infof("%s, Opening tpm connection", message.SU)
+		// Workaround for tpm2-abrmd bug in RHEL 7.5
+		tpmFactory, err := tpmprovider.NewTpmFactory()
+		if err != nil {
+			fmt.Println("Error while creating the tpm factory.")
+			os.Exit(1)
+		}
+
+		t, err := tpmFactory.NewTpmProvider()
+		if err != nil {
+			fmt.Println("Error while opening a connection to TPM.")
+			os.Exit(1)
+		}
+		defer t.Close()
 
 		// Run list of setup tasks one by one
 		setupRunner := &csetup.Runner{
@@ -178,7 +179,6 @@ func main() {
 			},
 			AskInput: false,
 		}
-		defer t.Close()
 		tasklist := []string{}
 		if args[1] != "all" {
 			tasklist = args[1:]
@@ -189,6 +189,7 @@ func main() {
 			log.WithError(err).Error("main:main() Error running setup")
 			log.Tracef("%+v", err)
 			fmt.Fprintf(os.Stderr, "Error running setup tasks...\n")
+			t.Close()
 			os.Exit(1)
 		}
 
