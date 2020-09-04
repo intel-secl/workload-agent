@@ -8,16 +8,16 @@ import (
 	"fmt"
 	"intel/isecl/lib/common/v3/exec"
 	cLog "intel/isecl/lib/common/v3/log"
+	"intel/isecl/lib/common/v3/log/message"
 	cLogInt "intel/isecl/lib/common/v3/log/setup"
 	csetup "intel/isecl/lib/common/v3/setup"
-	"intel/isecl/lib/common/v3/log/message"
 	"intel/isecl/wlagent/v3/consts"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -29,7 +29,7 @@ var Configuration struct {
 	BindingKeySecret string
 	SigningKeySecret string
 	CmsTlsCertDigest string
-	Mtwilson struct {
+	Hvs              struct {
 		APIURL string
 	}
 	Wls struct {
@@ -202,10 +202,10 @@ func SaveConfiguration(c csetup.Context) error {
 		return errors.Wrap(err, "WLS_API_URL is not defined in environment or configuration file")
 	}
 
-	mtwilsonAPIUrl, err := c.GetenvString(consts.MTWILSON_API_URL, "Verification Service URL")
-	if err == nil && mtwilsonAPIUrl != "" {
-		Configuration.Mtwilson.APIURL = mtwilsonAPIUrl
-	} else if strings.TrimSpace(Configuration.Mtwilson.APIURL) == "" {
+	hvsUrl, err := c.GetenvString(consts.HVS_URL, "Verification Service URL")
+	if err == nil && hvsUrl != "" {
+		Configuration.Hvs.APIURL = hvsUrl
+	} else if strings.TrimSpace(Configuration.Hvs.APIURL) == "" {
 		return errors.Wrap(err, "HVS_URL is not defined in environment or configuration file")
 	}
 
@@ -225,7 +225,7 @@ func SaveConfiguration(c csetup.Context) error {
 
 	// See if the 'TRUSTAGENT_USER' name has been exported to the env.  This is the name
 	// of the Linux user that the trust-agent service runs under (and requires access
-	// to /etc/workload-agent/bindingkey.pem to serve to hvs).  If the name is not in the 
+	// to /etc/workload-agent/bindingkey.pem to serve to hvs).  If the name is not in the
 	// environment, assume the default value 'tagent'.
 	taUser, err := c.GetenvString(consts.TAUserNameEnvVar, "Trust Agent User Name")
 	if err == nil && taUser != "" {
@@ -244,7 +244,7 @@ func SaveConfiguration(c csetup.Context) error {
 	}
 
 	if skipFlavorSignatureVerification, err := c.GetenvString(consts.SkipFlavorSignatureVerification,
-		"Skip flavor signature verification"); err == nil{
+		"Skip flavor signature verification"); err == nil {
 		Configuration.SkipFlavorSignatureVerification, err = strconv.ParseBool(skipFlavorSignatureVerification)
 		if err != nil {
 			log.Warn("SKIP_FLAVOR_SIGNATURE_VERIFICATION is set to invalid value (should be true/false). " +
@@ -284,11 +284,10 @@ func SaveConfiguration(c csetup.Context) error {
 	logEnableStdout, err := c.GetenvString("WLA_ENABLE_CONSOLE_LOG", "Workload Agent Enable standard output")
 	if err == nil && logEnableStdout != "" {
 		Configuration.LogEnableStdout, err = strconv.ParseBool(logEnableStdout)
-		if err != nil{
+		if err != nil {
 			log.Info("Error while parsing the variable WLA_ENABLE_CONSOLE_LOG, setting to default value false")
 		}
-	} 
-
+	}
 
 	Configuration.TrustAgent.AikPemFile = filepath.Join(Configuration.TrustAgent.ConfigDir, consts.TAAikPemFileName)
 	Configuration.ConfigComplete = true
@@ -310,7 +309,7 @@ func LogConfiguration(isStdOut bool) {
 	if isStdOut {
 		ioWriterDefault = io.MultiWriter(os.Stdout, ioWriterDefault)
 	}
-	
+
 	ioWriterSecurity := io.MultiWriter(ioWriterDefault, secLogFile)
 	cLogInt.SetLogger(cLog.DefaultLoggerName, Configuration.LogLevel, &cLog.LogFormatter{MaxLength: Configuration.LogMaxLength}, ioWriterDefault, false)
 	cLogInt.SetLogger(cLog.SecurityLoggerName, Configuration.LogLevel, &cLog.LogFormatter{MaxLength: Configuration.LogMaxLength}, ioWriterSecurity, false)

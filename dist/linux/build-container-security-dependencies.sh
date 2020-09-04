@@ -33,6 +33,6 @@ git pull
 
 make
 
-if [ $? == 0 ]; then
+if [ $? -eq 0 ]; then
   echo "Successfully built secure docker plugin"
 fi

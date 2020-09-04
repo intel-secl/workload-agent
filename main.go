@@ -52,7 +52,7 @@ func printUsage() {
 	fmt.Printf("    stop                   Stop wlagent\n")
 	fmt.Printf("    status                 Reports the status of wlagent service\n")
 	fmt.Printf("    fetch-key-url <keyUrl>      Fetch a key from the keyUrl\n")
-	fmt.Printf("    uninstall  [--purge]   Uninstall wlagent. --purge option needs to be applied to remove configuration and data files\n")
+	fmt.Printf("    uninstall  [--purge]   Uninstall wlagent. --purge option needs to be applied to remove configuration and secureoverlay2 data files\n")
 	fmt.Printf("    setup [task]           Run setup task\n")
 	fmt.Printf("Available Tasks for setup:\n")
 	fmt.Printf("    download_ca_cert       Download CMS root CA certificate\n")
@@ -65,11 +65,11 @@ func printUsage() {
 	fmt.Printf("\t\t                           - Option [--force] overwrites any existing files, and always creates a new Binding key\n")
 	fmt.Printf("    RegisterSigningKey     Register a signing key with the host verification service\n")
 	fmt.Printf("\t\t                           - Option [--force] Always registers the Signing key with Verification service\n")
-	fmt.Printf("                           - Environment variable MTWILSON_API_URL=<url> for registering the key with Verification service\n")
+	fmt.Printf("                           - Environment variable HVS_URL=<url> for registering the key with Verification service\n")
 	fmt.Printf("                           - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
 	fmt.Printf("    RegisterBindingKey     Register a binding key with the host verification service\n")
 	fmt.Printf("\t\t                           - Option [--force] Always registers the Binding key with Verification service\n")
-	fmt.Printf("                           - Environment variable MTWILSON_API_URL=<url> for registering the key with Verification service\n")
+	fmt.Printf("                           - Environment variable HVS_URL=<url> for registering the key with Verification service\n")
 	fmt.Printf("                           - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
 	fmt.Printf("                           - Environment variable TRUSTAGENT_USERNAME=<TA user> for changing binding key file ownership to TA application user\n")
 }
@@ -382,10 +382,18 @@ func main() {
 		os.Exit(0)
 
 	case "uninstall":
-		commandArgs := []string{consts.OptDirPath + "secure-docker-daemon"}
-		_, err := exec.ExecuteCommand("ls", commandArgs)
+		_, err := os.Stat(consts.OptDirPath + "secure-docker-daemon")
 		if err == nil {
 			removeSecureDockerDaemon()
+
+			// restart docker daemon
+			if err == nil {
+				commandArgs := []string{"start", "docker"}
+				_, err = exec.ExecuteCommand("systemctl", commandArgs)
+				if err != nil {
+					fmt.Print("Error starting docker daemon post-uninstall. Refer dockerd logs for more information.")
+				}
+			}
 		}
 		stop()
 		removeservice()
@@ -415,6 +423,7 @@ func removeSecureDockerDaemon() {
 	defer log.Trace("main/main:removeSecureDockerDaemon() Leaving")
 
 	commandArgs := []string{consts.OptDirPath + "secure-docker-daemon/uninstall-container-security-dependencies.sh"}
+
 	_, err := exec.ExecuteCommand("/bin/bash", commandArgs)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

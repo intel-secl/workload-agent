@@ -124,7 +124,7 @@ logRotate_install() {
   LOGROTATE_YUM_PACKAGES="logrotate"
   if [ "$(whoami)" == "root" ]; then
     auto_install "Log Rotate" "LOGROTATE"
-    if [ $? -ne 0 ]; then echo_failure "Failed to install logrotate"; exit -1; fi
+    if [ $? -ne 0 ]; then echo_failure "Failed to install logrotate"; exit 1; fi
   fi
   logRotate_clear; logRotate_detect;
     if [ -z "$logrotate" ]; then
@@ -221,8 +221,8 @@ systemctl enable $WORKLOAD_AGENT_HOME/wlagent.service
 
 
 # exit workload-agent setup if WORKLOAD_AGENT_NOSETUP is set
-if [ $WLA_NOSETUP == "true" ]; then
-  echo "WLA_NOSETUP is set. So, skipping the workload-agent setup task."
+if [ "$WORKLOAD_AGENT_NOSETUP" == "true" ]; then
+  echo "$WORKLOAD_AGENT_NOSETUP is set. So, skipping the workload-agent setup task."
   exit 0
 fi
 
@@ -250,7 +250,7 @@ check_env_var_present(){
   # check if we were passed in an empty string
   if [[ -z $1 ]]; then return 1; fi
 
-  if [[ $# > 1 ]] && [[ $2 == "true" || $2 == "1" ]]; then
+  if [[ $# -gt 1 ]] && [[ $2 == "true" || $2 == "1" ]]; then
     if [ "${!1:-}" ]; then
       return 0
     else
@@ -279,7 +279,7 @@ check_env_var_present(){
 
 all_env_vars_present=1
 
-required_vars="MTWILSON_API_URL WLS_API_URL WLA_SERVICE_USERNAME WLA_SERVICE_PASSWORD CMS_TLS_CERT_SHA384 AAS_API_URL CMS_BASE_URL"
+required_vars="HVS_URL WLS_API_URL WLA_SERVICE_USERNAME WLA_SERVICE_PASSWORD CMS_TLS_CERT_SHA384 AAS_API_URL CMS_BASE_URL"
 for env_var in $required_vars; do
   check_env_var_present $env_var
 done
@@ -344,20 +344,27 @@ if [ "$WA_WITH_CONTAINER_SECURITY" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY" =
     fi  
     echo "Installing secure docker daemon"
     systemctl stop docker
-    
-    mkdir -p $WORKLOAD_AGENT_HOME/secure-docker-daemon/bin
-    cp /usr/bin/docker $WORKLOAD_AGENT_HOME/secure-docker-daemon/bin/
+
+    # Take backup of existing docker CLI and daemon binaries and configs
+    mkdir -p $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+    cp /usr/bin/docker $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
     chown -R root:root docker-daemon/
     
     cp -f docker-daemon/docker /usr/bin/
     which /usr/bin/dockerd-ce 2>/dev/null
     if [ $? -ne 0 ]; then
-      cp /usr/bin/dockerd $WORKLOAD_AGENT_HOME/secure-docker-daemon/bin/
+      cp /usr/bin/dockerd $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
       cp -f docker-daemon/dockerd-ce /usr/bin/dockerd
     else
-      cp /usr/bin/dockerd-ce $WORKLOAD_AGENT_HOME/secure-docker-daemon/bin/
+      cp /usr/bin/dockerd-ce $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
       cp -f docker-daemon/dockerd-ce /usr/bin/dockerd-ce
     fi
+
+    # backup config files
+    if [ -f "/etc/docker/daemon.json" ]; then
+      cp /etc/docker/daemon.json $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+    fi
+    cp /lib/systemd/system/docker.service $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
 
     install_secure_docker_plugin
 

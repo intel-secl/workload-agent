@@ -76,7 +76,7 @@ func certifyHostKey(keyInfo *wlaModel.RegisterKeyInfo, keyUsage string) ([]byte,
 		return nil, errors.Wrap(err, "BEARER_TOKEN is not defined in environment")
 	}
 
-	vsClientFactory, err := hvsclient.NewVSClientFactory(config.Configuration.Mtwilson.APIURL, jwtToken, consts.TrustedCaCertsDir)
+	vsClientFactory, err := hvsclient.NewVSClientFactory(config.Configuration.Hvs.APIURL, jwtToken, consts.TrustedCaCertsDir)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error while instantiating VSClientFactory")
 	}
