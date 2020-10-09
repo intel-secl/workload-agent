@@ -1,5 +1,20 @@
 #!/bin/bash
 echo "Removing container security components"
+
+# remove all running containers
+docker rmi -f $(docker images -q)
+
+# unmount and remove the secureoverlay2 layer data
+for m in $(mount -t overlay | grep /var/lib/docker/secureoverlay2/ | awk '{print $3}')
+do
+  umount -d -f -R $m
+done
+rm -rf /var/lib/docker/secureoverlay2
+
+# purge the stale data
+echo y | docker system prune -a
+
+# stop and purge
 systemctl stop docker.service
 systemctl stop secure-docker-plugin.service
 systemctl disable secure-docker-plugin.service
@@ -22,8 +37,5 @@ fi
 # restore original docker unit file
 cp -f /opt/workload-agent/secure-docker-daemon/backup/docker.service /lib/systemd/system/docker.service
 
-# unmount and remove the secureoverlay2 layer data
-umount /var/lib/docker/secureoverlay2
-rm -rf /var/lib/docker/secureoverlay2
-
+# reload changes before restart
 systemctl daemon-reload
