@@ -24,7 +24,7 @@ echo "Successfully built secure docker daemon"
 
 cd $CURR_DIR
 ##Install secure-docker-daemon plugin
-git clone  https://gitlab.devtools.intel.com/sst/isecl/secure-docker-plugin.git 2>/dev/null 
+git clone https://gitlab.devtools.intel.com/sst/isecl/secure-docker-plugin.git 2>/dev/null
 
 cd $SECURE_DOCKER_PLUGIN_DIR
 git fetch
