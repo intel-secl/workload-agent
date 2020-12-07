@@ -77,7 +77,7 @@ func (vm *VirtualMachine) Start(args *DomainXML, reply *bool) error {
 	// Passing the false parameter to ensure the start vm task is not added waitgroup if there is pending signal termination on rpc
 	_, err := proc.AddTask(false)
 	if err != nil {
-		errors.Wrap(err, "rpc/server:Start() Could not add task for vm start")
+		return errors.Wrap(err, "rpc/server:Start() Could not add task for vm start")
 	}
 	defer proc.TaskDone()
 	log.Trace("rpc/server:Start() Entering")
@@ -99,7 +99,7 @@ func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
 	// even if there is pending signal termination on rpc
 	_, err := proc.AddTask(true)
 	if err != nil {
-		errors.Wrap(err, "rpc/server:Stop() Could not add task for vm stop")
+		return errors.Wrap(err, "rpc/server:Stop() Could not add task for vm stop")
 	}
 	defer proc.TaskDone()
 
@@ -122,7 +122,7 @@ func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status
 	// even if there is pending signal termination on rpc
 	_, err := proc.AddTask(true)
 	if err != nil {
-		errors.Wrap(err, "rpc/server:CreateInstanceTrustReport() Could not add task for CreateInstanceTrustReport")
+		return errors.Wrap(err, "rpc/server:CreateInstanceTrustReport() Could not add task for CreateInstanceTrustReport")
 	}
 	defer proc.TaskDone()
 
@@ -174,7 +174,7 @@ func (vm *VirtualMachine) FetchFlavor(args *FlavorInfo, outFlavor *flavor.OutFla
 	// Passing the false parameter to ensure that FetchFlavor task is not added to the wait group if there is pending signal termination on rpc
 	_, err := proc.AddTask(false)
 	if err != nil {
-		errors.Wrap(err, "rpc/server:FetchFlavor() Could not add task for FetchFlavor")
+		return errors.Wrap(err, "rpc/server:FetchFlavor() Could not add task for FetchFlavor")
 	}
 	defer proc.TaskDone()
 
@@ -204,7 +204,7 @@ func (vm *VirtualMachine) FetchKey(args *KeyInfo, outKeyInfo *KeyInfo) error {
 
 	_, err := proc.AddTask(true)
 	if err != nil {
-		errors.Wrap(err, "rpc/server:FetchKey() Could not add task for FetchKey")
+		return errors.Wrap(err, "rpc/server:FetchKey() Could not add task for FetchKey")
 	}
 	defer proc.TaskDone()
 	log.Trace("rpc/server:FetchKey() Entering")
@@ -246,7 +246,7 @@ func (vm *VirtualMachine) FetchKeyWithURL(args *TransferURL, outKey *KeyOnly) er
 
 	_, err := proc.AddTask(true)
 	if err != nil {
-		errors.Wrap(err, "rpc/server:FetchKeyWithURL() Could not add task for FetchKeyWithURL")
+		return errors.Wrap(err, "rpc/server:FetchKeyWithURL() Could not add task for FetchKeyWithURL")
 	}
 	defer proc.TaskDone()
 	log.Trace("rpc/server:FetchKeyWithURL() Entering")

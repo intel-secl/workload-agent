@@ -39,8 +39,16 @@ func LoadImageVMAssociation() error {
 	if err != nil {
 		return err
 	}
-	defer imageVMAssociationFile.Close()
+	defer func() {
+		derr := imageVMAssociationFile.Close()
+		if derr != nil {
+			log.WithError(derr).Error("Error closing file")
+		}
+	}()
 	associations, err := ioutil.ReadAll(imageVMAssociationFile)
+	if err != nil {
+		return err
+	}
 	err = yaml.Unmarshal([]byte(associations), &ImageVMAssociations)
 	if err != nil {
 		return err

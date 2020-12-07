@@ -532,7 +532,10 @@ func runservice() {
 			// When the socket is closed, the file handle on the socket file isn't handled.
 			// This code is added to manually remove any stale socket file before the connection
 			// is reopened; prevent error: bind address already in use
-			os.Remove(RPCSocketFilePath)
+			err = os.Remove(RPCSocketFilePath)
+			if err != nil {
+				log.WithError(err).Error("main:runservice() Failed to remove socket file")
+			}
 			// block and loop, daemon doesnt need to run on go routine
 			l, err := net.Listen("unix", RPCSocketFilePath)
 			if err != nil {
@@ -558,6 +561,9 @@ func runservice() {
 	secLog.Info(message.ServiceStart)
 
 	// block until stop channel receives
-	proc.WaitForQuitAndCleanup(10 * time.Second)
+	err = proc.WaitForQuitAndCleanup(10 * time.Second)
+	if err != nil {
+		log.WithError(err).Error("main:runservice() Error while clean up")
+	}
 	secLog.Info(message.ServiceStop)
 }

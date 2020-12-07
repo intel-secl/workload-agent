@@ -90,7 +90,7 @@ func (w *Watcher) Watch() {
 
 func ExampleWatcherUsage() {
 	w, _ := NewWatcher()
-	w.HandleEvent("/home/user/foobar.txt", func(event fsnotify.Event) {
+	err := w.HandleEvent("/home/user/foobar.txt", func(event fsnotify.Event) {
 		affectedFile := event.Name
 		if event.Op&fsnotify.Remove == fsnotify.Remove {
 			fmt.Printf("File %s was deleted!\n", affectedFile)
@@ -98,5 +98,8 @@ func ExampleWatcherUsage() {
 			fmt.Printf("File %s was modified, created, ...\n", affectedFile)
 		}
 	})
+	if err != nil {
+		log.Errorf("filewatch/filewatch:Watch() Error while handling event: %+v", err)
+	}
 	go w.Watch()
 }

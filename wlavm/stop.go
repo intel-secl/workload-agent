@@ -67,8 +67,14 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 		var vmMountPath = consts.MountPath + d.GetVMUUID()
 		// Unmount the image
 		secLog.Infof("wlavm/stop:Stop() %s, A dm-crypt volume for the image is created, deleting the vm volume", message.SU)
-		vml.Unmount(vmMountPath)
-		vml.DeleteVolume(d.GetVMUUID())
+		err = vml.Unmount(vmMountPath)
+		if err != nil {
+			log.Errorf("wlavm/stop:Stop() Failed to unmount volume for VM instance: %s", d.GetVMUUID())
+		}
+		err = vml.DeleteVolume(d.GetVMUUID())
+		if err != nil {
+			log.Errorf("wlavm/stop:Stop() Failed to delete volume for VM instance: %s", d.GetVMUUID())
+		}
 	}
 
 	// check if this is the last vm associated with the image
@@ -102,10 +108,16 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	secLog.Infof("wlavm/stop:Stop() %s, Unmounting the image volume: %s", message.SU, imageMountPath)
 
 	// Unmount the image
-	vml.Unmount(imageMountPath)
+	err = vml.Unmount(imageMountPath)
+	if err != nil {
+		log.Errorf("wlavm/stop:Stop() Failed to unmount volume for VM image: %s", d.GetImageUUID())
+	}
 	secLog.Infof("wlavm/stop:Stop() %s, Deleting the image volume: %s",  message.SU, d.GetImageUUID())
 	// Close the image volume
-	vml.DeleteVolume(d.GetImageUUID())
+	err = vml.DeleteVolume(d.GetImageUUID())
+	if err != nil {
+		log.Errorf("wlavm/stop:Stop() Failed to delete volume for VM image: %s", d.GetImageUUID())
+	}
 	log.Infof("wlavm/stop:Stop() VM %s stopped", d.GetVMUUID())
 	return true
 }

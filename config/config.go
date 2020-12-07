@@ -139,7 +139,12 @@ func GetAikSecret() (string, error) {
 // Save method saves the changes in configuration file made by any of the setup tasks
 func Save() error {
 	file, err := os.OpenFile(configFilePath, os.O_RDWR, 0)
-	defer file.Close()
+	defer func() {
+		derr := file.Close()
+		if derr != nil {
+			log.WithError(derr).Error("Error closing file")
+		}
+	}()
 	if err != nil {
 		// we have an error
 		if os.IsNotExist(err) {
@@ -161,8 +166,16 @@ func init() {
 	// load from config
 	file, err := os.Open(configFilePath)
 	if err == nil {
-		defer file.Close()
-		yaml.NewDecoder(file).Decode(&Configuration)
+		defer func() {
+			derr := file.Close()
+			if derr != nil {
+				log.WithError(derr).Error("Error closing file")
+			}
+		}()
+		err = yaml.NewDecoder(file).Decode(&Configuration)
+		if err != nil {
+			log.WithError(err).Error("Error decoding configuration")
+		}
 	}
 	LogWriter = os.Stdout
 }

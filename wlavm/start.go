@@ -271,12 +271,18 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	// trigger a file watcher event to delete VM mount path when disk.info file is deleted on VM delete
 	vmDiskInfoFile := strings.Replace(vmPath, "disk", "disk.info", -1)
 	// Watch the symlink for deletion, and remove the _sparseFile if image is deleted
-	filewatcher.HandleEvent(vmDiskInfoFile, func(e fsnotify.Event) {
+	err = filewatcher.HandleEvent(vmDiskInfoFile, func(e fsnotify.Event) {
 		if e.Op&fsnotify.Remove == fsnotify.Remove {
 			secLog.Infof("wlavm/start:vmVolumeManager() %s, Removing vm mount path at: %s", message.SU, vmMountPath)
-			os.RemoveAll(vmMountPath)
+			err = os.RemoveAll(vmMountPath)
+			if err != nil {
+				log.Errorf("wlavm/start:vmVolumeManager() Failed to remove mount path")
+			}
 		}
 	})
+	if err != nil {
+		log.Errorf("wlavm/start:vmVolumeManager() Failed to handle event: %v", err)
+	}
 
 	return nil
 }
@@ -536,7 +542,12 @@ func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath, emptyFileNa
 	if err != nil {
 		return errors.New("wlavm/start.go:checkMountPathExistsAndMountVolume() error creating a sample file")
 	}
-	defer sampleFile.Close()
+	defer func() {
+		derr := sampleFile.Close()
+		if derr != nil {
+			log.WithError(derr).Error("Error closing file")
+		}
+	}()
 
 	// get the qemu user info and change image and vm file owner to qemu
 	userID, groupID, err := userInfoLookUp("qemu")

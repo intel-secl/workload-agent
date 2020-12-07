@@ -57,13 +57,15 @@ func createKey(usage int, t tpmprovider.TpmProvider) (tpmck *tpmprovider.Certifi
 	case tpmprovider.Signing:
 		tpmck, err = t.CreateSigningKey(config.Configuration.SigningKeySecret, aiksecret)
 	}
-
 	if err != nil {
 		return nil, err
 	}
 	
 
-	config.Save()
+	err = config.Save()
+	if err != nil {
+		return nil, err
+	}
 
 	return tpmck, nil
 }
@@ -89,9 +91,20 @@ func writeCertifiedKeyToDisk(tpmck *tpmprovider.CertifiedKey, filepath string) e
 	if err != nil {
 		return errors.New("common/key_creation:writeCertifiedKeyToDisk() Could not create file Error:" + err.Error())
 	}
-	f.WriteString(string(json))
-	f.WriteString("\n")
-	defer f.Close()
+	_, err = f.WriteString(string(json))
+	if err != nil {
+		return errors.Wrap(err, "common/key_creation:writeCertifiedKeyToDisk() Failed to write json")
+	}
+	_, err = f.WriteString("\n")
+	if err != nil {
+		return errors.Wrap(err, "common/key_creation:writeCertifiedKeyToDisk() Failed to write end of data")
+	}
+	defer func() {
+		derr := f.Close()
+		if derr != nil {
+			log.WithError(derr).Error("Error closing file")
+		}
+	}()
 
 	return nil
 }
