@@ -75,7 +75,7 @@ func CreateRequest(key []byte) (*wlaModel.RegisterKeyInfo, error) {
 func WriteKeyCertToDisk(keyCertPath string, aikPem []byte) error {
 	log.Trace("common/WriteKeyCertToDisk:WriteKeyCertToDisk() Entering")
 	defer log.Trace("common/WriteKeyCertToDisk:WriteKeyCertToDisk() Leaving")
-	file, err := os.Create(keyCertPath)
+	file, err := os.OpenFile(keyCertPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
 		return errors.Wrap(err, "common/key_registration:WriteKeyCertToDisk() Error creating file. ")
 	}

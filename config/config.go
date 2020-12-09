@@ -150,7 +150,7 @@ func Save() error {
 		if os.IsNotExist(err) {
 			// error is that the config doesnt yet exist, create it
 			log.Debug("config/config:Save() File does not exist, creating a file... ")
-			file, err = os.Create(configFilePath)
+			file, err = os.OpenFile(configFilePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600)
 			if err != nil {
 				return errors.Wrap(err, "config/config:Save() Error in file creation")
 			}
@@ -314,8 +314,8 @@ func SaveConfiguration(c csetup.Context) error {
 func LogConfiguration(isStdOut bool) {
 	// creating the log file if not preset
 	var ioWriterDefault io.Writer
-	secLogFile, _ := os.OpenFile(consts.SecurityLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
-	defaultLogFile, _ := os.OpenFile(consts.DefaultLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
+	secLogFile, _ := os.OpenFile(consts.SecurityLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	defaultLogFile, _ := os.OpenFile(consts.DefaultLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 
 	ioWriterDefault = defaultLogFile
 

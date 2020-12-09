@@ -87,7 +87,7 @@ func writeCertifiedKeyToDisk(tpmck *tpmprovider.CertifiedKey, filepath string) e
 	}
 
 	// create a file and write the json value to it and finally close it
-	f, err := os.Create(filepath)
+	f, err := os.OpenFile(filepath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
 		return errors.New("common/key_creation:writeCertifiedKeyToDisk() Could not create file Error:" + err.Error())
 	}

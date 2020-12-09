@@ -538,7 +538,7 @@ func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath, emptyFileNa
 	// create an empty image and disk file so that symlinks are not broken after VM stop
 	emptyFilePath := mountPath + "/" + emptyFileName
 	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() %s, Creating an empty file in : %s", message.SU, emptyFilePath)
-	sampleFile, err := os.Create(emptyFilePath)
+	sampleFile, err := os.OpenFile(emptyFilePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0640)
 	if err != nil {
 		return errors.New("wlavm/start.go:checkMountPathExistsAndMountVolume() error creating a sample file")
 	}

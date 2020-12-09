@@ -35,7 +35,7 @@ func LoadImageVMAssociation() error {
 	imageVMAssociationFilePath := consts.ConfigDirPath + consts.ImageVmCountAssociationFileName
 	// Read from a file and store it in a string
 	log.Info("Reading image vm association file.")
-	imageVMAssociationFile, err := os.OpenFile(imageVMAssociationFilePath, os.O_RDONLY|os.O_CREATE, 0644)
+	imageVMAssociationFile, err := os.OpenFile(imageVMAssociationFilePath, os.O_RDONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,12 @@ func SaveImageVMAssociation() error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(imageVMAssociationFilePath, []byte(string(associations)), 0644)
+	fInfo, err := os.Stat(imageVMAssociationFilePath)
+	if fInfo != nil && fInfo.Mode().Perm() != 0600 {
+		return errors.Errorf("Invalid file permission on %s", imageVMAssociationFilePath)
+	}
+
+	err = ioutil.WriteFile(imageVMAssociationFilePath, []byte(string(associations)), 0600)
 	if err != nil {
 		return errors.Wrapf(err, "util/util:SaveImageVMAssociation() Error while writing file:%s", imageVMAssociationFilePath)
 	}
