@@ -103,13 +103,17 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 		}
 		log.Info("wlavm/start:Start() Image is not a symlink, so checking is image is encrypted...")
 		isImageEncrypted, err = crypt.EncryptionHeaderExists(imagePath)
-
 		if err != nil {
 			log.Errorf("wlavm/start.go:Start() Error while trying to check if the image is encrypted: %s", err.Error())
 			log.Tracef("%+v", err)
 			return false
 		}
 		log.Info("wlavm/start:Start() Image encryption status : ", isImageEncrypted)
+		// if image is not encrypted, return true to libvirt hook
+		if !isImageEncrypted {
+			log.Info("wlavm/start:Start() Image is not encrypted, returning to the hook")
+			return true
+		}
 	}
 
 	var flavorKeyInfo wlsModel.FlavorKey
