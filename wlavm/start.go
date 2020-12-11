@@ -190,7 +190,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	}
 	//create VM manifest
 	log.Info("wlavm/start:Start() Creating VM Manifest")
-	manifest, err := vml.CreateVMManifest(vmUUID, hardwareUUID, imageUUID, isImageEncrypted)
+	manifest, err := vml.CreateVMManifest(vmUUID, hardwareUUID, imageUUID, true)
 	if err != nil {
 		log.WithError(err).Error("wlavm/start.go:Start() Error creating the VM manifest")
 		return false
