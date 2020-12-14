@@ -7,11 +7,11 @@ package clients
 import (
 	"github.com/intel-secl/intel-secl/v3/pkg/clients/wlsclient"
 	wlsModel "github.com/intel-secl/intel-secl/v3/pkg/model/wls"
+	"github.com/pkg/errors"
 	"intel/isecl/wlagent/v3/config"
 	"intel/isecl/wlagent/v3/consts"
 	"net/url"
 	"strings"
-	"github.com/pkg/errors"
 )
 
 // GetImageFlavorKey method is used to get the image flavor-key from the workload service
@@ -34,9 +34,9 @@ func GetImageFlavorKey(imageUUID, hardwareUUID string) (wlsModel.FlavorKey, erro
 	flavorKeyInfo, err = flavorsClient.GetImageFlavorKey(imageUUID, hardwareUUID)
 	if err != nil {
 		// Return error as nil in case of http response code 404, to support docker images with no image flavor association
-                if strings.Contains(err.Error(), "404"){
-                        return flavorKeyInfo, nil
-                }
+		if strings.Contains(err.Error(), "404") {
+			return flavorKeyInfo, nil
+		}
 		return flavorKeyInfo, errors.Wrap(err, "Error while retrieving Flavor-Key")
 	}
 
@@ -124,7 +124,7 @@ func GetKeyWithURL(keyUrl string, hardwareUUID string) (wlsModel.ReturnKey, erro
 
 	retKey, err = keysClient.GetKeyWithURL(keyUrl, hardwareUUID)
 	if err != nil {
-		return retKey,errors.Wrap(err, "Error while getting key")
+		return retKey, errors.Wrap(err, "Error while getting key")
 	}
 	log.Debug("client/workload_service_client:GetKeyWithURL() Successfully retrieved Key")
 	return retKey, nil

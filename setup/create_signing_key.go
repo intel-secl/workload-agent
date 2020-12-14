@@ -17,7 +17,7 @@ import (
 )
 
 type SigningKey struct {
-	T tpmprovider.TpmProvider
+	T     tpmprovider.TpmProvider
 	Flags []string
 }
 
@@ -30,7 +30,7 @@ func (sk SigningKey) Run(c csetup.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "setup/create_signing_key:Run() Unable to parse flags")
 	}
-	
+
 	if config.Configuration.ConfigComplete == false {
 		return ErrMessageSetupIncomplete
 	}

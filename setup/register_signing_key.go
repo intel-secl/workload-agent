@@ -35,7 +35,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	}
 
 	if !*force && rs.Validate(c) == nil {
-		fmt.Fprintln(os.Stdout,"Signing key already registered. Skipping this setup task.")
+		fmt.Fprintln(os.Stdout, "Signing key already registered. Skipping this setup task.")
 		log.Info("setup/register_signing_key:Run() Signing key already registered. Skipping this setup task.")
 		return nil
 	}
@@ -50,7 +50,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "setup/register_signing_key.go:Run() error registering signing key ")
 	}
-	
+
 	registerKey, err := hvsclient.CertifyHostSigningKey(httpRequestBody)
 	if err != nil {
 		secLog.WithError(err).Error("setup/register_signing_key.go:Run() error while certify host signing key from hvs")

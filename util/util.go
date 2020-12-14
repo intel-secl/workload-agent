@@ -118,7 +118,6 @@ func CloseTpmInstance() {
 	log.Trace("util/util:CloseTpmInstance() Entering")
 	defer log.Trace("util/util:CloseTpmInstance() Leaving")
 
-
 	if vmStartTpm != nil {
 		secLog.Infof("util/util:CloseTpmInstance() %s, Closing connection to the tpm", message.SU)
 		vmStartTpm.Close()
@@ -129,8 +128,8 @@ func CloseTpmInstance() {
 func UnwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 	log.Trace("util/util:UnwrapKey() Entering")
 	defer log.Trace("util/util:UnwrapKey() Leaving")
-	
-	if (len(tpmWrappedKey) == 0){
+
+	if len(tpmWrappedKey) == 0 {
 		return nil, errors.New("util/util:UnwrapKey() tpm wrapped key is empty")
 	}
 

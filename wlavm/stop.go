@@ -8,8 +8,8 @@ package wlavm
 
 import (
 	"intel/isecl/lib/common/v3/exec"
-	"intel/isecl/lib/vml/v3"
 	"intel/isecl/lib/common/v3/log/message"
+	"intel/isecl/lib/vml/v3"
 	"intel/isecl/wlagent/v3/consts"
 	"intel/isecl/wlagent/v3/filewatch"
 	"intel/isecl/wlagent/v3/libvirt"
@@ -112,7 +112,7 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	if err != nil {
 		log.Errorf("wlavm/stop:Stop() Failed to unmount volume for VM image: %s", d.GetImageUUID())
 	}
-	secLog.Infof("wlavm/stop:Stop() %s, Deleting the image volume: %s",  message.SU, d.GetImageUUID())
+	secLog.Infof("wlavm/stop:Stop() %s, Deleting the image volume: %s", message.SU, d.GetImageUUID())
 	// Close the image volume
 	err = vml.DeleteVolume(d.GetImageUUID())
 	if err != nil {
@@ -131,7 +131,6 @@ func isVmVolumeEncrypted(vmUUID string) (bool, error) {
 	log.Debugf("wlavm/stop:isVmVolumeEncrypted() Checking for volume with UUID:%s is encrypted", vmUUID)
 	deviceMapperLocation := consts.DevMapperDirPath + vmUUID
 	args := []string{"status", deviceMapperLocation}
-
 
 	secLog.Infof("wlavm/stop:isVmVolumeEncrypted() %s, Checking for volume with UUID:%s is encrypted", message.SU, vmUUID)
 	cmdOutput, err := exec.ExecuteCommand("cryptsetup", args)

@@ -7,8 +7,8 @@ package setup
 import (
 	"flag"
 	"fmt"
-	csetup "intel/isecl/lib/common/v3/setup"
 	cLog "intel/isecl/lib/common/v3/log"
+	csetup "intel/isecl/lib/common/v3/setup"
 	"intel/isecl/lib/tpmprovider/v3"
 	"intel/isecl/wlagent/v3/common"
 	"intel/isecl/wlagent/v3/config"
@@ -18,7 +18,7 @@ import (
 )
 
 type BindingKey struct {
-	T tpmprovider.TpmProvider
+	T     tpmprovider.TpmProvider
 	Flags []string
 }
 

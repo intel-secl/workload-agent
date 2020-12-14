@@ -35,11 +35,11 @@ func createKey(usage int, t tpmprovider.TpmProvider) (tpmck *tpmprovider.Certifi
 		return nil, err
 	}
 
-	switch (usage){
+	switch usage {
 	case tpmprovider.Binding:
-		config.Configuration.BindingKeySecret  = hex.EncodeToString(secretbytes)
+		config.Configuration.BindingKeySecret = hex.EncodeToString(secretbytes)
 	case tpmprovider.Signing:
-		config.Configuration.SigningKeySecret  = hex.EncodeToString(secretbytes)
+		config.Configuration.SigningKeySecret = hex.EncodeToString(secretbytes)
 	}
 
 	// get the aiksecret. This will return a byte array.
@@ -51,7 +51,7 @@ func createKey(usage int, t tpmprovider.TpmProvider) (tpmck *tpmprovider.Certifi
 
 	secLog.Infof("common/key_creation:createKey() %s, Calling CreateCertifiedKey of tpm library to create and certify signing or binding key", message.SU)
 
-	switch (usage){
+	switch usage {
 	case tpmprovider.Binding:
 		tpmck, err = t.CreateBindingKey(config.Configuration.BindingKeySecret, aiksecret)
 	case tpmprovider.Signing:
@@ -60,7 +60,6 @@ func createKey(usage int, t tpmprovider.TpmProvider) (tpmck *tpmprovider.Certifi
 	if err != nil {
 		return nil, err
 	}
-	
 
 	err = config.Save()
 	if err != nil {
