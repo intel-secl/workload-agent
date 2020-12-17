@@ -344,7 +344,7 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	// write the decrypted data into a file in image mount path
 	decryptedImagePath := imageDeviceMapperMountPath + "/" + imageUUID
 	secLog.Infof("wlavm/start:imageVolumeManager() %s, Writing decrypted data in to a file: %s", message.SU, decryptedImagePath)
-	ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0660)
+	ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0664)
 	if ioWriteErr != nil {
 		return errors.New("wlavm/start.go:imageVolumeManager() error writing the decrypted data to file")
 	}
@@ -397,7 +397,7 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 
 	// Giving read write access to the target file
 	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing permissions to changed disk path: %s", message.SU, targetFile)
-	err = os.Chmod(targetFile, 0660)
+	err = os.Chmod(targetFile, 0664)
 	if err != nil {
 		return errors.Wrapf(err, "wlavm/start.go:createSymLinkAndChangeOwnership() error while giving permissions to changed disk path: %s", targetFile)
 	}
@@ -542,7 +542,7 @@ func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath, emptyFileNa
 	// create an empty image and disk file so that symlinks are not broken after VM stop
 	emptyFilePath := mountPath + "/" + emptyFileName
 	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() %s, Creating an empty file in : %s", message.SU, emptyFilePath)
-	sampleFile, err := os.OpenFile(emptyFilePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0640)
+	sampleFile, err := os.OpenFile(emptyFilePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666)
 	if err != nil {
 		return errors.New("wlavm/start.go:checkMountPathExistsAndMountVolume() error creating a sample file")
 	}

@@ -6,11 +6,9 @@ Type=simple
 
 WorkingDirectory=/opt/workload-agent/bin/
 ExecStart=/opt/workload-agent/bin/wlagent runservice
-TimeoutSec=300
-
+TimeoutStartSec=0
 Restart=on-failure
-RestartSec=10
-startLimitIntervalSec=60
+PermissionsStartOnly=true
 
 [Install]
 WantedBy=multi-user.target

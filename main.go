@@ -232,6 +232,7 @@ func main() {
 			os.Exit(1)
 		}
 		client := rpc.NewClient(conn)
+		defer client.Close()
 
 		// validate domainXML input
 		if err = validation.ValidateXMLString(args[1]); err != nil {
@@ -273,6 +274,7 @@ func main() {
 		}
 
 		client := rpc.NewClient(conn)
+		defer client.Close()
 		var args = wlrpc.DomainXML{
 			XML: args[1],
 		}
@@ -301,6 +303,7 @@ func main() {
 			os.Exit(1)
 		}
 		client := rpc.NewClient(conn)
+		defer client.Close()
 		var args = wlrpc.ManifestString{
 			Manifest: args[1],
 		}
@@ -332,6 +335,7 @@ func main() {
 		}
 
 		client := rpc.NewClient(conn)
+		defer client.Close()
 		var outFlavor flavor.OutFlavor
 		var args = wlrpc.FlavorInfo{
 			ImageID: args[1],
@@ -362,6 +366,7 @@ func main() {
 		}
 
 		client := rpc.NewClient(conn)
+		defer client.Close()
 		var keyOut wlrpc.KeyOnly
 		var args = wlrpc.TransferURL{
 			URL: args[1],
