@@ -43,10 +43,10 @@ var (
 	TpmMtx       sync.Mutex
 )
 
-// Start method is used perform the VM confidentiality check before lunching the VM
+// Start method is used perform the VM confidentiality check before launching the VM
 // Input Parameters: domainXML content string
 // Return : Returns a boolean value to the main method.
-// true if the vm is launched sucessfully, else returns false.
+// true if the vm is launched successfully, else returns false.
 func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 
 	log.Trace("wlavm/start:Start() Entering")
@@ -59,7 +59,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	log.Info("wlavm/start:Start() Parsing domain XML to get image UUID, image path, VM UUID, VM path and disk size")
 	d, err := libvirt.NewDomainParser(domainXMLContent, libvirt.Start)
 	if err != nil {
-		log.Error("wlavm/start.go:Start() Parsing error: ", err.Error())
+		log.Error("wlavm/start:Start() Parsing error: ", err.Error())
 		log.Tracef("%+v", err)
 		return false
 	}
@@ -71,15 +71,15 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	size := d.GetDiskSize()
 
 	// In prepare state, the image path returned is nil
-	if len(imagePath) <= 0 {
+	if imagePath == "" {
 		// skip manifest and report creation in prepare state and create them in start state
 		skipManifestAndReportCreation = true
 		imagePath, err = imagePathFromVMAssociationFile(imageUUID)
 		if err != nil {
-			log.Errorf("wlavm/start.go:Start() Error while retrieving image path from image-vm association file: %s", err.Error())
+			log.Errorf("wlavm/start:Start() Error while retrieving image path from image-vm association file: %s", err.Error())
 			log.Tracef("%+v", err)
 			return false
-		} else if len(imagePath) <= 0 {
+		} else if imagePath == "" {
 			// if image path does not exist in image-vm association file, return back to hook
 			log.Infof("wlavm/start:Start() There are no VM's launched from %s encrypted image, returning to hook", imageUUID)
 			return true
@@ -97,14 +97,14 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 		// check if image is encrypted
 		_, err = os.Stat(imagePath)
 		if os.IsNotExist(err) {
-			log.Errorf("wlavm/start.go:Start() Image does not exist in location %s", imagePath)
+			log.Errorf("wlavm/start:Start() Image does not exist in location %s", imagePath)
 			log.Tracef("%+v", err)
 			return false
 		}
 		log.Info("wlavm/start:Start() Image is not a symlink, so checking is image is encrypted...")
 		isImageEncrypted, err = crypt.EncryptionHeaderExists(imagePath)
 		if err != nil {
-			log.Errorf("wlavm/start.go:Start() Error while trying to check if the image is encrypted: %s", err.Error())
+			log.Errorf("wlavm/start:Start() Error while trying to check if the image is encrypted: %s", err.Error())
 			log.Tracef("%+v", err)
 			return false
 		}
@@ -120,10 +120,10 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	var tpmWrappedKey []byte
 
 	// get host hardware UUID
-	secLog.Infof("wlavm/start.go:Start() %s, Trying to get host hardware UUID", message.SU)
+	secLog.Infof("wlavm/start:Start() %s, Trying to get host hardware UUID", message.SU)
 	hardwareUUID, err := pinfo.HardwareUUID()
 	if err != nil {
-		log.WithError(err).Error("wlavm/start.go:Start() Unable to get the host hardware UUID")
+		log.WithError(err).Error("wlavm/start:Start() Unable to get the host hardware UUID")
 		return false
 	}
 	log.Debugf("wlavm/start:Start() The host hardware UUID is :%s", hardwareUUID)
@@ -138,7 +138,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 
 	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID)
 	if err != nil {
-		secLog.WithError(err).Error("wlavm/start.go:Start() Error retrieving the image flavor and key")
+		secLog.WithError(err).Error("wlavm/start:Start() Error retrieving the image flavor and key")
 		return false
 	}
 
@@ -149,7 +149,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 
 	if flavorKeyInfo.Flavor.EncryptionRequired {
 		if len(flavorKeyInfo.Key) == 0 {
-			log.Error("wlavm/start.go:Start() Flavor Key is empty")
+			log.Error("wlavm/start:Start() Flavor Key is empty")
 			return false
 		}
 		tpmWrappedKey = flavorKeyInfo.Key
@@ -159,7 +159,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 		key, unWrapErr := util.UnwrapKey(tpmWrappedKey)
 		TpmMtx.Unlock()
 		if unWrapErr != nil {
-			secLog.WithError(err).Error("wlavm/start.go:Start() Error unwrapping the key")
+			secLog.WithError(err).Error("wlavm/start:Start() Error unwrapping the key")
 			return false
 		}
 
@@ -167,7 +167,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 			log.Info("wlavm/start:Start() Creating and mounting image dm-crypt volume")
 			err = imageVolumeManager(imageUUID, imagePath, size, key)
 			if err != nil {
-				log.WithError(err).Error("wlavm/start.go:Start() Error while creating and mounting image dm-crypt volume ")
+				log.WithError(err).Error("wlavm/start:Start() Error while creating and mounting image dm-crypt volume ")
 				return false
 			}
 		}
@@ -178,7 +178,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 			log.Info("wlavm/start:Start() Creating and mounting vm dm-crypt volume")
 			err = vmVolumeManager(vmUUID, vmPath, size, key, filewatcher)
 			if err != nil {
-				log.WithError(err).Error("wlavm/start.go:Start() Error while creating and mounting vm dm-crypt volume ")
+				log.WithError(err).Error("wlavm/start:Start() Error while creating and mounting vm dm-crypt volume ")
 				return false
 			}
 		}
@@ -192,14 +192,14 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	log.Info("wlavm/start:Start() Creating VM Manifest")
 	manifest, err := vml.CreateVMManifest(vmUUID, hardwareUUID, imageUUID, true)
 	if err != nil {
-		log.WithError(err).Error("wlavm/start.go:Start() Error creating the VM manifest")
+		log.WithError(err).Error("wlavm/start:Start() Error creating the VM manifest")
 		return false
 	}
 
 	//Create Image trust report
-	status := CreateInstanceTrustReport(manifest, wlsModel.SignedImageFlavor{flavorKeyInfo.Flavor, flavorKeyInfo.Signature})
+	status := CreateInstanceTrustReport(manifest, wlsModel.SignedImageFlavor{ImageFlavor: flavorKeyInfo.Flavor, Signature: flavorKeyInfo.Signature})
 	if status == false {
-		log.Error("wlavm/start.go:Start() Error while creating image trust report")
+		log.Error("wlavm/start:Start() Error while creating image trust report")
 		return false
 	}
 
@@ -208,7 +208,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	iAssoc := ImageVMAssociation{imageUUID, imagePath}
 	err = iAssoc.Create()
 	if err != nil {
-		log.WithError(err).Error("wlavm/start.go:Start() Error while updating the image-instance count file")
+		log.WithError(err).Error("wlavm/start:Start() Error while updating the image-instance count file")
 		return false
 	}
 
@@ -231,7 +231,7 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	err = vml.CreateVolume(vmSparseFilePath, vmDeviceMapperPath, key, size)
 	vmVolumeMtx.Unlock()
 	if err != nil {
-		return errors.Wrap(err, "wlavm/start.go:vmVolumeManager() error creating vm dm-crypt volume")
+		return errors.Wrap(err, "wlavm/start:vmVolumeManager() error creating vm dm-crypt volume")
 	}
 
 	// mount the vm dmcrypt volume on to a mount path
@@ -240,7 +240,7 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	var vmMountPath = consts.MountPath + vmUUID
 	err = checkMountPathExistsAndMountVolume(vmMountPath, vmDeviceMapperPath, "disk")
 	if err != nil {
-		return errors.Wrap(err, "wlavm/start.go:vmVolumeManager() error checking if mount path exists and mounting the volume")
+		return errors.Wrap(err, "wlavm/start:vmVolumeManager() error checking if mount path exists and mounting the volume")
 	}
 
 	// is sparse file exists, the image is already decrypted, so returning back to VM start method
@@ -254,14 +254,14 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	secLog.Infof("wlavm/start:vmVolumeManager() %s, Copying all the files from %s to vm mount path", message.SU, vmPath)
 	_, err = exec.ExecuteCommand("cp", args)
 	if err != nil {
-		return errors.Wrapf(err, "wlavm/start.go:vmVolumeManager() error copying the vm path %s change disk to mount path. %s", vmPath, vmMountPath)
+		return errors.Wrapf(err, "wlavm/start:vmVolumeManager() error copying the vm path %s change disk to mount path. %s", vmPath, vmMountPath)
 	}
 
 	// remove the encrypted image file and create a symlink with the dm-crypt volume
 	secLog.Infof("wlavm/start:vmVolumeManager() %s, Deleting change disk: %s", message.SU, vmPath)
 	err = os.RemoveAll(vmPath)
 	if err != nil {
-		return errors.Wrapf(err, "wlavm/start.go:vmVolumeManager() error deleting the change disk: %s", vmPath)
+		return errors.Wrapf(err, "wlavm/start:vmVolumeManager() error deleting the change disk: %s", vmPath)
 	}
 
 	changeDiskFile := vmMountPath + "/disk"
@@ -269,7 +269,7 @@ func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewat
 	// create symlink between the image and the dm-crypt volume
 	err = createSymLinkAndChangeOwnership(changeDiskFile, vmPath, vmMountPath)
 	if err != nil {
-		return errors.Wrap(err, "wlavm/start.go:vmVolumeManager() error creating a symlink and changing file ownership")
+		return errors.Wrap(err, "wlavm/start:vmVolumeManager() error creating a symlink and changing file ownership")
 	}
 
 	// trigger a file watcher event to delete VM mount path when disk.info file is deleted on VM delete
@@ -310,7 +310,7 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 			log.Debug("wlavm/start:imageVolumeManager() Device mapper of same name already exists. Skipping image volume creation..")
 			return nil
 		} else {
-			return errors.Wrap(err, "wlavm/start.go:imageVolumeManager() error while creating image dm-crypt volume for image")
+			return errors.Wrap(err, "wlavm/start:imageVolumeManager() error while creating image dm-crypt volume for image")
 		}
 	}
 
@@ -318,7 +318,7 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	imageDeviceMapperMountPath := consts.MountPath + imageUUID
 	err = checkMountPathExistsAndMountVolume(imageDeviceMapperMountPath, imageDeviceMapperPath, imageUUID)
 	if err != nil {
-		return errors.Wrap(err, "wlavm/start.go:imageVolumeManager() error checking if image mount path exists and mounting the volume")
+		return errors.Wrap(err, "wlavm/start:imageVolumeManager() error checking if image mount path exists and mounting the volume")
 	}
 
 	// is sparse file exists, the image is already decrypted, so returning back to VM start method
@@ -331,14 +331,14 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	log.Debug("Reading the encrypted image file...")
 	encryptedImage, ioReadErr := ioutil.ReadFile(imagePath)
 	if ioReadErr != nil {
-		return errors.New("wlavm/start.go:imageVolumeManager() error while reading the image file")
+		return errors.New("wlavm/start:imageVolumeManager() error while reading the image file")
 	}
 
 	//decrypt the image
 	log.Info("wlavm/start:imageVolumeManager() Decrypting the image")
 	decryptedImage, err := vml.Decrypt(encryptedImage, key)
 	if err != nil {
-		return errors.Wrap(err, "wlavm/start.go:imageVolumeManager() error while decrypting the image")
+		return errors.Wrap(err, "wlavm/start:imageVolumeManager() error while decrypting the image")
 	}
 	log.Info("wlavm/start:imageVolumeManager() Image decrypted successfully")
 	// write the decrypted data into a file in image mount path
@@ -346,13 +346,13 @@ func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte
 	secLog.Infof("wlavm/start:imageVolumeManager() %s, Writing decrypted data in to a file: %s", message.SU, decryptedImagePath)
 	ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0664)
 	if ioWriteErr != nil {
-		return errors.New("wlavm/start.go:imageVolumeManager() error writing the decrypted data to file")
+		return errors.New("wlavm/start:imageVolumeManager() error writing the decrypted data to file")
 	}
 
 	log.Debug("wlavm/start:imageVolumeManager() Creating a symlink between the image and the volume")
 	err = createSymLinkAndChangeOwnership(decryptedImagePath, imagePath, imageDeviceMapperMountPath)
 	if err != nil {
-		return errors.Wrap(err, "wlavm/start.go:imageVolumeManager() error creating a symlink and changing file ownership")
+		return errors.Wrap(err, "wlavm/start:imageVolumeManager() error creating a symlink and changing file ownership")
 	}
 
 	// Watch the symlink for deletion, and remove the _sparseFile if image is deleted
@@ -378,36 +378,36 @@ func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) e
 	secLog.Infof("wlavm/start:imageVolumeManager() %s, Deleting the enc image file from :%s", message.SU, sourceFile)
 	rmErr := os.RemoveAll(sourceFile)
 	if rmErr != nil {
-		return errors.Wrapf(err, "wlavm/start.go:createSymLinkAndChangeOwnership() error deleting the change disk: %s", sourceFile)
+		return errors.Wrapf(err, "wlavm/start:createSymLinkAndChangeOwnership() error deleting the change disk: %s", sourceFile)
 	}
 
 	// create symlink between the image and the dm-crypt volume
 	secLog.Infof("wlavm/start:imageVolumeManager() %s, Creating a symlink between %s and %s", message.SU, sourceFile, targetFile)
 	err = os.Symlink(targetFile, sourceFile)
 	if err != nil {
-		return errors.Wrapf(err, "wlavm/start.go:createSymLinkAndChangeOwnership() error while creating symbolic link")
+		return errors.Wrapf(err, "wlavm/start:createSymLinkAndChangeOwnership() error while creating symbolic link")
 	}
 
 	// change the image symlink file ownership to qemu
-	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing symlink ownership to qemu", message.SU)
+	secLog.Infof("wlavm/start:createSymLinkAndChangeOwnership() %s, Changing symlink ownership to qemu", message.SU)
 	err = os.Lchown(sourceFile, userID, groupID)
 	if err != nil {
-		return errors.New("wlavm/start.go:createSymLinkAndChangeOwnership() error while trying to change symlink owner to qemu")
+		return errors.New("wlavm/start:createSymLinkAndChangeOwnership() error while trying to change symlink owner to qemu")
 	}
 
 	// Giving read write access to the target file
-	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing permissions to changed disk path: %s", message.SU, targetFile)
+	secLog.Infof("wlavm/start:createSymLinkAndChangeOwnership() %s, Changing permissions to changed disk path: %s", message.SU, targetFile)
 	err = os.Chmod(targetFile, 0664)
 	if err != nil {
-		return errors.Wrapf(err, "wlavm/start.go:createSymLinkAndChangeOwnership() error while giving permissions to changed disk path: %s", targetFile)
+		return errors.Wrapf(err, "wlavm/start:createSymLinkAndChangeOwnership() error while giving permissions to changed disk path: %s", targetFile)
 	}
 
 	// change the image mount path directory ownership to qemu
-	secLog.Infof("wlavm/start.go:createSymLinkAndChangeOwnership() %s, Changing the mount path ownership to qemu", message.SU)
+	secLog.Infof("wlavm/start:createSymLinkAndChangeOwnership() %s, Changing the mount path ownership to qemu", message.SU)
 	err = osutil.ChownR(mountPath, userID, groupID)
 
 	if err != nil {
-		return errors.New("wlavm/start.go:createSymLinkAndChangeOwnership() error trying to change mount path owner to qemu")
+		return errors.New("wlavm/start:createSymLinkAndChangeOwnership() error trying to change mount path owner to qemu")
 	}
 	return nil
 }
@@ -420,7 +420,7 @@ func CreateInstanceTrustReport(manifest instance.Manifest, flavor wlsModel.Signe
 	log.Info("wlavm/start:CreateInstanceTrustReport() Creating image trust report")
 	instanceTrustReport, err := verifier.Verify(&manifest, &flavor, consts.FlavorSigningCertDir, consts.TrustedCaCertsDir, config.Configuration.SkipFlavorSignatureVerification)
 	if err != nil {
-		log.WithError(err).Error("wlavm/start.go:CreateInstanceTrustReport() Error creating image trust report")
+		log.WithError(err).Error("wlavm/start:CreateInstanceTrustReport() Error creating image trust report")
 		log.Tracef("%+v", err)
 		return false
 	}
@@ -431,7 +431,7 @@ func CreateInstanceTrustReport(manifest instance.Manifest, flavor wlsModel.Signe
 	log.Info("wlavm/start:CreateInstanceTrustReport() Signing image trust report")
 	signedInstanceTrustReport, err := signInstanceTrustReport(instanceTrustReport.(*verifier.InstanceTrustReport))
 	if err != nil {
-		log.WithError(err).Error("wlavm/start.go:CreateInstanceTrustReport() Could not sign image trust report using TPM")
+		log.WithError(err).Error("wlavm/start:CreateInstanceTrustReport() Could not sign image trust report using TPM")
 		log.Tracef("%+v", err)
 		return false
 	}
@@ -443,7 +443,7 @@ func CreateInstanceTrustReport(manifest instance.Manifest, flavor wlsModel.Signe
 
 	err = wlsclient.PostVMReport(report)
 	if err != nil {
-		secLog.WithError(err).Error("wlavm/start.go:CreateInstanceTrustReport() Failed to post the instance trust report on to workload service")
+		secLog.WithError(err).Error("wlavm/start:CreateInstanceTrustReport() Failed to post the instance trust report on to workload service")
 		return false
 	}
 	return true
@@ -458,7 +458,7 @@ func signInstanceTrustReport(report *verifier.InstanceTrustReport) (*crypt.Signe
 
 	jsonVMTrustReport, err := json.Marshal(*report)
 	if err != nil {
-		return nil, errors.Wrap(err, "wlavm/start.go:signInstanceTrustReport() could not marshal instance trust report")
+		return nil, errors.Wrap(err, "wlavm/start:signInstanceTrustReport() could not marshal instance trust report")
 	}
 
 	signedreport.Data = jsonVMTrustReport
@@ -469,7 +469,7 @@ func signInstanceTrustReport(report *verifier.InstanceTrustReport) (*crypt.Signe
 		return nil, err
 	}
 	log.Debug("wlavm/start:signInstanceTrustReport() Using TPM to create signature")
-	signature, err := createSignatureWithTPM([]byte(signedreport.Data), crypto.SHA256)
+	signature, err := createSignatureWithTPM(signedreport.Data, crypto.SHA256)
 	if err != nil {
 		return nil, err
 	}
@@ -501,7 +501,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	// log.Debug("wlavm/start:createSignatureWithTPM() Retrieving the signing key secret form WA configuration")
 	// keyAuth, err := hex.DecodeString(config.Configuration.SigningKeySecret)
 	// if err != nil {
-	// 	return nil, errors.Wrap(err, "wlavm/start.go:createSignatureWithTPM() Error retrieving the signing key secret from configuration")
+	// 	return nil, errors.Wrap(err, "wlavm/start:createSignatureWithTPM() Error retrieving the signing key secret from configuration")
 	// }
 
 	// Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
@@ -509,7 +509,7 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	defer TpmMtx.Unlock()
 	t, err := util.GetTpmInstance()
 	if err != nil {
-		return nil, errors.Wrap(err, "wlavm/start.go:createSignatureWithTPM() Error attempting to create signature - could not open TPM")
+		return nil, errors.Wrap(err, "wlavm/start:createSignatureWithTPM() Error attempting to create signature - could not open TPM")
 	}
 
 	log.Debug("wlavm/start:createSignatureWithTPM() Computing the hash of the report to be signed by the TPM")
@@ -536,7 +536,7 @@ func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath, emptyFileNa
 	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() %s, Mounting the device mapper: %s", message.SU, deviceMapperPath)
 	mkdirErr := os.MkdirAll(mountPath, 0655)
 	if mkdirErr != nil {
-		return errors.New("wlavm/start.go:checkMountPathExistsAndMountVolume() error while creating the mount point for the image device mapper")
+		return errors.New("wlavm/start:checkMountPathExistsAndMountVolume() error while creating the mount point for the image device mapper")
 	}
 
 	// create an empty image and disk file so that symlinks are not broken after VM stop
@@ -545,7 +545,7 @@ func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath, emptyFileNa
 	// creating a file with 664 permissions so that nova and qemu can also access it
 	sampleFile, err := os.OpenFile(emptyFilePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0664)
 	if err != nil {
-		return errors.New("wlavm/start.go:checkMountPathExistsAndMountVolume() error creating a sample file")
+		return errors.New("wlavm/start:checkMountPathExistsAndMountVolume() error creating a sample file")
 	}
 	defer func() {
 		derr := sampleFile.Close()
@@ -561,17 +561,17 @@ func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath, emptyFileNa
 	}
 
 	// change the image mount path directory ownership to qemu
-	secLog.Infof("wlavm/start.go:checkMountPathExistsAndMountVolume() %s, Changing the mount path ownership to qemu", message.SU)
+	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() %s, Changing the mount path ownership to qemu", message.SU)
 	err = osutil.ChownR(mountPath, userID, groupID)
 	if err != nil {
-		return errors.New("wlavm/start.go:checkMountPathExistsAndMountVolume() error trying to change mount path owner to qemu")
+		return errors.New("wlavm/start:checkMountPathExistsAndMountVolume() error trying to change mount path owner to qemu")
 	}
 
-	secLog.Infof("wlavm/start.go:checkMountPathExistsAndMountVolume() %s, Mounting the image device mapper %s on %s", message.SU, deviceMapperPath, mountPath)
+	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() %s, Mounting the image device mapper %s on %s", message.SU, deviceMapperPath, mountPath)
 	mountErr := vml.Mount(deviceMapperPath, mountPath)
 	if mountErr != nil {
 		if !strings.Contains(mountErr.Error(), "device is already mounted") {
-			return errors.New("wlavm/start.go:checkMountPathExistsAndMountVolume() error while mounting the image device mapper")
+			return errors.New("wlavm/start:checkMountPathExistsAndMountVolume() error while mounting the image device mapper")
 		}
 	}
 	return nil
@@ -583,7 +583,7 @@ func userInfoLookUp(userName string) (int, int, error) {
 
 	userInfo, err := user.Lookup(userName)
 	if err != nil {
-		return 0, 0, errors.New("wlavm/start.go:checkMountPathExistsAndMountVolume() error trying to look up qemu userID and groupID")
+		return 0, 0, errors.New("wlavm/start:checkMountPathExistsAndMountVolume() error trying to look up qemu userID and groupID")
 	}
 	userID, _ := strconv.Atoi(userInfo.Uid)
 	groupID, _ := strconv.Atoi(userInfo.Gid)

@@ -59,7 +59,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 
 	registerKey, err := hvsclient.CertifyHostBindingKey(httpRequestBody)
 	if err != nil {
-		secLog.WithError(err).Error("setup/register_binding_key.go:Run() error while certifying host binding key with hvs")
+		secLog.WithError(err).Error("setup/register_binding_key:Run() error while certifying host binding key with hvs")
 		return errors.Wrap(err, "setup/register_binding_key:Run() error while certifying host binding key with hvs")
 	}
 

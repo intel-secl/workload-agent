@@ -29,10 +29,10 @@ import (
 )
 
 var (
-	Version           string = ""
-	Time              string = ""
-	Branch            string = ""
-	rpcSocketFilePath string = consts.RunDirPath + consts.RPCSocketFileName
+	Version           = ""
+	Time              = ""
+	Branch            = ""
+	rpcSocketFilePath = consts.RunDirPath + consts.RPCSocketFileName
 )
 
 var log = cLog.GetDefaultLogger()
@@ -392,12 +392,10 @@ func main() {
 			removeSecureDockerDaemon()
 
 			// restart docker daemon
-			if err == nil {
-				commandArgs := []string{"start", "docker"}
-				_, err = exec.ExecuteCommand("systemctl", commandArgs)
-				if err != nil {
-					fmt.Print("Error starting docker daemon post-uninstall. Refer dockerd logs for more information.")
-				}
+			commandArgs := []string{"start", "docker"}
+			_, err = exec.ExecuteCommand("systemctl", commandArgs)
+			if err != nil {
+				fmt.Print("Error starting docker daemon post-uninstall. Refer dockerd logs for more information.")
 			}
 		}
 		stop()

@@ -43,23 +43,23 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	log.Info("setup/register_signing_key:Run() Registering signing key with host verification service.")
 	signingKey, err := config.GetSigningKeyFromFile()
 	if err != nil {
-		return errors.Wrap(err, "setup/register_signing_key.go:Run() error reading signing key from  file ")
+		return errors.Wrap(err, "setup/register_signing_key:Run() error reading signing key from  file ")
 	}
 
 	httpRequestBody, err := common.CreateRequest(signingKey)
 	if err != nil {
-		return errors.Wrap(err, "setup/register_signing_key.go:Run() error registering signing key ")
+		return errors.Wrap(err, "setup/register_signing_key:Run() error registering signing key ")
 	}
 
 	registerKey, err := hvsclient.CertifyHostSigningKey(httpRequestBody)
 	if err != nil {
-		secLog.WithError(err).Error("setup/register_signing_key.go:Run() error while certify host signing key from hvs")
-		return errors.Wrap(err, "setup/register_signing_key.go:Run() error while certify host signing key from hvs")
+		secLog.WithError(err).Error("setup/register_signing_key:Run() error while certify host signing key from hvs")
+		return errors.Wrap(err, "setup/register_signing_key:Run() error while certify host signing key from hvs")
 	}
 
 	err = common.WriteKeyCertToDisk(consts.ConfigDirPath+consts.SigningKeyPemFileName, registerKey.SigningKeyCertificate)
 	if err != nil {
-		return errors.New("setup/register_signing_key.go:Run() error writing signing key certificate to file")
+		return errors.New("setup/register_signing_key:Run() error writing signing key certificate to file")
 	}
 	return nil
 }
@@ -73,7 +73,7 @@ func (rs RegisterSigningKey) Validate(c csetup.Context) error {
 	signingKeyCertPath := consts.ConfigDirPath + consts.SigningKeyPemFileName
 	_, err := os.Stat(signingKeyCertPath)
 	if os.IsNotExist(err) {
-		return errors.New("setup/register_signing_key.go:Validate() Signing key certificate file does not exist")
+		return errors.New("setup/register_signing_key:Validate() Signing key certificate file does not exist")
 	}
 	return nil
 }

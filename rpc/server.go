@@ -156,7 +156,7 @@ func (vm *VirtualMachine) CreateInstanceTrustReport(args *ManifestString, status
 	if string(f) == "" {
 		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while retrieving flavor", StatusCode: 1}
 	}
-	err = json.Unmarshal([]byte(f), &imageFlavor)
+	err = json.Unmarshal(f, &imageFlavor)
 	if err != nil {
 		return &rpcError{Message: "rpc/server:CreateInstanceTrustReport() error while unmarshalling flavor", StatusCode: 1}
 	}

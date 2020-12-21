@@ -22,20 +22,31 @@ import (
 var log = cLog.GetDefaultLogger()
 var secLog = cLog.GetSecurityLogger()
 var ImageVMAssociations = make(map[string]*ImageVMAssociation)
+var MapMtx sync.RWMutex
 
 type ImageVMAssociation struct {
 	ImagePath string `yaml:"imagepath"`
 	VMCount   int    `yaml:"vmcount"`
 }
 
-// LoadImageVMAssociation method loads image vm association from yaml file
-func LoadImageVMAssociation() error {
-	log.Trace("util/util: LoadImageVMAssociation Entering")
-	defer log.Trace("util/util: LoadImageVMAssociation Leaving")
-	imageVMAssociationFilePath := consts.ConfigDirPath + consts.ImageVmCountAssociationFileName
+func init() {
+	loadIVAMapErr := loadImageVMAssociation()
+	if loadIVAMapErr != nil {
+		log.WithError(loadIVAMapErr).Fatal("util/util:init error loading ImageVMAssociation map")
+	}
+}
+
+// loadImageVMAssociation method loads image vm association from yaml file
+func loadImageVMAssociation() error {
+	log.Trace("util/util:loadImageVMAssociation Entering")
+	defer log.Trace("util/util:loadImageVMAssociation Leaving")
+
+	imageVMAssociationFilePath := consts.RunDirPath + consts.ImageVmCountAssociationFileName
 	// Read from a file and store it in a string
 	log.Info("Reading image vm association file.")
+	MapMtx.RLock()
 	imageVMAssociationFile, err := os.OpenFile(imageVMAssociationFilePath, os.O_RDWR|os.O_CREATE, 0600)
+	MapMtx.RUnlock()
 	if err != nil {
 		return err
 	}
@@ -49,21 +60,19 @@ func LoadImageVMAssociation() error {
 	if err != nil {
 		return err
 	}
-	err = yaml.Unmarshal([]byte(associations), &ImageVMAssociations)
+	err = yaml.Unmarshal(associations, &ImageVMAssociations)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-var fileMutex sync.Mutex
-
 // SaveImageVMAssociation method saves vm image association to yaml file
 func SaveImageVMAssociation() error {
 	log.Trace("util/util:SaveImageVMAssociation() Entering")
 	defer log.Trace("util/util:SaveImageVMAssociation() Leaving")
 
-	imageVMAssociationFilePath := consts.ConfigDirPath + consts.ImageVmCountAssociationFileName
+	imageVMAssociationFilePath := consts.RunDirPath + consts.ImageVmCountAssociationFileName
 	log.Infof("util/util:SaveImageVMAssociation() Writing to image vm association file %s", imageVMAssociationFilePath)
 	associations, err := yaml.Marshal(&ImageVMAssociations)
 	if err != nil {
@@ -74,7 +83,9 @@ func SaveImageVMAssociation() error {
 		return errors.Errorf("Invalid file permission on %s", imageVMAssociationFilePath)
 	}
 
-	err = ioutil.WriteFile(imageVMAssociationFilePath, []byte(string(associations)), 0600)
+	MapMtx.Lock()
+	err = ioutil.WriteFile(imageVMAssociationFilePath, associations, 0600)
+	MapMtx.Unlock()
 	if err != nil {
 		return errors.Wrapf(err, "util/util:SaveImageVMAssociation() Error while writing file:%s", imageVMAssociationFilePath)
 	}
@@ -103,15 +114,6 @@ func GetTpmInstance() (tpmprovider.TpmProvider, error) {
 
 	return vmStartTpm, nil
 }
-
-// func GetNewTpmInstance() (tpm.Tpm, error){
-// 	log.Trace("util/util:GetNewTpmInstance() Entering")
-// 	defer log.Trace("util/util:GetNewTpmInstance() Leaving")
-// 	var err error
-// 	secLog.Infof("util/util:GetTpmInstance() %s, Opening a new connection to the tpm", message.SU)
-// 	vmStartTpm, err = tpm.Open()
-// 	return vmStartTpm, err
-// }
 
 // CloseTpmInstance method is used to close an instance of TPM
 func CloseTpmInstance() {

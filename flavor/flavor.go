@@ -51,7 +51,7 @@ func Fetch(imageID string) (string, bool) {
 	log.Debug("Retrieving host hardware UUID...")
 	hardwareUUID, err := pinfo.HardwareUUID()
 	if err != nil {
-		log.Error("flavor/key_retrieval.go:Fetch() unable to get the host hardware UUID")
+		log.Error("flavor/key_retrieval:Fetch() unable to get the host hardware UUID")
 		log.Tracef("%+v", err)
 		return "", false
 	}
@@ -59,7 +59,7 @@ func Fetch(imageID string) (string, bool) {
 	// get image flavor key from workload service
 	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageID, hardwareUUID)
 	if err != nil {
-		secLog.WithError(err).Error("flavor/flavor.go:Fetch() Error while retrieving the image flavor")
+		secLog.WithError(err).Error("flavor/flavor:Fetch() Error while retrieving the image flavor")
 		return "", false
 	}
 
@@ -79,7 +79,7 @@ func Fetch(imageID string) (string, bool) {
 
 	f, err := json.Marshal(flavorKeyInfo.Flavor)
 	if err != nil {
-		log.WithError(err).Error("flavor/flavor.go:Fetch() Error while marshalling flavor")
+		log.WithError(err).Error("flavor/flavor:Fetch() Error while marshalling flavor")
 		return "", false
 	}
 

@@ -21,7 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 // Configuration is the global configuration struct that is marshalled/unmarshaled to a persisted yaml file
@@ -59,8 +59,7 @@ var Configuration struct {
 }
 
 var (
-	configFilePath string = consts.ConfigDirPath + consts.ConfigFileName
-	LogWriter      io.Writer
+	configFilePath = consts.ConfigDirPath + consts.ConfigFileName
 )
 
 var secLog = cLog.GetSecurityLogger()
@@ -177,7 +176,6 @@ func init() {
 			log.WithError(err).Error("Error decoding configuration")
 		}
 	}
-	LogWriter = os.Stdout
 }
 
 // SaveConfiguration is used to save configurations that are provided in environment during setup tasks
@@ -244,7 +242,7 @@ func SaveConfiguration(c csetup.Context) error {
 	if err == nil && taUser != "" {
 		Configuration.TrustAgent.User = taUser
 	} else if strings.TrimSpace(Configuration.TrustAgent.User) == "" {
-		log.Info("TRUSTAGENT_USER is not defined in the environment, using default '%s'", consts.DEFAULT_TRUSTAGENT_USER)
+		log.Infof("TRUSTAGENT_USER is not defined in the environment, using default '%s'", consts.DEFAULT_TRUSTAGENT_USER)
 		Configuration.TrustAgent.User = consts.DEFAULT_TRUSTAGENT_USER
 	}
 
@@ -252,7 +250,7 @@ func SaveConfiguration(c csetup.Context) error {
 	if err == nil && taConfigDir != "" {
 		Configuration.TrustAgent.ConfigDir = taConfigDir
 	} else if strings.TrimSpace(Configuration.TrustAgent.ConfigDir) == "" {
-		log.Info("TRUSTAGENT_CONFIGURATION is not defined in the environment, using default '%s'", consts.DEFAULT_TRUSTAGENT_CONFIGURATION)
+		log.Infof("TRUSTAGENT_CONFIGURATION is not defined in the environment, using default '%s'", consts.DEFAULT_TRUSTAGENT_CONFIGURATION)
 		Configuration.TrustAgent.ConfigDir = consts.DEFAULT_TRUSTAGENT_CONFIGURATION
 	}
 

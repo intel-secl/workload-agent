@@ -22,7 +22,7 @@ func RetrieveKey(keyID string) ([]byte, bool) {
 	var tpmWrappedKey []byte
 
 	if imageKeyID[keyID] == "" {
-		log.Errorf("flavor/key_retrieval.go:RetrieveKey() unable to get the image ID for given key ID %s", keyID)
+		log.Errorf("flavor/key_retrieval:RetrieveKey() unable to get the image ID for given key ID %s", keyID)
 		return nil, false
 	}
 	imageUUID := imageKeyID[keyID]
@@ -31,7 +31,7 @@ func RetrieveKey(keyID string) ([]byte, bool) {
 	log.Debug("Retrieving host hardware UUID...")
 	hardwareUUID, err := pinfo.HardwareUUID()
 	if err != nil {
-		log.Error("flavor/key_retrieval.go:RetrieveKey() unable to get the host hardware UUID")
+		log.Error("flavor/key_retrieval:RetrieveKey() unable to get the host hardware UUID")
 		log.Tracef("%+v", err)
 		return nil, false
 	}
@@ -41,7 +41,7 @@ func RetrieveKey(keyID string) ([]byte, bool) {
 	log.Infof("Retrieving image-flavor-key for image %s from WLS", imageUUID)
 	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID)
 	if err != nil {
-		log.Errorf("flavor/key_retrieval.go:RetrieveKey() error retrieving the image flavor and key: %s", err.Error())
+		log.Errorf("flavor/key_retrieval:RetrieveKey() error retrieving the image flavor and key: %s", err.Error())
 		log.Tracef("%+v", err)
 		return nil, false
 	}
@@ -78,7 +78,7 @@ func RetrieveKeyWithURL(keyUrl string) ([]byte, bool) {
 	log.Debug("Retrieving host hardware UUID...")
 	hardwareUUID, err := pinfo.HardwareUUID()
 	if err != nil {
-		log.Error("flavor/key_retrieval.go:RetrieveKeyWithURL() unable to get the host hardware UUID")
+		log.Error("flavor/key_retrieval:RetrieveKeyWithURL() unable to get the host hardware UUID")
 		log.Tracef("%+v", err)
 		return nil, false
 	}
@@ -88,7 +88,7 @@ func RetrieveKeyWithURL(keyUrl string) ([]byte, bool) {
 	log.Infof("Retrieving key %s with hardware UUID %s from WLS", keyUrl, hardwareUUID)
 	receivedKey, err = wlsclient.GetKeyWithURL(keyUrl, hardwareUUID)
 	if err != nil {
-		log.Errorf("flavor/key_retrieval.go:RetrieveKeyWithURL() error retrieving key: %s", err.Error())
+		log.Errorf("flavor/key_retrieval:RetrieveKeyWithURL() error retrieving key: %s", err.Error())
 		log.Tracef("%+v", err)
 		return nil, false
 	}
@@ -101,5 +101,4 @@ func RetrieveKeyWithURL(keyUrl string) ([]byte, bool) {
 		log.Infof("key does not exist for keyUrl %s", keyUrl)
 		return nil, false
 	}
-	return nil, false
 }

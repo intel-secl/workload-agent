@@ -35,7 +35,7 @@ var (
 // e.g. shutdown, reboot, stop etc.
 // Input Parameters: domainXML content string
 // Return : Returns a boolean value to the main method.
-// true if the vm is launched sucessfully, else returns false.
+// true if the vm is launched successfully, else returns false.
 func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	log.Trace("wlavm/stop:Stop() Entering")
 	defer log.Trace("wlavm/stop:Stop() Leaving")
@@ -43,14 +43,14 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 
 	d, err := libvirt.NewDomainParser(domainXMLContent, libvirt.Stop)
 	if err != nil {
-		log.Error("wlavm/stop.go:Stop() Parsing error")
+		log.Error("wlavm/stop:Stop() Parsing error")
 		return false
 	}
 
 	// check if vm exists at given path
 	log.Infof("Checking if VM exists in %s", d.GetVMPath())
 	if _, err := os.Stat(d.GetVMPath()); os.IsNotExist(err) {
-		log.Error("wlavm/stop.go:Stop() VM does not exist")
+		log.Error("wlavm/stop:Stop() VM does not exist")
 		return false
 	}
 
@@ -58,7 +58,7 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	log.Info("wlavm/stop:Stop() Checking if a dm-crypt volume for the image is created")
 	isVmVolume, err := isVmVolumeEncrypted(d.GetVMUUID())
 	if err != nil {
-		log.Error("wlavm/stop.go:Stop() Error while checking if a dm-crypt volume is created for the VM and is active")
+		log.Error("wlavm/stop:Stop() Error while checking if a dm-crypt volume is created for the VM and is active")
 		log.Tracef("%+v", err)
 		return false
 	}
@@ -90,7 +90,7 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	// to check if original image is encrypted. Instead we check if sparse file of image
 	// exists at given path, if it does that means the image was enrypted and volumes were created
 	if _, err := os.Stat(imagePath + "_sparseFile"); os.IsNotExist(err) {
-		log.Info("wlavm/stop:Stop() The base image is not ecrypted, returning to hook...")
+		log.Info("wlavm/stop:Stop() The base image is not encrypted, returning to hook...")
 		return true
 	}
 
@@ -141,7 +141,7 @@ func isVmVolumeEncrypted(vmUUID string) (bool, error) {
 	}
 
 	if err != nil {
-		return false, errors.Wrap(err, "wlavm/stop.go:isVmVolumeEncrypted() error occured while executing cryptsetup status command")
+		return false, errors.Wrap(err, "wlavm/stop:isVmVolumeEncrypted() error occurred while executing cryptsetup status command")
 	}
 	log.Debug("wlavm/stop:isVmVolumeEncrypted() The device mapper is encrypted and active")
 	return true, nil

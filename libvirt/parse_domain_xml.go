@@ -74,7 +74,7 @@ func NewDomainParser(domainXML string, qemuInterceptCall QemuIntercept) (*Domain
 		return nil, err
 	}
 
-	log.Info("libvirt/parse_domain_xml:NewDomainParser() Successfull parsed domain xml")
+	log.Info("libvirt/parse_domain_xml:NewDomainParser() Successfully parsed domain xml")
 	d.vmUUID = domain.UUID
 
 	d.vmPath = domain.Source.File

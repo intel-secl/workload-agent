@@ -38,12 +38,12 @@ func CertifyHostSigningKey(key *wlaModel.RegisterKeyInfo) (*wlaModel.SigningKeyC
 
 	rsp, err := certifyHostKey(key, "signing")
 	if err != nil {
-		return nil, errors.Wrap(err, "clients/hvs_client.go:CertifyHostSigningKey()  error registering signing key with HVS")
+		return nil, errors.Wrap(err, "clients/hvs_client:CertifyHostSigningKey()  error registering signing key with HVS")
 	}
 	err = json.Unmarshal(rsp, &keyCert)
 	if err != nil {
 		log.Debugf("Could not unmarshal json from /rpc/certify-host-signing-key: %s", string(rsp))
-		return nil, errors.Wrap(err, "clients/hvs_client.go:CertifyHostSigningKey() error decoding signing key certificate")
+		return nil, errors.Wrap(err, "clients/hvs_client:CertifyHostSigningKey() error decoding signing key certificate")
 	}
 	return &keyCert, nil
 }
@@ -55,12 +55,12 @@ func CertifyHostBindingKey(key *wlaModel.RegisterKeyInfo) (*wlaModel.BindingKeyC
 	var keyCert wlaModel.BindingKeyCert
 	rsp, err := certifyHostKey(key, "binding")
 	if err != nil {
-		return nil, errors.Wrap(err, "clients/hvs_client.go:CertifyHostBindingKey() error registering binding key with HVS")
+		return nil, errors.Wrap(err, "clients/hvs_client:CertifyHostBindingKey() error registering binding key with HVS")
 	}
 	err = json.Unmarshal(rsp, &keyCert)
 	if err != nil {
 		log.Debugf("Could not unmarshal json from /rpc/certify-host-binding-key: %s", string(rsp))
-		return nil, errors.Wrap(err, "clients/hvs_client.go:CertifyHostBindingKey() error decoding binding key certificate.")
+		return nil, errors.Wrap(err, "clients/hvs_client:CertifyHostBindingKey() error decoding binding key certificate.")
 	}
 	return &keyCert, nil
 }
