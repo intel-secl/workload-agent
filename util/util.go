@@ -30,6 +30,13 @@ type ImageVMAssociation struct {
 }
 
 func init() {
+	//check if the wlagent run direcotry path is already created
+	if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
+			log.WithError(err).Fatalf("util/util:init could not create directory: %s, err: %s", consts.RunDirPath, err)
+		}
+	}
+
 	loadIVAMapErr := loadImageVMAssociation()
 	if loadIVAMapErr != nil {
 		log.WithError(loadIVAMapErr).Fatal("util/util:init error loading ImageVMAssociation map")
