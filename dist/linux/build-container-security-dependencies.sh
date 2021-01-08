@@ -8,7 +8,7 @@ git clone https://github.com/intel-secl/secure-docker-daemon.git 2>/dev/null
 
 cd $SECURE_DOCKER_DAEMON_DIR
 git fetch
-git checkout v3.3.0
+git checkout v3.3.1
 git pull
 
 #Build secure docker daemon
@@ -28,7 +28,7 @@ git clone https://github.com/intel-secl/secure-docker-plugin.git 2>/dev/null
 
 cd $SECURE_DOCKER_PLUGIN_DIR
 git fetch
-git checkout v3.3.0
+git checkout v3.3.1
 git pull
 
 make
