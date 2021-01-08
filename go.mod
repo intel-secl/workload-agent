@@ -14,18 +14,18 @@ require (
         intel/isecl/lib/vml/v3 v3.3.1
 )
 
-replace intel/isecl/lib/tpmprovider/v3 => gitlab.devtools.intel.com/sst/isecl/lib/tpm-provider.git/v3 v3.3.1/develop
+replace intel/isecl/lib/tpmprovider/v3 => github.com/intel-secl/tpm-provider/v3 v3.3.1
 
-replace intel/isecl/lib/vml/v3 => gitlab.devtools.intel.com/sst/isecl/lib/volume-management.git/v3 v3.3.1/develop
+replace intel/isecl/lib/vml/v3 => github.com/intel-secl/volume-management/v3 v3.3.1
 
-replace intel/isecl/lib/common/v3 => gitlab.devtools.intel.com/sst/isecl/lib/common.git/v3 v3.3.1/develop
+replace intel/isecl/lib/common/v3 => github.com/intel-secl/common/v3 v3.3.1
 
-replace intel/isecl/lib/flavor/v3 => gitlab.devtools.intel.com/sst/isecl/lib/flavor.git/v3 v3.3.1/develop
+replace intel/isecl/lib/flavor/v3 => github.com/intel-secl/flavor/v3 v3.3.1
 
-replace intel/isecl/lib/verifier/v3 => gitlab.devtools.intel.com/sst/isecl/lib/verifier.git/v3 v3.3.1/develop
+replace intel/isecl/lib/verifier/v3 => github.com/intel-secl/verifier/v3 v3.3.1
 
-replace intel/isecl/lib/platform-info/v3 => gitlab.devtools.intel.com/sst/isecl/lib/platform-info.git/v3 v3.3.1/develop
+replace intel/isecl/lib/platform-info/v3 => github.com/intel-secl/platform-info/v3 v3.3.1
 
 replace github.com/vmware/govmomi => github.com/arijit8972/govmomi fix-tpm-attestation-output
 
-replace github.com/intel-secl/intel-secl/v3 => gitlab.devtools.intel.com/sst/isecl/intel-secl.git/v3 v3.3.1/develop
+replace github.com/intel-secl/intel-secl/v3 => github.com/intel-secl/intel-secl/v3 v3.3.1
