@@ -330,50 +330,55 @@ systemctl start secure-docker-plugin.service
 }
 
 
-#Install secure docker daemon with WA only if WA_WITH_CONTAINER_SECURITY is enabled in workload-agent.env
-#and SKIP_SECURE_DOCKER_DAEMON is not enabled in wpm.env
-if [ "$WA_WITH_CONTAINER_SECURITY" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY" == "Y" ] || [ "$WA_WITH_CONTAINER_SECURITY" == "yes" ]; then
-  if [ "$SKIP_SECURE_DOCKER_DAEMON" = "y" ] || [ "$SKIP_SECURE_DOCKER_DAEMON" = "Y" ] || [ "$SKIP_SECURE_DOCKER_DAEMON" = "yes" ]; then
-    echo "Skipping secure-docker-daemon installation"
-  else
-    is_docker_installed
+#Install secure docker daemon with WA only if WA_WITH_CONTAINER_SECURITY_DOCKER is enabled in workload-agent.env
+if [ "$WA_WITH_CONTAINER_SECURITY_DOCKER" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY_DOCKER" == "Y" ] || [ "$WA_WITH_CONTAINER_SECURITY_DOCKER" == "yes" ]; then
+  is_docker_installed
 
-    which cryptsetup 2>/dev/null
-    if [ $? -ne 0 ]; then
-      yum install -y cryptsetup
-    fi  
-    echo "Installing secure docker daemon"
-    systemctl stop docker
-
-    # Take backup of existing docker CLI and daemon binaries and configs
-    mkdir -p $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-    cp /usr/bin/docker $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-    chown -R root:root docker-daemon/
-    
-    cp -f docker-daemon/docker /usr/bin/
-    which /usr/bin/dockerd-ce 2>/dev/null
-    if [ $? -ne 0 ]; then
-      cp /usr/bin/dockerd $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-      cp -f docker-daemon/dockerd-ce /usr/bin/dockerd
-    else
-      cp /usr/bin/dockerd-ce $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-      cp -f docker-daemon/dockerd-ce /usr/bin/dockerd-ce
+  which cryptsetup 2>/dev/null
+  if [ $? -ne 0 ]; then
+    yum install -y cryptsetup
+    CRYPTSETUP_RESULT=$?
+    if [ $CRYPTSETUP_RESULT -ne 0 ]; then
+      echo_failure "Error: Secure Docker Daemon requires cryptsetup - Install failed. Exiting."
+      exit $CRYPTSETUP_RESULT
     fi
+  fi
+  echo "Installing secure docker daemon"
+  systemctl stop docker
+
+  # Take backup of existing docker CLI and daemon binaries and configs
+  mkdir -p $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+  cp /usr/bin/docker $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+  chown -R root:root docker-daemon/
+    
+  cp -f docker-daemon/docker /usr/bin/
+  which /usr/bin/dockerd-ce 2>/dev/null
+  if [ $? -ne 0 ]; then
+    cp /usr/bin/dockerd $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+    cp -f docker-daemon/dockerd-ce /usr/bin/dockerd
+  else
+    cp /usr/bin/dockerd-ce $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+    cp -f docker-daemon/dockerd-ce /usr/bin/dockerd-ce
+  fi
 
     # backup config files
-    if [ -f "/etc/docker/daemon.json" ]; then
-      cp /etc/docker/daemon.json $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-    fi
-    cp /lib/systemd/system/docker.service $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+  if [ -f "/etc/docker/daemon.json" ]; then
+    cp /etc/docker/daemon.json $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
+  fi
+  cp /lib/systemd/system/docker.service $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
 
-    install_secure_docker_plugin
+  install_secure_docker_plugin
 
-    echo "Starting secure docker engine"
-    mkdir -p /etc/docker
-    cp daemon.json /etc/docker/ 
-    systemctl daemon-reload
-    systemctl start docker
-    cp uninstall-container-security-dependencies.sh $WORKLOAD_AGENT_HOME/secure-docker-daemon/
+  echo "Starting secure docker engine"
+  mkdir -p /etc/docker
+  cp daemon.json /etc/docker/
+  systemctl daemon-reload
+  systemctl start docker
+  cp uninstall-container-security-dependencies.sh $WORKLOAD_AGENT_HOME/secure-docker-daemon/
+elif [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "Y" ] || [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "yes" ]; then
+  isinstalled=$(rpm -q cri-o)
+  if [ "$isinstalled" == "package cri-o is not installed" ]; then
+    echo_warning "Prerequisite cri-o is not installed, please install cri-o runtime before proceeding with container confidentiality"
   fi
 else
   yum_packages=(libvirt cryptsetup)
