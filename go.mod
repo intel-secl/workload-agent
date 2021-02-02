@@ -1,17 +1,17 @@
 module intel/isecl/wlagent/v3
 
 require (
-        github.com/fsnotify/fsnotify v1.4.9
-        github.com/intel-secl/intel-secl/v3 v3.4.0
-        github.com/pkg/errors v0.9.1
-        github.com/sirupsen/logrus v1.4.2
-        github.com/stretchr/testify v1.6.1
-        gopkg.in/yaml.v2 v2.3.0
-        intel/isecl/lib/common/v3 v3.4.0
-        intel/isecl/lib/platform-info/v3 v3.4.0
-        intel/isecl/lib/tpmprovider/v3 v3.4.0
-        intel/isecl/lib/verifier/v3 v3.4.0
-        intel/isecl/lib/vml/v3 v3.4.0
+	github.com/fsnotify/fsnotify v1.4.9
+	github.com/intel-secl/intel-secl/v3 v3.4.0
+	github.com/pkg/errors v0.9.1
+	github.com/sirupsen/logrus v1.4.2
+	github.com/stretchr/testify v1.6.1
+	gopkg.in/yaml.v2 v2.3.0
+	intel/isecl/lib/common/v3 v3.4.0
+	intel/isecl/lib/platform-info/v3 v3.4.0
+	intel/isecl/lib/tpmprovider/v3 v3.4.0
+	intel/isecl/lib/verifier/v3 v3.4.0
+	intel/isecl/lib/vml/v3 v3.4.0
 )
 
 replace intel/isecl/lib/tpmprovider/v3 => gitlab.devtools.intel.com/sst/isecl/lib/tpm-provider.git/v3 v3.4/develop

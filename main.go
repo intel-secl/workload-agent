@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"intel/isecl/lib/common/v3/exec"
 	cLog "intel/isecl/lib/common/v3/log"
 	"intel/isecl/lib/common/v3/log/message"
@@ -33,10 +34,14 @@ var (
 	Time              = ""
 	Branch            = ""
 	rpcSocketFilePath = consts.RunDirPath + consts.RPCSocketFileName
+	log, secLog       *logrus.Entry
 )
 
-var log = cLog.GetDefaultLogger()
-var secLog = cLog.GetSecurityLogger()
+func init() {
+	config.LogConfiguration(config.Configuration.LogEnableStdout)
+	log = cLog.GetDefaultLogger()
+	secLog = cLog.GetSecurityLogger()
+}
 
 func printVersion() {
 	fmt.Printf("Version %s\nBuild %s at %s\n", Version, Branch, Time)
@@ -95,18 +100,19 @@ func main() {
 	}
 	switch arg := strings.ToLower(args[0]); arg {
 	case "--version", "-v":
+		config.LogConfiguration(false)
 		printVersion()
 
 	case "setup":
 		// Everytime, we run setup, need to make sure that the configuration is complete
-		// So lets run the Configurer as a seperate runner. We could have made a single runner
+		// So lets run the Configurer as a separate runner. We could have made a single runner
 		// with the first task as the Configurer. However, the logic in the common setup task
 		// runner runs only the tasks passed in the argument if there are 1 or more tasks.
 		// This means that with current logic, if there are no specific tasks passed in the
-		// argument, we will only run the confugurer but the intention was to run all of them
+		// argument, we will only run the Configurer but the intention was to run all of them
 
 		// TODO : The right way to address this is to pass the arguments from the commandline
-		// to a functon in the workload agent setup package and have it build a slice of tasks
+		// to a function in the workload agent setup package and have it build a slice of tasks
 		// to run.
 		config.LogConfiguration(false)
 		err := config.SaveConfiguration(context)
@@ -194,25 +200,21 @@ func main() {
 		}
 
 	case "runservice":
-		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		runservice()
 
 	case "start":
-		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		start()
 
 	case "stop":
-		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		stop()
 
 	case "status":
-		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		fmt.Println("Workload Agent Status")
 		stdout, stderr, _ := exec.RunCommandWithTimeout(consts.ServiceStatusCmd, 2)
 
 		// When stopped, 'systemctl status wlagent' will return '3' and print
 		// the status message to stdout.  Other errors (ex 'systemctl status xyz') will return
-		// an error code (ex. 4) and write to stderr.  Alwyas print stdout and print
+		// an error code (ex. 4) and write to stderr. Always print stdout and print
 		// stderr if present.
 		fmt.Println(stdout)
 		if stderr != "" {
@@ -387,6 +389,8 @@ func main() {
 		os.Exit(0)
 
 	case "uninstall":
+		config.LogConfiguration(false)
+
 		_, err := os.Stat(consts.OptDirPath + "secure-docker-daemon")
 		if err == nil {
 			removeSecureDockerDaemon()
@@ -412,11 +416,13 @@ func main() {
 		}
 
 	default:
+		config.LogConfiguration(false)
 		fmt.Printf("Unrecognized option : %s\n", arg)
 		secLog.Errorf("%s Command not found", message.InvalidInputProtocolViolation)
 		fallthrough
 
 	case "help", "-help", "--help":
+		config.LogConfiguration(false)
 		printUsage()
 	}
 }
@@ -489,6 +495,18 @@ func runservice() {
 	defer log.Trace("main:runservice() Leaving")
 	// Save log configurations
 	//TODO : daemon log configuration - does it need to be passed in?
+
+	//check if the wlagent run directory path is already created
+	if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
+			log.WithError(err).Fatalf("main:runservice() could not create directory: %s, err: %s", consts.RunDirPath, err)
+		}
+	}
+
+	loadIVAMapErr := util.LoadImageVMAssociation()
+	if loadIVAMapErr != nil {
+		log.WithError(loadIVAMapErr).Fatal("main:runservice() error loading ImageVMAssociation map")
+	}
 
 	// open a connection to TPM
 	_, err := util.GetTpmInstance()

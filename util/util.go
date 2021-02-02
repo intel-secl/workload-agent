@@ -29,24 +29,10 @@ type ImageVMAssociation struct {
 	VMCount   int    `yaml:"vmcount"`
 }
 
-func init() {
-	//check if the wlagent run direcotry path is already created
-	if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
-			log.WithError(err).Fatalf("util/util:init could not create directory: %s, err: %s", consts.RunDirPath, err)
-		}
-	}
-
-	loadIVAMapErr := loadImageVMAssociation()
-	if loadIVAMapErr != nil {
-		log.WithError(loadIVAMapErr).Fatal("util/util:init error loading ImageVMAssociation map")
-	}
-}
-
-// loadImageVMAssociation method loads image vm association from yaml file
-func loadImageVMAssociation() error {
-	log.Trace("util/util:loadImageVMAssociation Entering")
-	defer log.Trace("util/util:loadImageVMAssociation Leaving")
+// LoadImageVMAssociation method loads image vm association from yaml file
+func LoadImageVMAssociation() error {
+	log.Trace("util/util:LoadImageVMAssociation Entering")
+	defer log.Trace("util/util:LoadImageVMAssociation Leaving")
 
 	imageVMAssociationFilePath := consts.RunDirPath + consts.ImageVmCountAssociationFileName
 	// Read from a file and store it in a string
