@@ -70,7 +70,7 @@ func certifyHostKey(keyInfo *wlaModel.RegisterKeyInfo, keyUsage string) ([]byte,
 	defer log.Trace("clients/hvs_client:certifyHostKey Leaving")
 
 	var c csetup.Context
-	jwtToken, err := c.GetenvSecret(consts.BEARER_TOKEN_ENV, "BEARER_TOKEN")
+	jwtToken, err := c.GetenvSecret(consts.BearerTokenEnv, "BEARER_TOKEN")
 	if jwtToken == "" || err != nil {
 		fmt.Fprintln(os.Stderr, "BEARER_TOKEN is not defined in environment")
 		return nil, errors.Wrap(err, "BEARER_TOKEN is not defined in environment")

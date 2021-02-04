@@ -101,17 +101,6 @@ func GetSigningCertFromFile() (string, error) {
 	return string(f), nil
 }
 
-func GetBindingCertFromFile() (string, error) {
-	log.Trace("config/config:GetBindingCertFromFile() Entering")
-	defer log.Trace("config/config:GetBindingCertFromFile() Leaving")
-
-	f, err := getFileContentFromConfigDir(consts.BindingKeyPemFileName)
-	if err != nil {
-		return "", errors.Wrapf(err, "config/config:BindingKeyPemFileName() Error while getting contents of File :%s", consts.BindingKeyPemFileName)
-	}
-	return string(f), nil
-}
-
 type CommandError struct {
 	IssuedCommand string
 	StdError      string
@@ -180,128 +169,134 @@ func init() {
 
 // SaveConfiguration is used to save configurations that are provided in environment during setup tasks
 // This is called when setup tasks are called
-func SaveConfiguration(c csetup.Context) error {
+func SaveConfiguration(c csetup.Context, taskName string) error {
 	log.Trace("config/config:SaveConfiguration() Entering")
 	defer log.Trace("config/config:SaveConfiguration() Leaving")
-	var err error
 
-	tlsCertDigest, err := c.GetenvString(consts.CmsTlsCertDigestEnv, "CMS TLS certificate digest")
-	if err == nil && tlsCertDigest != "" {
-		Configuration.CmsTlsCertDigest = tlsCertDigest
-	} else if strings.TrimSpace(Configuration.CmsTlsCertDigest) == "" {
-		return errors.Wrap(err, "CMS_TLS_CERT_SHA384 is not defined in environment or configuration file")
-	}
+	switch taskName {
+	case consts.SetupAllCommand:
+		aasAPIUrl, err := c.GetenvString(consts.AasUrl, "AAS API URL")
+		if err == nil && aasAPIUrl != "" {
+			Configuration.Aas.BaseURL = aasAPIUrl
+		} else if strings.TrimSpace(Configuration.Aas.BaseURL) == "" {
+			return errors.Wrap(err, "AAS_API_URL is not defined in environment or configuration file")
+		}
 
-	cmsBaseUrl, err := c.GetenvString(consts.CMS_BASE_URL, "CMS Base URL")
-	if err == nil && cmsBaseUrl != "" {
-		Configuration.Cms.BaseURL = cmsBaseUrl
-	} else if strings.TrimSpace(Configuration.Cms.BaseURL) == "" {
-		return errors.Wrap(err, "CMS_BASE_URL is not defined in environment or configuration file")
-	}
+		wlsAPIUrl, err := c.GetenvString(consts.WlsApiUrlEnv, "Workload Service URL")
+		if err == nil && aasAPIUrl != "" {
+			Configuration.Wls.APIURL = wlsAPIUrl
+		} else if strings.TrimSpace(Configuration.Wls.APIURL) == "" {
+			return errors.Wrap(err, "WLS_API_URL is not defined in environment or configuration file")
+		}
 
-	aasAPIUrl, err := c.GetenvString(consts.AAS_URL, "AAS API URL")
-	if err == nil && aasAPIUrl != "" {
-		Configuration.Aas.BaseURL = aasAPIUrl
-	} else if strings.TrimSpace(Configuration.Aas.BaseURL) == "" {
-		return errors.Wrap(err, "AAS_API_URL is not defined in environment or configuration file")
-	}
+		wlaAASUser, err := c.GetenvString(consts.WlaUsernameEnv, "WLA Service Username")
+		if err == nil && wlaAASUser != "" {
+			Configuration.Wla.APIUsername = wlaAASUser
+		} else if Configuration.Wla.APIUsername == "" {
+			return errors.Wrap(err, "WLA_SERVICE_USERNAME is not defined in environment or configuration file")
+		}
 
-	wlsAPIUrl, err := c.GetenvString(consts.WLS_API_URL, "Workload Service URL")
-	if err == nil && aasAPIUrl != "" {
-		Configuration.Wls.APIURL = wlsAPIUrl
-	} else if strings.TrimSpace(Configuration.Wls.APIURL) == "" {
-		return errors.Wrap(err, "WLS_API_URL is not defined in environment or configuration file")
-	}
+		wlaAASPassword, err := c.GetenvSecret(consts.WlaPasswordEnv, "WLA Service Password")
+		if err == nil && wlaAASPassword != "" {
+			Configuration.Wla.APIPassword = wlaAASPassword
+		} else if strings.TrimSpace(Configuration.Wla.APIPassword) == "" {
+			return errors.Wrap(err, "WLA_SERVICE_PASSWORD is not defined in environment or configuration file")
+		}
 
-	hvsUrl, err := c.GetenvString(consts.HVS_URL, "Verification Service URL")
-	if err == nil && hvsUrl != "" {
-		Configuration.Hvs.APIURL = hvsUrl
-	} else if strings.TrimSpace(Configuration.Hvs.APIURL) == "" {
-		return errors.Wrap(err, "HVS_URL is not defined in environment or configuration file")
-	}
+		// See if the 'TRUSTAGENT_USER' name has been exported to the env.  This is the name
+		// of the Linux user that the trust-agent service runs under (and requires access
+		// to /etc/workload-agent/bindingkey.pem to serve to hvs).  If the name is not in the
+		// environment, assume the default value 'tagent'.
+		taUser, err := c.GetenvString(consts.TAUserNameEnvVar, "Trust Agent User Name")
+		if err == nil && taUser != "" {
+			Configuration.TrustAgent.User = taUser
+		} else if strings.TrimSpace(Configuration.TrustAgent.User) == "" {
+			log.Infof("TRUSTAGENT_USER is not defined in the environment, using default '%s'", consts.DefaultTrustagentUser)
+			Configuration.TrustAgent.User = consts.DefaultTrustagentUser
+		}
 
-	wlaAASUser, err := c.GetenvString(consts.WLA_USERNAME, "WLA Service Username")
-	if err == nil && wlaAASUser != "" {
-		Configuration.Wla.APIUsername = wlaAASUser
-	} else if Configuration.Wla.APIUsername == "" {
-		return errors.Wrap(err, "WLA_SERVICE_USERNAME is not defined in environment or configuration file")
-	}
+		taConfigDir, err := c.GetenvString(consts.TAConfigDirEnvVar, "Trust Agent Configuration Directory")
+		if err == nil && taConfigDir != "" {
+			Configuration.TrustAgent.ConfigDir = taConfigDir
+		} else if strings.TrimSpace(Configuration.TrustAgent.ConfigDir) == "" {
+			log.Infof("TRUSTAGENT_CONFIGURATION is not defined in the environment, using default '%s'", consts.DefaultTrustagentConfiguration)
+			Configuration.TrustAgent.ConfigDir = consts.DefaultTrustagentConfiguration
+		}
 
-	wlaAASPassword, err := c.GetenvSecret(consts.WLA_PASSWORD, "WLA Service Password")
-	if err == nil && wlaAASPassword != "" {
-		Configuration.Wla.APIPassword = wlaAASPassword
-	} else if strings.TrimSpace(Configuration.Wla.APIPassword) == "" {
-		return errors.Wrap(err, "WLA_SERVICE_PASSWORD is not defined in environment or configuration file")
-	}
-
-	// See if the 'TRUSTAGENT_USER' name has been exported to the env.  This is the name
-	// of the Linux user that the trust-agent service runs under (and requires access
-	// to /etc/workload-agent/bindingkey.pem to serve to hvs).  If the name is not in the
-	// environment, assume the default value 'tagent'.
-	taUser, err := c.GetenvString(consts.TAUserNameEnvVar, "Trust Agent User Name")
-	if err == nil && taUser != "" {
-		Configuration.TrustAgent.User = taUser
-	} else if strings.TrimSpace(Configuration.TrustAgent.User) == "" {
-		log.Infof("TRUSTAGENT_USER is not defined in the environment, using default '%s'", consts.DEFAULT_TRUSTAGENT_USER)
-		Configuration.TrustAgent.User = consts.DEFAULT_TRUSTAGENT_USER
-	}
-
-	taConfigDir, err := c.GetenvString(consts.TAConfigDirEnvVar, "Trust Agent Configuration Directory")
-	if err == nil && taConfigDir != "" {
-		Configuration.TrustAgent.ConfigDir = taConfigDir
-	} else if strings.TrimSpace(Configuration.TrustAgent.ConfigDir) == "" {
-		log.Infof("TRUSTAGENT_CONFIGURATION is not defined in the environment, using default '%s'", consts.DEFAULT_TRUSTAGENT_CONFIGURATION)
-		Configuration.TrustAgent.ConfigDir = consts.DEFAULT_TRUSTAGENT_CONFIGURATION
-	}
-
-	if skipFlavorSignatureVerification, err := c.GetenvString(consts.SkipFlavorSignatureVerification,
-		"Skip flavor signature verification"); err == nil {
-		Configuration.SkipFlavorSignatureVerification, err = strconv.ParseBool(skipFlavorSignatureVerification)
-		if err != nil {
-			log.Warn("SKIP_FLAVOR_SIGNATURE_VERIFICATION is set to invalid value (should be true/false). " +
-				"Setting it to true by default")
+		if skipFlavorSignatureVerification, err := c.GetenvString(consts.SkipFlavorSignatureVerificationEnv,
+			"Skip flavor signature verification"); err == nil {
+			Configuration.SkipFlavorSignatureVerification, err = strconv.ParseBool(skipFlavorSignatureVerification)
+			if err != nil {
+				log.Warn("SKIP_FLAVOR_SIGNATURE_VERIFICATION is set to invalid value (should be true/false). " +
+					"Setting it to true by default")
+				Configuration.SkipFlavorSignatureVerification = true
+			}
+		} else {
+			log.Info("SKIP_FLAVOR_SIGNATURE_VERIFICATION is not set. Setting it to true by default")
 			Configuration.SkipFlavorSignatureVerification = true
 		}
-	} else {
-		log.Info("SKIP_FLAVOR_SIGNATURE_VERIFICATION is not set. Setting it to true by default")
-		Configuration.SkipFlavorSignatureVerification = true
-	}
 
-	ll, err := c.GetenvString(consts.LogLevelEnvVar, "Logging Level")
-	if err != nil {
-		log.Info("No logging level specified, using default logging level: Info")
-		Configuration.LogLevel = logrus.InfoLevel
-	} else if Configuration.LogLevel != 0 {
-		log.Info("No change in logging level")
-	} else {
-		Configuration.LogLevel, err = logrus.ParseLevel(ll)
+		ll, err := c.GetenvString(consts.LogLevelEnvVar, "Logging Level")
 		if err != nil {
-			log.Info("Invalid logging level specified, using default logging level: Info")
+			log.Info("No logging level specified, using default logging level: Info")
 			Configuration.LogLevel = logrus.InfoLevel
+		} else if Configuration.LogLevel != 0 {
+			log.Info("No change in logging level")
+		} else {
+			Configuration.LogLevel, err = logrus.ParseLevel(ll)
+			if err != nil {
+				log.Info("Invalid logging level specified, using default logging level: Info")
+				Configuration.LogLevel = logrus.InfoLevel
+			}
+		}
+
+		logEntryMaxLength, err := c.GetenvInt(consts.LogEntryMaxlengthEnv, "Maximum length of each entry in a log")
+		if err == nil && logEntryMaxLength >= consts.MinLogEntryMaxlength {
+			Configuration.LogMaxLength = logEntryMaxLength
+		} else if Configuration.LogMaxLength != 0 {
+			log.Info("No change in Log Entry Max Length")
+		} else {
+			log.Info("Invalid Log Entry Max Length defined (should be > ", consts.MinLogEntryMaxlength, "), using default value:", consts.DefaultLogEntryMaxlength)
+			Configuration.LogMaxLength = consts.DefaultLogEntryMaxlength
+		}
+
+		Configuration.LogEnableStdout = false
+		logEnableStdout, err := c.GetenvString("WLA_ENABLE_CONSOLE_LOG", "Workload Agent Enable standard output")
+		if err == nil && logEnableStdout != "" {
+			Configuration.LogEnableStdout, err = strconv.ParseBool(logEnableStdout)
+			if err != nil {
+				log.Info("Error while parsing the variable WLA_ENABLE_CONSOLE_LOG, setting to default value false")
+			}
+		}
+
+		Configuration.TrustAgent.AikPemFile = filepath.Join(Configuration.TrustAgent.ConfigDir, consts.TAAikPemFileName)
+		Configuration.ConfigComplete = true
+		fallthrough
+
+	case consts.DownloadRootCACertCommand:
+		cmsBaseUrl, err := c.GetenvString(consts.CmsBaseUrl, "CMS Base URL")
+		if err == nil && cmsBaseUrl != "" {
+			Configuration.Cms.BaseURL = cmsBaseUrl
+		} else if strings.TrimSpace(Configuration.Cms.BaseURL) == "" {
+			return errors.Wrap(err, "CMS_BASE_URL is not defined in environment or configuration file")
+		}
+
+		tlsCertDigest, err := c.GetenvString(consts.CmsTlsCertDigestEnv, "CMS TLS certificate digest")
+		if err == nil && tlsCertDigest != "" {
+			Configuration.CmsTlsCertDigest = tlsCertDigest
+		} else if strings.TrimSpace(Configuration.CmsTlsCertDigest) == "" {
+			return errors.Wrap(err, "CMS_TLS_CERT_SHA384 is not defined in environment or configuration file")
+		}
+
+	case consts.RegisterBindingKeyCommand, consts.RegisterSigningKeyCommand:
+		hvsUrl, err := c.GetenvString(consts.HvsUrlEnv, "Verification Service URL")
+		if err == nil && hvsUrl != "" {
+			Configuration.Hvs.APIURL = hvsUrl
+		} else if strings.TrimSpace(Configuration.Hvs.APIURL) == "" {
+			return errors.Wrap(err, "HVS_URL is not defined in environment or configuration file")
 		}
 	}
 
-	logEntryMaxLength, err := c.GetenvInt(consts.LogEntryMaxlengthEnv, "Maximum length of each entry in a log")
-	if err == nil && logEntryMaxLength >= 100 {
-		Configuration.LogMaxLength = logEntryMaxLength
-	} else if Configuration.LogMaxLength != 0 {
-		log.Info("No change in Log Entry Max Length")
-	} else {
-		log.Info("Invalid Log Entry Max Length defined (should be > 100), using default value:", consts.DefaultLogEntryMaxlength)
-		Configuration.LogMaxLength = consts.DefaultLogEntryMaxlength
-	}
-
-	Configuration.LogEnableStdout = false
-	logEnableStdout, err := c.GetenvString("WLA_ENABLE_CONSOLE_LOG", "Workload Agent Enable standard output")
-	if err == nil && logEnableStdout != "" {
-		Configuration.LogEnableStdout, err = strconv.ParseBool(logEnableStdout)
-		if err != nil {
-			log.Info("Error while parsing the variable WLA_ENABLE_CONSOLE_LOG, setting to default value false")
-		}
-	}
-
-	Configuration.TrustAgent.AikPemFile = filepath.Join(Configuration.TrustAgent.ConfigDir, consts.TAAikPemFileName)
-	Configuration.ConfigComplete = true
 	fmt.Println("Configuration Loaded")
 	log.Info("config/config:SaveConfiguration() Saving Environment variables inside the configuration file")
 	return Save()

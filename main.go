@@ -115,13 +115,6 @@ func main() {
 		// to a function in the workload agent setup package and have it build a slice of tasks
 		// to run.
 		config.LogConfiguration(false)
-		err := config.SaveConfiguration(context)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "main:main() Unable to save configuration in config.yml ")
-			log.WithError(err).Error("main:main() Unable to save configuration in config.yml")
-			os.Exit(1)
-		}
-
 		flags := args
 		if len(args) > 1 {
 			flags = args[2:]
@@ -131,13 +124,22 @@ func main() {
 			os.Exit(1)
 		}
 
-		if len(args) >= 2 &&
-			args[1] != "download_ca_cert" &&
-			args[1] != "SigningKey" &&
-			args[1] != "BindingKey" &&
-			args[1] != "RegisterSigningKey" &&
-			args[1] != "RegisterBindingKey" &&
-			args[1] != "all" {
+		var taskName string
+		if len(args) >= 2 {
+			taskName = args[1]
+		}
+
+		switch taskName {
+		case consts.SetupAllCommand, consts.DownloadRootCACertCommand,
+			consts.RegisterSigningKeyCommand, consts.RegisterBindingKeyCommand:
+			err := config.SaveConfiguration(context, taskName)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "main:main() Unable to save configuration in config.yml ")
+				log.WithError(err).Error("main:main() Unable to save configuration in config.yml")
+				os.Exit(1)
+			}
+
+		default:
 			fmt.Fprintln(os.Stderr, "Error: Unknown setup task ", args[1])
 			printUsage()
 			os.Exit(1)
@@ -186,16 +188,14 @@ func main() {
 			AskInput: false,
 		}
 		tasklist := []string{}
-		if args[1] != "all" {
+		if taskName != consts.SetupAllCommand {
 			tasklist = args[1:]
 		}
-		config.LogConfiguration(false)
 		err = setupRunner.RunTasks(tasklist...)
 		if err != nil {
 			log.WithError(err).Error("main:main() Error running setup")
 			log.Tracef("%+v", err)
 			fmt.Fprintf(os.Stderr, "Error running setup tasks...\n")
-			t.Close()
 			os.Exit(1)
 		}
 
