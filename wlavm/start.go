@@ -1,20 +1,19 @@
+// +build linux
+
 /*
  * Copyright (C) 2019 Intel Corporation
  * SPDX-License-Identifier: BSD-3-Clause
  */
-// +build linux
 
 package wlavm
 
 import (
 	"crypto"
 	"encoding/json"
-
 	wlsModel "github.com/intel-secl/intel-secl/v3/pkg/model/wls"
+	"github.com/pkg/errors"
 	"intel/isecl/lib/common/v3/crypt"
-	"intel/isecl/lib/common/v3/exec"
 	"intel/isecl/lib/common/v3/log/message"
-	osutil "intel/isecl/lib/common/v3/os"
 	"intel/isecl/lib/common/v3/pkg/instance"
 	pinfo "intel/isecl/lib/platform-info/v3/platforminfo"
 	"intel/isecl/lib/tpmprovider/v3"
@@ -26,21 +25,6 @@ import (
 	"intel/isecl/wlagent/v3/filewatch"
 	"intel/isecl/wlagent/v3/libvirt"
 	"intel/isecl/wlagent/v3/util"
-	"io/ioutil"
-	"os"
-	"os/user"
-	"strconv"
-	"strings"
-	"sync"
-
-	"github.com/fsnotify/fsnotify"
-	"github.com/pkg/errors"
-)
-
-var (
-	imgVolumeMtx sync.Mutex
-	vmVolumeMtx  sync.Mutex
-	TpmMtx       sync.Mutex
 )
 
 // Start method is used perform the VM confidentiality check before launching the VM
@@ -51,10 +35,7 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 
 	log.Trace("wlavm/start:Start() Entering")
 	defer log.Trace("wlavm/start:Start() Leaving")
-	var skipImageVolumeCreation = false
 	var err error
-	var skipManifestAndReportCreation = false
-	var isImageEncrypted bool
 
 	log.Info("wlavm/start:Start() Parsing domain XML to get image UUID, image path, VM UUID, VM path and disk size")
 	d, err := libvirt.NewDomainParser(domainXMLContent, libvirt.Start)
@@ -65,59 +46,10 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	}
 
 	vmUUID := d.GetVMUUID()
-	vmPath := d.GetVMPath()
 	imageUUID := d.GetImageUUID()
 	imagePath := d.GetImagePath()
-	size := d.GetDiskSize()
-
-	// In prepare state, the image path returned is nil
-	if imagePath == "" {
-		// skip manifest and report creation in prepare state and create them in start state
-		skipManifestAndReportCreation = true
-		imagePath, err = imagePathFromVMAssociationFile(imageUUID)
-		if err != nil {
-			log.Errorf("wlavm/start:Start() Error while retrieving image path from image-vm association file: %s", err.Error())
-			log.Tracef("%+v", err)
-			return false
-		} else if imagePath == "" {
-			// if image path does not exist in image-vm association file, return back to hook
-			log.Infof("wlavm/start:Start() There are no VM's launched from %s encrypted image, returning to hook", imageUUID)
-			return true
-		}
-	}
-
-	// check if the image is a symlink, if it is avoid creating image dm-crypt volume
-	log.Info("wlavm/start:Start() Checking if the image file is a symlink...")
-	symLinkOut, err := os.Readlink(imagePath)
-	imageFileStat, imageFileStatErr := os.Stat(symLinkOut)
-	if len(strings.TrimSpace(symLinkOut)) > 0 && imageFileStat.Size() > 0 && imageFileStatErr == nil {
-		log.Info("wlavm/start:Start() The image is a symlink and the file linked exists, so will be skipping the image dm-crypt volume creation")
-		skipImageVolumeCreation = true
-	} else if err != nil {
-		// check if image is encrypted
-		_, err = os.Stat(imagePath)
-		if os.IsNotExist(err) {
-			log.Errorf("wlavm/start:Start() Image does not exist in location %s", imagePath)
-			log.Tracef("%+v", err)
-			return false
-		}
-		log.Info("wlavm/start:Start() Image is not a symlink, so checking is image is encrypted...")
-		isImageEncrypted, err = crypt.EncryptionHeaderExists(imagePath)
-		if err != nil {
-			log.Errorf("wlavm/start:Start() Error while trying to check if the image is encrypted: %s", err.Error())
-			log.Tracef("%+v", err)
-			return false
-		}
-		log.Info("wlavm/start:Start() Image encryption status : ", isImageEncrypted)
-		// if image is not encrypted, return true to libvirt hook
-		if !isImageEncrypted {
-			log.Info("wlavm/start:Start() Image is not encrypted, returning to the hook")
-			return true
-		}
-	}
 
 	var flavorKeyInfo wlsModel.FlavorKey
-	var tpmWrappedKey []byte
 
 	// get host hardware UUID
 	secLog.Infof("wlavm/start:Start() %s, Trying to get host hardware UUID", message.SU)
@@ -147,47 +79,6 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 		return false
 	}
 
-	if flavorKeyInfo.Flavor.EncryptionRequired {
-		if len(flavorKeyInfo.Key) == 0 {
-			log.Error("wlavm/start:Start() Flavor Key is empty")
-			return false
-		}
-		tpmWrappedKey = flavorKeyInfo.Key
-		// unwrap key
-		log.Info("wlavm/start:Start() Unwrapping the key...")
-		TpmMtx.Lock()
-		key, unWrapErr := util.UnwrapKey(tpmWrappedKey)
-		TpmMtx.Unlock()
-		if unWrapErr != nil {
-			secLog.WithError(err).Error("wlavm/start:Start() Error unwrapping the key")
-			return false
-		}
-
-		if !skipImageVolumeCreation {
-			log.Info("wlavm/start:Start() Creating and mounting image dm-crypt volume")
-			err = imageVolumeManager(imageUUID, imagePath, size, key)
-			if err != nil {
-				log.WithError(err).Error("wlavm/start:Start() Error while creating and mounting image dm-crypt volume ")
-				return false
-			}
-		}
-
-		vmSymLinkOut, _ := os.Readlink(vmPath)
-		vmSymLinkStat, vmSymLinkStatErr := os.Stat(vmSymLinkOut)
-		if len(strings.TrimSpace(vmSymLinkOut)) <= 0 || vmSymLinkStatErr != nil || vmSymLinkStat.Size() <= 0 {
-			log.Info("wlavm/start:Start() Creating and mounting vm dm-crypt volume")
-			err = vmVolumeManager(vmUUID, vmPath, size, key, filewatcher)
-			if err != nil {
-				log.WithError(err).Error("wlavm/start:Start() Error while creating and mounting vm dm-crypt volume ")
-				return false
-			}
-		}
-	}
-
-	if skipManifestAndReportCreation {
-		log.Debug("wlavm/start:Start() Skipping manifest and report creation in prepare VM state")
-		return true
-	}
 	//create VM manifest
 	log.Info("wlavm/start:Start() Creating VM Manifest")
 	manifest, err := vml.CreateVMManifest(vmUUID, hardwareUUID, imageUUID, true)
@@ -214,202 +105,6 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 
 	log.Infof("wlavm/start:Start() VM %s started", vmUUID)
 	return true
-}
-
-func vmVolumeManager(vmUUID string, vmPath string, size int, key []byte, filewatcher *filewatch.Watcher) error {
-	log.Trace("wlavm/start:vmVolumeManager() Entering")
-	defer log.Trace("wlavm/start:vmVolumeManager() Leaving")
-
-	// create vm volume
-	var err error
-	vmDeviceMapperPath := consts.DevMapperDirPath + vmUUID
-	vmSparseFilePath := strings.Replace(vmPath, "disk", vmUUID+"_sparse", -1)
-	// check if sparse file exists, if it does, skip copying the change disk file to mount point
-	_, sparseFleStatErr := os.Stat(vmSparseFilePath)
-	vmVolumeMtx.Lock()
-	secLog.Infof("wlavm/start:vmVolumeManager() %s, Creating VM dm-crypt volume in %s", message.SU, vmDeviceMapperPath)
-	err = vml.CreateVolume(vmSparseFilePath, vmDeviceMapperPath, key, size)
-	vmVolumeMtx.Unlock()
-	if err != nil {
-		return errors.Wrap(err, "wlavm/start:vmVolumeManager() error creating vm dm-crypt volume")
-	}
-
-	// mount the vm dmcrypt volume on to a mount path
-	log.Debug("wlavm/start:vmVolumeManager() Mounting the vm volume on a mount path")
-	// vmDeviceMapperMountPath := strings.Replace(vmPath, "disk", "", -1) + vmUUID
-	var vmMountPath = consts.MountPath + vmUUID
-	err = checkMountPathExistsAndMountVolume(vmMountPath, vmDeviceMapperPath, "disk")
-	if err != nil {
-		return errors.Wrap(err, "wlavm/start:vmVolumeManager() error checking if mount path exists and mounting the volume")
-	}
-
-	// is sparse file exists, the image is already decrypted, so returning back to VM start method
-	if !os.IsNotExist(sparseFleStatErr) {
-		log.Debug("wlavm/start:vmVolumeManager() Sparse file of the VM already exists, skipping copying the change disk to mount point...")
-		return nil
-	}
-
-	// copy the files from vm path
-	args := []string{vmPath, vmMountPath}
-	secLog.Infof("wlavm/start:vmVolumeManager() %s, Copying all the files from %s to vm mount path", message.SU, vmPath)
-	_, err = exec.ExecuteCommand("cp", args)
-	if err != nil {
-		return errors.Wrapf(err, "wlavm/start:vmVolumeManager() error copying the vm path %s change disk to mount path. %s", vmPath, vmMountPath)
-	}
-
-	// remove the encrypted image file and create a symlink with the dm-crypt volume
-	secLog.Infof("wlavm/start:vmVolumeManager() %s, Deleting change disk: %s", message.SU, vmPath)
-	err = os.RemoveAll(vmPath)
-	if err != nil {
-		return errors.Wrapf(err, "wlavm/start:vmVolumeManager() error deleting the change disk: %s", vmPath)
-	}
-
-	changeDiskFile := vmMountPath + "/disk"
-	log.Debug("wlavm/start:vmVolumeManager() Creating a symlink between the vm and the volume")
-	// create symlink between the image and the dm-crypt volume
-	err = createSymLinkAndChangeOwnership(changeDiskFile, vmPath, vmMountPath)
-	if err != nil {
-		return errors.Wrap(err, "wlavm/start:vmVolumeManager() error creating a symlink and changing file ownership")
-	}
-
-	// trigger a file watcher event to delete VM mount path when disk.info file is deleted on VM delete
-	vmDiskInfoFile := strings.Replace(vmPath, "disk", "disk.info", -1)
-	// Watch the symlink for deletion, and remove the _sparseFile if image is deleted
-	err = filewatcher.HandleEvent(vmDiskInfoFile, func(e fsnotify.Event) {
-		if e.Op&fsnotify.Remove == fsnotify.Remove {
-			secLog.Infof("wlavm/start:vmVolumeManager() %s, Removing vm mount path at: %s", message.SU, vmMountPath)
-			err = os.RemoveAll(vmMountPath)
-			if err != nil {
-				log.Errorf("wlavm/start:vmVolumeManager() Failed to remove mount path")
-			}
-		}
-	})
-	if err != nil {
-		log.Errorf("wlavm/start:vmVolumeManager() Failed to handle event: %v", err)
-	}
-
-	return nil
-}
-
-func imageVolumeManager(imageUUID string, imagePath string, size int, key []byte) error {
-	log.Trace("wlavm/start:imageVolumeManager() Entering")
-	defer log.Trace("wlavm/start:imageVolumeManager() Leaving")
-
-	// create image dm-crypt volume
-	var err error
-	imageDeviceMapperPath := consts.DevMapperDirPath + imageUUID
-	sparseFilePath := imagePath + "_sparseFile"
-	// check if the sprse file already exists, if it does, skip image file decryption
-	_, sparseFileStatErr := os.Stat(sparseFilePath)
-	imgVolumeMtx.Lock()
-	secLog.Infof("wlavm/start:imageVolumeManager() %s, Creating a dm-crypt volume for the image %s", message.SU, imageUUID)
-	err = vml.CreateVolume(sparseFilePath, imageDeviceMapperPath, key, size)
-	imgVolumeMtx.Unlock()
-	if err != nil {
-		if strings.Contains(err.Error(), "device mapper of the same already exists") {
-			log.Debug("wlavm/start:imageVolumeManager() Device mapper of same name already exists. Skipping image volume creation..")
-			return nil
-		} else {
-			return errors.Wrap(err, "wlavm/start:imageVolumeManager() error while creating image dm-crypt volume for image")
-		}
-	}
-
-	//check if the image device mapper is mount path exists, if not create it
-	imageDeviceMapperMountPath := consts.MountPath + imageUUID
-	err = checkMountPathExistsAndMountVolume(imageDeviceMapperMountPath, imageDeviceMapperPath, imageUUID)
-	if err != nil {
-		return errors.Wrap(err, "wlavm/start:imageVolumeManager() error checking if image mount path exists and mounting the volume")
-	}
-
-	// is sparse file exists, the image is already decrypted, so returning back to VM start method
-	if !os.IsNotExist(sparseFileStatErr) {
-		log.Debug("wlavm/start:imageVolumeManager() Sparse file of the image already exists, skipping image decryption...")
-		return nil
-	}
-
-	// read image file contents
-	log.Debug("Reading the encrypted image file...")
-	encryptedImage, ioReadErr := ioutil.ReadFile(imagePath)
-	if ioReadErr != nil {
-		return errors.New("wlavm/start:imageVolumeManager() error while reading the image file")
-	}
-
-	//decrypt the image
-	log.Info("wlavm/start:imageVolumeManager() Decrypting the image")
-	decryptedImage, err := vml.Decrypt(encryptedImage, key)
-	if err != nil {
-		return errors.Wrap(err, "wlavm/start:imageVolumeManager() error while decrypting the image")
-	}
-	log.Info("wlavm/start:imageVolumeManager() Image decrypted successfully")
-	// write the decrypted data into a file in image mount path
-	decryptedImagePath := imageDeviceMapperMountPath + "/" + imageUUID
-	secLog.Infof("wlavm/start:imageVolumeManager() %s, Writing decrypted data in to a file: %s", message.SU, decryptedImagePath)
-	ioWriteErr := ioutil.WriteFile(decryptedImagePath, decryptedImage, 0664)
-	if ioWriteErr != nil {
-		return errors.New("wlavm/start:imageVolumeManager() error writing the decrypted data to file")
-	}
-
-	log.Debug("wlavm/start:imageVolumeManager() Creating a symlink between the image and the volume")
-	err = createSymLinkAndChangeOwnership(decryptedImagePath, imagePath, imageDeviceMapperMountPath)
-	if err != nil {
-		return errors.Wrap(err, "wlavm/start:imageVolumeManager() error creating a symlink and changing file ownership")
-	}
-
-	// Watch the symlink for deletion, and remove the _sparseFile if image is deleted
-	// filewatcher.HandleEvent(imagePath, func(e fsnotify.Event) {
-	// 	if e.Op&fsnotify.Remove == fsnotify.Remove {
-	// 		os.Remove(sparseFilePath)
-	// 	}
-	// })
-	return nil
-}
-
-func createSymLinkAndChangeOwnership(targetFile, sourceFile, mountPath string) error {
-	log.Trace("wlavm/start:Start() Entering")
-	defer log.Trace("wlavm/start:Start() Leaving")
-
-	// get the qemu user info and change image and vm file owner to qemu
-	userID, groupID, err := userInfoLookUp("qemu")
-	if err != nil {
-		return err
-	}
-
-	// remove the encrypted image file and create a symlink with the dm-crypt volume
-	secLog.Infof("wlavm/start:imageVolumeManager() %s, Deleting the enc image file from :%s", message.SU, sourceFile)
-	rmErr := os.RemoveAll(sourceFile)
-	if rmErr != nil {
-		return errors.Wrapf(err, "wlavm/start:createSymLinkAndChangeOwnership() error deleting the change disk: %s", sourceFile)
-	}
-
-	// create symlink between the image and the dm-crypt volume
-	secLog.Infof("wlavm/start:imageVolumeManager() %s, Creating a symlink between %s and %s", message.SU, sourceFile, targetFile)
-	err = os.Symlink(targetFile, sourceFile)
-	if err != nil {
-		return errors.Wrapf(err, "wlavm/start:createSymLinkAndChangeOwnership() error while creating symbolic link")
-	}
-
-	// change the image symlink file ownership to qemu
-	secLog.Infof("wlavm/start:createSymLinkAndChangeOwnership() %s, Changing symlink ownership to qemu", message.SU)
-	err = os.Lchown(sourceFile, userID, groupID)
-	if err != nil {
-		return errors.New("wlavm/start:createSymLinkAndChangeOwnership() error while trying to change symlink owner to qemu")
-	}
-
-	// Giving read write access to the target file
-	secLog.Infof("wlavm/start:createSymLinkAndChangeOwnership() %s, Changing permissions to changed disk path: %s", message.SU, targetFile)
-	err = os.Chmod(targetFile, 0664)
-	if err != nil {
-		return errors.Wrapf(err, "wlavm/start:createSymLinkAndChangeOwnership() error while giving permissions to changed disk path: %s", targetFile)
-	}
-
-	// change the image mount path directory ownership to qemu
-	secLog.Infof("wlavm/start:createSymLinkAndChangeOwnership() %s, Changing the mount path ownership to qemu", message.SU)
-	err = osutil.ChownR(mountPath, userID, groupID)
-
-	if err != nil {
-		return errors.New("wlavm/start:createSymLinkAndChangeOwnership() error trying to change mount path owner to qemu")
-	}
-	return nil
 }
 
 func CreateInstanceTrustReport(manifest instance.Manifest, flavor wlsModel.SignedImageFlavor) bool {
@@ -525,68 +220,4 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	}
 	log.Debug("wlavm/start:createSignatureWithTPM() Report signed by TPM successfully")
 	return signature, nil
-}
-
-// checkMountPathExistsAndMountVolume method is used to check if te mount path exists,
-// if it does not exists, the method creates the mount path and mounts the device mapper.
-func checkMountPathExistsAndMountVolume(mountPath, deviceMapperPath, emptyFileName string) error {
-	log.Trace("wlavm/start:checkMountPathExistsAndMountVolume() Entering")
-	defer log.Trace("wlavm/start:checkMountPathExistsAndMountVolume() Leaving")
-
-	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() %s, Mounting the device mapper: %s", message.SU, deviceMapperPath)
-	mkdirErr := os.MkdirAll(mountPath, 0655)
-	if mkdirErr != nil {
-		return errors.New("wlavm/start:checkMountPathExistsAndMountVolume() error while creating the mount point for the image device mapper")
-	}
-
-	// create an empty image and disk file so that symlinks are not broken after VM stop
-	emptyFilePath := mountPath + "/" + emptyFileName
-	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() %s, Creating an empty file in : %s", message.SU, emptyFilePath)
-	// creating a file with 664 permissions so that nova and qemu can also access it
-	sampleFile, err := os.OpenFile(emptyFilePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0664)
-	if err != nil {
-		return errors.New("wlavm/start:checkMountPathExistsAndMountVolume() error creating a sample file")
-	}
-	defer func() {
-		derr := sampleFile.Close()
-		if derr != nil {
-			log.WithError(derr).Error("Error closing file")
-		}
-	}()
-
-	// get the qemu user info and change image and vm file owner to qemu
-	userID, groupID, err := userInfoLookUp("qemu")
-	if err != nil {
-		return err
-	}
-
-	// change the image mount path directory ownership to qemu
-	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() %s, Changing the mount path ownership to qemu", message.SU)
-	err = osutil.ChownR(mountPath, userID, groupID)
-	if err != nil {
-		return errors.New("wlavm/start:checkMountPathExistsAndMountVolume() error trying to change mount path owner to qemu")
-	}
-
-	secLog.Infof("wlavm/start:checkMountPathExistsAndMountVolume() %s, Mounting the image device mapper %s on %s", message.SU, deviceMapperPath, mountPath)
-	mountErr := vml.Mount(deviceMapperPath, mountPath)
-	if mountErr != nil {
-		if !strings.Contains(mountErr.Error(), "device is already mounted") {
-			return errors.New("wlavm/start:checkMountPathExistsAndMountVolume() error while mounting the image device mapper")
-		}
-	}
-	return nil
-}
-
-func userInfoLookUp(userName string) (int, int, error) {
-	log.Trace("wlavm/start:userInfoLookUp() Entering")
-	defer log.Trace("wlavm/start:userInfoLookUp() Leaving")
-
-	userInfo, err := user.Lookup(userName)
-	if err != nil {
-		return 0, 0, errors.New("wlavm/start:checkMountPathExistsAndMountVolume() error trying to look up qemu userID and groupID")
-	}
-	userID, _ := strconv.Atoi(userInfo.Uid)
-	groupID, _ := strconv.Atoi(userInfo.Gid)
-
-	return userID, groupID, nil
 }

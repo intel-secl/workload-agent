@@ -18,12 +18,15 @@ import (
 	"intel/isecl/wlagent/v3/flavor"
 	"intel/isecl/wlagent/v3/util"
 	"intel/isecl/wlagent/v3/wlavm"
+	"sync"
 
 	"github.com/pkg/errors"
 )
 
 var log = cLog.GetDefaultLogger()
 var secLog = cLog.GetSecurityLogger()
+
+var wlaMtx sync.Mutex
 
 // DomainXML is a struct containing domain XML as argument to allow invocation over RPC
 type DomainXML struct {
@@ -74,7 +77,7 @@ func (e rpcError) Error() string {
 
 // Start forwards the RPC request to wlavm.Start
 func (vm *VirtualMachine) Start(args *DomainXML, reply *bool) error {
-	// Passing the false parameter to ensure the start vm task is not added waitgroup if there is pending signal termination on rpc
+	// Passing the false parameter to ensure the start vm task is not added to waitgroup if there is pending signal termination on rpc
 	_, err := proc.AddTask(false)
 	if err != nil {
 		return errors.Wrap(err, "rpc/server:Start() Could not add task for vm start")
@@ -93,6 +96,30 @@ func (vm *VirtualMachine) Start(args *DomainXML, reply *bool) error {
 	return nil
 }
 
+// Prepare forwards the RPC request to wlavm.Prepare
+func (vm *VirtualMachine) Prepare(args *DomainXML, reply *bool) error {
+	// Passing the false parameter to ensure the prepare vm task is not added to waitgroup if there is pending signal termination on rpc
+	_, err := proc.AddTask(false)
+	if err != nil {
+		return errors.Wrap(err, "rpc/server:Prepare() Could not add task for vm prepare")
+	}
+	defer proc.TaskDone()
+	log.Trace("rpc/server:Prepare() Entering")
+	defer log.Trace("rpc/server:Prepare() Leaving")
+
+	wlaMtx.Lock()
+	defer wlaMtx.Unlock()
+
+	if err = validation.ValidateXMLString(args.XML); err != nil {
+		secLog.Errorf("rpc:server() Prepare: %s, Invalid domain XML format", message.InvalidInputBadParam)
+		return nil
+	}
+
+	// pass in vm.Watcher to get the instance to the File System Watcher
+	*reply = wlavm.Prepare(args.XML, vm.Watcher)
+	return nil
+}
+
 // Stop forwards the RPC request to wlavm.Stop
 func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
 	// Passing the true parameter to ensure the stop vm task is added to waitgroup as this action needs to be completed
@@ -105,6 +132,9 @@ func (vm *VirtualMachine) Stop(args *DomainXML, reply *bool) error {
 
 	log.Trace("rpc/server:Stop() Entering")
 	defer log.Trace("rpc/server:Stop() Leaving")
+
+	wlaMtx.Lock()
+	defer wlaMtx.Unlock()
 
 	if err = validation.ValidateXMLString(args.XML); err != nil {
 		secLog.Errorf("rpc:server() Stop: %s, Invalid domain XML format", message.InvalidInputBadParam)

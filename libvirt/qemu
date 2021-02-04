@@ -3,18 +3,16 @@
 domainxml="-"
 
 if [ $2 == "prepare" ] || [ $2 == "start" ] || [ $2 == "stopped" ]; then
-    domainXmlContents=$( cat $domainxml )
-    if [ $2 == "start" ] || [ $2 == "prepare" ]; then
-        wlagent start-vm "'$domainXmlContents'"
-        if [ $? -ne 0 ]; then
-           exit 1
-        fi
-    elif [ $2 == "stopped" ] ; then
-        wlagent stop-vm "'$domainXmlContents'"
-        if [ $? -ne 0 ]; then
-           exit 1
-        fi
-    fi
+  domainXmlContents=$(cat $domainxml)
+  if [ "$2" == "prepare" ]; then
+    wlagent prepare-vm "'$domainXmlContents'"
+  elif [ "$2" == "start" ]; then
+    wlagent start-vm "'$domainXmlContents'"
+  elif [ "$2" == "stopped" ]; then
+    wlagent stop-vm "'$domainXmlContents'"
+  fi
 fi
 
-exit 0
+if [ $? -ne 0 ]; then
+  exit 1
+fi

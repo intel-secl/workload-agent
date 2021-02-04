@@ -17,6 +17,8 @@ var log = cLog.GetDefaultLogger()
 // const enumerates the Qemu intercept call. The values are Start, Stop or None
 const (
 	None QemuIntercept = iota
+	// Prepare intercept call
+	Prepare
 	// Start intercept call
 	Start
 	//Stop intercept call
@@ -81,14 +83,14 @@ func NewDomainParser(domainXML string, qemuInterceptCall QemuIntercept) (*Domain
 
 	d.imageUUID = domain.Root.UUID
 
-	if d.qemuInterceptCall == Start {
+	if d.qemuInterceptCall == Prepare || d.qemuInterceptCall == Start {
 		d.imagePath = domain.BackingStoreSource.File
 		if d.imagePath == "" {
 			d.imagePath = domain.BackingStoreSource.Dev
 		}
-
-		d.size = domain.Disk
 	}
+
+	d.size = domain.Disk
 
 	return &d, nil
 }

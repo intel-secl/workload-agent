@@ -54,6 +54,17 @@ const (
 	DefaultTrustagentConfiguration     = "/opt/trustagent/configuration"
 )
 
+const (
+	QemuImgUtilPath = "/usr/bin/qemu-img"
+	// Fields for qemu-img info output
+	QemuImgInfoBackingFileField = "backing file"
+	QemuImgInfoVirtualSizeField = "virtual size"
+	QemuImgInfoFileFormatField  = "file format"
+	GetImgInfoCmd               = "info %s --force-share"
+	CreateVmDiskCmd             = "create -f %s -o backing_file=%s,backing_fmt=%s %s"
+	ResizeVmDiskCmd             = "resize %s %s"
+)
+
 // Task Names
 const (
 	SetupAllCommand           = "all"

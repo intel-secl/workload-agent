@@ -60,10 +60,13 @@ func (IAssoc ImageVMAssociation) Delete() (bool, string, error) {
 		if imageAttributes.VMCount == 0 {
 			isLastVM = true
 		}
+	} else {
+		util.MapMtx.Unlock()
+		return true, "", errors.New("wlavm/image_VM_association:Delete() image VM association does not exist")
 	}
 
-	imagePath = imageAttributes.ImagePath
 	util.MapMtx.Unlock()
+	imagePath = imageAttributes.ImagePath
 
 	err := util.SaveImageVMAssociation()
 	if err != nil {
@@ -94,7 +97,7 @@ func (IAssoc ImageVMAssociation) DeleteEntry() error {
 	return nil
 }
 
-func imagePathFromVMAssociationFile(imageUUID string) (string, error) {
+func imagePathFromVMAssociationFile(imageUUID string) string {
 	log.Trace("wlavm/image_VM_association:imagePathFromVMAssociationFile() Entering")
 	defer log.Trace("wlavm/image_VM_association:imagePathFromVMAssociationFile() Leaving")
 
@@ -105,7 +108,7 @@ func imagePathFromVMAssociationFile(imageUUID string) (string, error) {
 	imageAttributes, ok := util.ImageVMAssociations[imageUUID]
 	util.MapMtx.RUnlock()
 	if ok {
-		return imageAttributes.ImagePath, nil
+		return imageAttributes.ImagePath
 	}
-	return "", nil
+	return ""
 }

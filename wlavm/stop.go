@@ -1,8 +1,9 @@
+// +build linux
+
 /*
  * Copyright (C) 2019 Intel Corporation
  * SPDX-License-Identifier: BSD-3-Clause
  */
-// +build linux
 
 package wlavm
 
@@ -18,12 +19,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-)
-
-var (
-	isVmVolume bool
-	isLastVm   bool
-	imagePath  string
 )
 
 var (
@@ -80,15 +75,14 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	// check if this is the last vm associated with the image
 	log.Info("wlavm/stop:Stop() Checking if this is the last vm using the image...")
 	iAssoc := ImageVMAssociation{d.GetImageUUID(), ""}
-	isLastVm, imagePath, err = iAssoc.Delete()
+	isLastVm, imagePath, err := iAssoc.Delete()
 	if err != nil {
 		log.WithError(err).Error("wlavm/stop:Stop() Error while image association deletion")
 		log.Tracef("%+v", err)
-		return false
 	}
 	// as the original image is deleted during the VM start process, there is no way
 	// to check if original image is encrypted. Instead we check if sparse file of image
-	// exists at given path, if it does that means the image was enrypted and volumes were created
+	// exists at given path, if it does that means the image was encrypted and volumes were created
 	if _, err := os.Stat(imagePath + "_sparseFile"); os.IsNotExist(err) {
 		log.Info("wlavm/stop:Stop() The base image is not encrypted, returning to hook...")
 		return true

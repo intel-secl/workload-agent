@@ -5,7 +5,6 @@
 package filewatch
 
 import (
-	"fmt"
 	cLog "intel/isecl/lib/common/v3/log"
 	"sync"
 
@@ -88,6 +87,9 @@ func (w *Watcher) Watch() {
 	}
 }
 
+/*
+Below is an example of how FileWatcher can be used
+
 func ExampleWatcherUsage() {
 	w, _ := NewWatcher()
 	err := w.HandleEvent("/home/user/foobar.txt", func(event fsnotify.Event) {
@@ -102,4 +104,4 @@ func ExampleWatcherUsage() {
 		log.Errorf("filewatch/filewatch:Watch() Error while handling event: %+v", err)
 	}
 	go w.Watch()
-}
+}*/

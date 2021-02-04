@@ -257,6 +257,42 @@ func main() {
 			os.Exit(0)
 		}
 
+	case "prepare-vm":
+		if len(args[1:]) < 1 {
+			log.Errorf("main:main() prepare-vm: Invalid number of parameters %s", message.InvalidInputProtocolViolation)
+			os.Exit(1)
+		}
+
+		secLog.Info("main:main() prepare-vm: wlagent prepare-vm called")
+		conn, err := net.Dial("unix", rpcSocketFilePath)
+		if err != nil {
+			secLog.Errorf("main:main() prepare-vm: Failed to dial wlagent.sock, %s", message.BadConnection)
+			os.Exit(1)
+		}
+		client := rpc.NewClient(conn)
+		defer client.Close()
+
+		// validate domainXML input
+		if err = validation.ValidateXMLString(args[1]); err != nil {
+			secLog.Errorf("main:main() prepare-vm: %s, Invalid domain XML format", message.InvalidInputBadParam)
+			os.Exit(1)
+		}
+
+		var args = wlrpc.DomainXML{
+			XML: args[1],
+		}
+		var prepareState bool
+		err = client.Call("VirtualMachine.Prepare", &args, &prepareState)
+		if err != nil {
+			log.Error("main:main() prepare-vm: Client call failed")
+		}
+
+		if !prepareState {
+			os.Exit(1)
+		} else {
+			os.Exit(0)
+		}
+
 	case "stop-vm":
 		if len(args[1:]) < 1 {
 			secLog.Errorf("main:main() stop-vm: Invalid number of parameters, %s", message.InvalidInputProtocolViolation)

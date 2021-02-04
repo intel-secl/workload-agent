@@ -77,8 +77,8 @@ func SaveImageVMAssociation() error {
 	}
 
 	MapMtx.Lock()
+	defer MapMtx.Unlock()
 	err = ioutil.WriteFile(imageVMAssociationFilePath, associations, 0600)
-	MapMtx.Unlock()
 	if err != nil {
 		return errors.Wrapf(err, "util/util:SaveImageVMAssociation() Error while writing file:%s", imageVMAssociationFilePath)
 	}
