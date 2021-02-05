@@ -173,6 +173,35 @@ func SaveConfiguration(c csetup.Context, taskName string) error {
 	log.Trace("config/config:SaveConfiguration() Entering")
 	defer log.Trace("config/config:SaveConfiguration() Leaving")
 
+	var err error
+
+	checkCmsConfig := func(c csetup.Context) error {
+		cmsBaseUrl, err := c.GetenvString(consts.CmsBaseUrl, "CMS Base URL")
+		if err == nil && cmsBaseUrl != "" {
+			Configuration.Cms.BaseURL = cmsBaseUrl
+		} else if strings.TrimSpace(Configuration.Cms.BaseURL) == "" {
+			return errors.Wrap(err, "CMS_BASE_URL is not defined in environment or configuration file")
+		}
+
+		tlsCertDigest, err := c.GetenvString(consts.CmsTlsCertDigestEnv, "CMS TLS certificate digest")
+		if err == nil && tlsCertDigest != "" {
+			Configuration.CmsTlsCertDigest = tlsCertDigest
+		} else if strings.TrimSpace(Configuration.CmsTlsCertDigest) == "" {
+			return errors.Wrap(err, "CMS_TLS_CERT_SHA384 is not defined in environment or configuration file")
+		}
+		return nil
+	}
+
+	checkHvsConfig := func(c csetup.Context) error {
+		hvsUrl, err := c.GetenvString(consts.HvsUrlEnv, "Verification Service URL")
+		if err == nil && hvsUrl != "" {
+			Configuration.Hvs.APIURL = hvsUrl
+		} else if strings.TrimSpace(Configuration.Hvs.APIURL) == "" {
+			return errors.Wrap(err, "HVS_URL is not defined in environment or configuration file")
+		}
+		return nil
+	}
+
 	switch taskName {
 	case consts.SetupAllCommand:
 		aasAPIUrl, err := c.GetenvString(consts.AasUrl, "AAS API URL")
@@ -270,30 +299,28 @@ func SaveConfiguration(c csetup.Context, taskName string) error {
 		}
 
 		Configuration.TrustAgent.AikPemFile = filepath.Join(Configuration.TrustAgent.ConfigDir, consts.TAAikPemFileName)
-		Configuration.ConfigComplete = true
-		fallthrough
 
-	case consts.DownloadRootCACertCommand:
-		cmsBaseUrl, err := c.GetenvString(consts.CmsBaseUrl, "CMS Base URL")
-		if err == nil && cmsBaseUrl != "" {
-			Configuration.Cms.BaseURL = cmsBaseUrl
-		} else if strings.TrimSpace(Configuration.Cms.BaseURL) == "" {
-			return errors.Wrap(err, "CMS_BASE_URL is not defined in environment or configuration file")
+		err = checkCmsConfig(c)
+		if err != nil {
+			return err
+		}
+		err = checkHvsConfig(c)
+		if err != nil {
+			return err
 		}
 
-		tlsCertDigest, err := c.GetenvString(consts.CmsTlsCertDigestEnv, "CMS TLS certificate digest")
-		if err == nil && tlsCertDigest != "" {
-			Configuration.CmsTlsCertDigest = tlsCertDigest
-		} else if strings.TrimSpace(Configuration.CmsTlsCertDigest) == "" {
-			return errors.Wrap(err, "CMS_TLS_CERT_SHA384 is not defined in environment or configuration file")
+		Configuration.ConfigComplete = true
+
+	case consts.DownloadRootCACertCommand:
+		err = checkCmsConfig(c)
+		if err != nil {
+			return err
 		}
 
 	case consts.RegisterBindingKeyCommand, consts.RegisterSigningKeyCommand:
-		hvsUrl, err := c.GetenvString(consts.HvsUrlEnv, "Verification Service URL")
-		if err == nil && hvsUrl != "" {
-			Configuration.Hvs.APIURL = hvsUrl
-		} else if strings.TrimSpace(Configuration.Hvs.APIURL) == "" {
-			return errors.Wrap(err, "HVS_URL is not defined in environment or configuration file")
+		err = checkHvsConfig(c)
+		if err != nil {
+			return err
 		}
 	}
 
