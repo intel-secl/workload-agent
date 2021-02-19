@@ -25,6 +25,7 @@ import (
 	"intel/isecl/wlagent/v3/filewatch"
 	"intel/isecl/wlagent/v3/libvirt"
 	"intel/isecl/wlagent/v3/util"
+	"strings"
 )
 
 // Start method is used perform the VM confidentiality check before launching the VM
@@ -51,56 +52,62 @@ func Start(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 
 	var flavorKeyInfo wlsModel.FlavorKey
 
-	// get host hardware UUID
-	secLog.Infof("wlavm/start:Start() %s, Trying to get host hardware UUID", message.SU)
-	hardwareUUID, err := pinfo.HardwareUUID()
-	if err != nil {
-		log.WithError(err).Error("wlavm/start:Start() Unable to get the host hardware UUID")
-		return false
-	}
-	log.Debugf("wlavm/start:Start() The host hardware UUID is :%s", hardwareUUID)
+	// check if the image is in the crypto path - if yes it was launched from an encrypted image
+	// need to push VM instance trust report to WLS
+	if strings.HasPrefix(imagePath, consts.MountPath) {
+		// get host hardware UUID
+		secLog.Infof("wlavm/start:Start() %s, Trying to get host hardware UUID", message.SU)
+		hardwareUUID, err := pinfo.HardwareUUID()
+		if err != nil {
+			log.WithError(err).Error("wlavm/start:Start() Unable to get the host hardware UUID")
+			return false
+		}
+		log.Debugf("wlavm/start:Start() The host hardware UUID is :%s", hardwareUUID)
 
-	//get flavor-key from workload service
-	// we will be hitting the WLS to retrieve the the flavor and key.
-	// TODO: Investigate if it makes sense to cache the flavor locally as well with
-	// an expiration time. Believe this was discussed and previously ruled out..
-	// but still worth exploring for performance reasons as we want to minimize
-	// making http client calls to external servers.
-	log.Infof("wlavm/start:Start() Retrieving image-flavor-key for image %s from WLS", imageUUID)
+		//get flavor-key from workload service
+		// we will be hitting the WLS to retrieve the the flavor and key.
+		// TODO: Investigate if it makes sense to cache the flavor locally as well with
+		// an expiration time. Believe this was discussed and previously ruled out..
+		// but still worth exploring for performance reasons as we want to minimize
+		// making http client calls to external servers.
+		log.Infof("wlavm/start:Start() Retrieving image-flavor-key for image %s from WLS", imageUUID)
 
-	flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID)
-	if err != nil {
-		secLog.WithError(err).Error("wlavm/start:Start() Error retrieving the image flavor and key")
-		return false
-	}
+		flavorKeyInfo, err = wlsclient.GetImageFlavorKey(imageUUID, hardwareUUID)
+		if err != nil {
+			secLog.WithError(err).Error("wlavm/start:Start() Error retrieving the image flavor and key")
+			return false
+		}
 
-	if flavorKeyInfo.Flavor.Meta.ID == "" {
-		log.Infof("wlavm/start:Start() Flavor does not exist for the image %s", imageUUID)
-		return false
-	}
+		if flavorKeyInfo.Flavor.Meta.ID == "" {
+			log.Infof("wlavm/start:Start() Flavor does not exist for the image %s", imageUUID)
+			return false
+		}
 
-	//create VM manifest
-	log.Info("wlavm/start:Start() Creating VM Manifest")
-	manifest, err := vml.CreateVMManifest(vmUUID, hardwareUUID, imageUUID, true)
-	if err != nil {
-		log.WithError(err).Error("wlavm/start:Start() Error creating the VM manifest")
-		return false
-	}
+		//create VM manifest
+		log.Info("wlavm/start:Start() Creating VM Manifest")
+		manifest, err := vml.CreateVMManifest(vmUUID, hardwareUUID, imageUUID, true)
+		if err != nil {
+			log.WithError(err).Error("wlavm/start:Start() Error creating the VM manifest")
+			return false
+		}
 
-	//Create Image trust report
-	status := CreateInstanceTrustReport(manifest, wlsModel.SignedImageFlavor{ImageFlavor: flavorKeyInfo.Flavor, Signature: flavorKeyInfo.Signature})
-	if status == false {
-		log.Error("wlavm/start:Start() Error while creating image trust report")
-		return false
-	}
+		//Create Image trust report
+		status := CreateInstanceTrustReport(manifest, wlsModel.SignedImageFlavor{ImageFlavor: flavorKeyInfo.Flavor, Signature: flavorKeyInfo.Signature})
+		if status == false {
+			log.Error("wlavm/start:Start() Error while creating image trust report")
+			return false
+		}
 
-	// Updating image-vm count association
-	log.Info("wlavm/start:Start() Associating VM with image in image-vm-count file")
-	iAssoc := ImageVMAssociation{imageUUID, imagePath}
-	err = iAssoc.Create()
-	if err != nil {
-		log.WithError(err).Error("wlavm/start:Start() Error while updating the image-instance count file")
-		return false
+		// Updating image-vm count association
+		log.Info("wlavm/start:Start() Associating VM with image in image-vm-count file")
+		iAssoc := ImageVMAssociation{imageUUID, imagePath}
+		err = iAssoc.Create()
+		if err != nil {
+			log.WithError(err).Error("wlavm/start:Start() Error while updating the image-instance count file")
+			return false
+		}
+	} else {
+		log.Info("wlavm/start:Start() Image is not encrypted, returning to the hook")
 	}
 
 	log.Infof("wlavm/start:Start() VM %s started", vmUUID)

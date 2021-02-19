@@ -68,9 +68,9 @@ func Prepare(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	var vmBackFileFormat string
 	var key []byte
 	isImageDecrypted := false
-	isVmShutoff := false
 	mustRecreateVMDisk := false
 	decryptedImagePath := ""
+	var isVMLaunchfromEncryptedImage bool
 
 	// Step 1 - Check if the VM is in shutoff state - detect the symlink from VM Disk to Volume
 	// if not, this is a fresh launch
@@ -119,12 +119,15 @@ func Prepare(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 			log.Errorf("wlavm/prepare:Prepare() Error while retrieving image path from image-vm association "+
 				"file for image %s", imageUUID)
 			return false
-		} else {
-			isVmShutoff = true
 		}
 	}
 
-	// Step 2 - check if the image is decrypted
+	// Step 2 - check if the image is in the crypto path - if yes this is from an encrypted image
+	if strings.HasPrefix(imagePath, consts.MountPath) {
+		isVMLaunchfromEncryptedImage = true
+	}
+
+	// Step 3 - check if the image is decrypted
 	isImageEncrypted, err = crypt.EncryptionHeaderExists(imagePath)
 	if err != nil {
 		log.Errorf("wlavm/prepare:Prepare() Error while trying to check if the image is encrypted: %s", err.Error())
@@ -144,13 +147,7 @@ func Prepare(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 				skipImageVolumeCreation = true
 			}
 		}
-	} else if !isVmShutoff {
-		log.Info("wlavm/prepare:Prepare() Image is not encrypted, returning to the hook")
-		return true
-	}
 
-	// Step 3 - if encrypted pull flavor and key
-	if isImageEncrypted {
 		var flavorKeyInfo wlsModel.FlavorKey
 		var tpmWrappedKey []byte
 
@@ -225,65 +222,67 @@ func Prepare(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 		}
 	}
 
-	// check if the VM Image has been decrypted and remounted
-	vmSymLinkOut, vmSymlinkReadErr = os.Readlink(vmPath)
-	if vmSymlinkReadErr != nil {
-		log.Debugf("wlavm/prepare:Prepare() VM Disk Path %s is not a symlink - %s", vmPath, vmSymlinkReadErr.Error())
-	}
-	vmSymLinkStat, vmSymLinkStatErr := os.Stat(vmSymLinkOut)
-	if vmSymlinkReadErr != nil || vmSymLinkStatErr != nil || vmSymLinkStat.Size() == 0 {
-		if mustRecreateVMDisk {
-			// since we need to recreate the VM disk file - discover info via qemu-img
-			queryVmDisk, err := exec.ExecuteCommand(consts.QemuImgUtilPath,
-				strings.Fields(fmt.Sprintf(consts.GetImgInfoCmd, vmPath)))
-			if err != nil {
-				log.Errorf("wlavm/prepare:Prepare() Error discovering backing file path: %s", err.Error())
-				return false
-			}
+	if isVMLaunchfromEncryptedImage || isImageEncrypted {
+		// check if the VM Image has been decrypted and remounted
+		vmSymLinkOut, vmSymlinkReadErr = os.Readlink(vmPath)
+		if vmSymlinkReadErr != nil {
+			log.Debugf("wlavm/prepare:Prepare() VM Disk Path %s is not a symlink - %s", vmPath, vmSymlinkReadErr.Error())
+		}
+		vmSymLinkStat, vmSymLinkStatErr := os.Stat(vmSymLinkOut)
+		if vmSymlinkReadErr != nil || vmSymLinkStatErr != nil || vmSymLinkStat.Size() == 0 {
+			if mustRecreateVMDisk {
+				// since we need to recreate the VM disk file - discover info via qemu-img
+				queryVmDisk, err := exec.ExecuteCommand(consts.QemuImgUtilPath,
+					strings.Fields(fmt.Sprintf(consts.GetImgInfoCmd, vmPath)))
+				if err != nil {
+					log.Errorf("wlavm/prepare:Prepare() Error discovering backing file path: %s", err.Error())
+					return false
+				}
 
-			// set the image properties
-			for _, line := range strings.Split(queryVmDisk, "\n") {
-				lineSplit := strings.Split(strings.TrimSpace(line), ": ")
-				if len(lineSplit) > 1 {
-					switch lineSplit[0] {
-					case consts.QemuImgInfoBackingFileField:
-						imagePath = lineSplit[1]
-						log.Debugf("wlavm/prepare:Prepare() Original Backing file path for VM : %s", imagePath)
-						log.Debugf("wlavm/prepare:Prepare() Decrypted Image Backing file path : %s", decryptedImagePath)
-					case consts.QemuImgInfoVirtualSizeField:
-						vmVirtualSize = strings.Split(strings.Split(line, "(")[1], " ")[0]
-						log.Debugf("wlavm/prepare:Prepare() VM Virtual Disk Size: %s", vmVirtualSize)
-					case consts.QemuImgInfoFileFormatField:
-						vmVirtualFormat = lineSplit[1]
-						log.Debugf("wlavm/prepare:Prepare() VM Virtual Disk Format: %s", vmVirtualFormat)
+				// set the image properties
+				for _, line := range strings.Split(queryVmDisk, "\n") {
+					lineSplit := strings.Split(strings.TrimSpace(line), ": ")
+					if len(lineSplit) > 1 {
+						switch lineSplit[0] {
+						case consts.QemuImgInfoBackingFileField:
+							imagePath = lineSplit[1]
+							log.Debugf("wlavm/prepare:Prepare() Original Backing file path for VM : %s", imagePath)
+							log.Debugf("wlavm/prepare:Prepare() Decrypted Image Backing file path : %s", decryptedImagePath)
+						case consts.QemuImgInfoVirtualSizeField:
+							vmVirtualSize = strings.Split(strings.Split(line, "(")[1], " ")[0]
+							log.Debugf("wlavm/prepare:Prepare() VM Virtual Disk Size: %s", vmVirtualSize)
+						case consts.QemuImgInfoFileFormatField:
+							vmVirtualFormat = lineSplit[1]
+							log.Debugf("wlavm/prepare:Prepare() VM Virtual Disk Format: %s", vmVirtualFormat)
+						}
 					}
 				}
-			}
 
-			recreateVMDiskOutput, err := exec.ExecuteCommand(consts.QemuImgUtilPath, strings.Fields(
-				fmt.Sprintf(consts.CreateVmDiskCmd, vmVirtualFormat, decryptedImagePath, vmBackFileFormat, vmPath)))
-			if err != nil {
-				log.Errorf("wlavm/prepare:Prepare() Error recreating VM disk file: %s", err.Error())
-				return false
-			}
-			log.Debugf("wlavm/prepare:Prepare() Reformatting VM disk: %s", recreateVMDiskOutput)
+				recreateVMDiskOutput, err := exec.ExecuteCommand(consts.QemuImgUtilPath, strings.Fields(
+					fmt.Sprintf(consts.CreateVmDiskCmd, vmVirtualFormat, decryptedImagePath, vmBackFileFormat, vmPath)))
+				if err != nil {
+					log.Errorf("wlavm/prepare:Prepare() Error recreating VM disk file: %s", err.Error())
+					return false
+				}
+				log.Debugf("wlavm/prepare:Prepare() Reformatting VM disk: %s", recreateVMDiskOutput)
 
-			// resize the disk file per the Nova flavor
-			resizeDiskFileOutput, err := exec.ExecuteCommand(consts.QemuImgUtilPath, strings.Fields(
-				fmt.Sprintf(consts.ResizeVmDiskCmd, vmPath, vmVirtualSize)))
-			if err != nil {
-				log.Errorf("wlavm/prepare:Prepare() Error resizing VM disk: %s", err.Error())
-				return false
+				// resize the disk file per the Nova flavor
+				resizeDiskFileOutput, err := exec.ExecuteCommand(consts.QemuImgUtilPath, strings.Fields(
+					fmt.Sprintf(consts.ResizeVmDiskCmd, vmPath, vmVirtualSize)))
+				if err != nil {
+					log.Errorf("wlavm/prepare:Prepare() Error resizing VM disk: %s", err.Error())
+					return false
+				}
+				log.Debugf("wlavm/prepare:Prepare() Resizing VM disk output: %s", resizeDiskFileOutput)
 			}
-			log.Debugf("wlavm/prepare:Prepare() Resizing VM disk output: %s", resizeDiskFileOutput)
 		}
-	}
 
-	log.Info("wlavm/prepare:Prepare() Creating and mounting vm dm-crypt volume")
-	err = vmVolumeManager(vmUUID, vmPath, size, key, filewatcher)
-	if err != nil {
-		log.WithError(err).Error("wlavm/prepare:Prepare() Error while creating and mounting vm dm-crypt volume ")
-		return false
+		log.Info("wlavm/prepare:Prepare() Creating and mounting vm dm-crypt volume")
+		err = vmVolumeManager(vmUUID, vmPath, size, key, filewatcher)
+		if err != nil {
+			log.WithError(err).Error("wlavm/prepare:Prepare() Error while creating and mounting vm dm-crypt volume ")
+			return false
+		}
 	}
 
 	log.Infof("wlavm/prepare:Prepare() VM %s prepared", vmUUID)
