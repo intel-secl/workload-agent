@@ -1,14 +1,13 @@
 GITTAG := $(shell git describe --tags --abbrev=0 2> /dev/null)
 GITCOMMIT := $(shell git describe --always)
-GITBRANCH := $(shell git rev-parse --abbrev-ref HEAD)
-TIMESTAMP := $(shell date --iso=seconds)
 VERSION := $(or ${GITTAG}, v0.0.0)
+BUILDDATE := $(shell TZ=UTC date +%Y-%m-%dT%H:%M:%S%z)
 
 .PHONY: wlagent, installer, all, clean, vmc-only
 
 wlagent:
 	export CGO_CFLAGS_ALLOW="-f.*"; \
-	env GOOS=linux GOSUMDB=off GOPROXY=direct go build -ldflags "-X main.Version=$(VERSION)-$(GITCOMMIT) -X main.Branch=$(GITBRANCH) -X main.Time=$(TIMESTAMP)"  -o out/wlagent main.go
+	env GOOS=linux GOSUMDB=off GOPROXY=direct go build -ldflags "-X main.Version=$(VERSION) -X main.GitHash=$(GITCOMMIT) -X main.BuildDate=$(BUILDDATE)"  -o out/wlagent main.go
 
 installer: wlagent
 	mkdir -p out/wla

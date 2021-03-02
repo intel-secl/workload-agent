@@ -19,6 +19,7 @@ const (
 )
 
 const (
+	ExplicitServiceName                = "Workload Agent"
 	MinLogEntryMaxlength               = 100
 	DefaultLogEntryMaxlength           = 300
 	SkipFlavorSignatureVerificationEnv = "SKIP_FLAVOR_SIGNATURE_VERIFICATION"

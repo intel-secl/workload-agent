@@ -30,9 +30,12 @@ import (
 )
 
 var (
-	Version           = ""
-	Time              = ""
-	Branch            = ""
+	// Version holds the version number for the WLA binary
+	Version string = ""
+	// BuildDate holds the build date for the WLA binary
+	BuildDate string = ""
+	// GitHash holds the commit hash for the WLA binary
+	GitHash           = ""
 	rpcSocketFilePath = consts.RunDirPath + consts.RPCSocketFileName
 	log, secLog       *logrus.Entry
 )
@@ -43,8 +46,15 @@ func init() {
 	secLog = cLog.GetSecurityLogger()
 }
 
+func getVersion() string {
+	verStr := fmt.Sprintf("Service Name: %s\n", consts.ExplicitServiceName)
+	verStr = verStr + fmt.Sprintf("Version: %s-%s\n", Version, GitHash)
+	verStr = verStr + fmt.Sprintf("Build Date: %s\n", BuildDate)
+	return verStr
+}
+
 func printVersion() {
-	fmt.Printf("Version %s\nBuild %s at %s\n", Version, Branch, Time)
+	fmt.Printf(getVersion())
 }
 
 func printUsage() {
