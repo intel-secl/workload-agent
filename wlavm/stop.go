@@ -30,7 +30,7 @@ var (
 // e.g. shutdown, reboot, stop etc.
 // Input Parameters: domainXML content string
 // Return : Returns a boolean value to the main method.
-// true if the vm is launched successfully, else returns false.
+// true if the vm is stopped successfully, else returns false.
 func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 	log.Trace("wlavm/stop:Stop() Entering")
 	defer log.Trace("wlavm/stop:Stop() Leaving")
@@ -66,13 +66,14 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 		if err != nil {
 			log.Errorf("wlavm/stop:Stop() Failed to unmount volume for VM instance: %s", d.GetVMUUID())
 		}
-		err = vml.DeleteVolume(d.GetVMUUID())
+		err = vml.DeleteVolume(consts.DevMapperDirPath + d.GetVMUUID())
 		if err != nil {
 			log.Errorf("wlavm/stop:Stop() Failed to delete volume for VM instance: %s", d.GetVMUUID())
 		}
 	}
 
 	// check if this is the last vm associated with the image
+	// if so, unmount image decrypted volume
 	log.Info("wlavm/stop:Stop() Checking if this is the last vm using the image...")
 	iAssoc := ImageVMAssociation{d.GetImageUUID(), ""}
 	isLastVm, imagePath, err := iAssoc.Delete()
@@ -80,10 +81,9 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 		log.WithError(err).Error("wlavm/stop:Stop() Error while image association deletion")
 		log.Tracef("%+v", err)
 	}
-	// as the original image is deleted during the VM start process, there is no way
-	// to check if original image is encrypted. Instead we check if sparse file of image
-	// exists at given path, if it does that means the image was encrypted and volumes were created
-	if _, err := os.Stat(imagePath + "_sparseFile"); os.IsNotExist(err) {
+
+	// check if the original image was encrypted
+	if imagePath == "" {
 		log.Info("wlavm/stop:Stop() The base image is not encrypted, returning to hook...")
 		return true
 	}
@@ -98,17 +98,16 @@ func Stop(domainXMLContent string, filewatcher *filewatch.Watcher) bool {
 
 	mtx.Lock()
 	defer mtx.Unlock()
-	var imageMountPath = consts.MountPath + d.GetImageUUID()
-	secLog.Infof("wlavm/stop:Stop() %s, Unmounting the image volume: %s", message.SU, imageMountPath)
+	secLog.Infof("wlavm/stop:Stop() %s, Unmounting the image volume: %s", message.SU, imagePath)
 
 	// Unmount the image
-	err = vml.Unmount(imageMountPath)
+	err = vml.Unmount(imagePath)
 	if err != nil {
 		log.Errorf("wlavm/stop:Stop() Failed to unmount volume for VM image: %s", d.GetImageUUID())
 	}
 	secLog.Infof("wlavm/stop:Stop() %s, Deleting the image volume: %s", message.SU, d.GetImageUUID())
 	// Close the image volume
-	err = vml.DeleteVolume(d.GetImageUUID())
+	err = vml.DeleteVolume(consts.DevMapperDirPath + d.GetImageUUID())
 	if err != nil {
 		log.Errorf("wlavm/stop:Stop() Failed to delete volume for VM image: %s", d.GetImageUUID())
 	}

@@ -101,9 +101,15 @@ func imagePathFromVMAssociationFile(imageUUID string) string {
 	log.Trace("wlavm/image_VM_association:imagePathFromVMAssociationFile() Entering")
 	defer log.Trace("wlavm/image_VM_association:imagePathFromVMAssociationFile() Leaving")
 
-	log.Debug("wlavm/image_VM_association:imagePathFromVMAssociationFile() Checking if the image UUID exists in image-vm association file")
-	log.Debug("wlavm/image_VM_association:imagePathFromVMAssociationFile() Loading yaml file to vm image association structure.")
+	if len(util.ImageVMAssociations) == 0 {
+		err := util.LoadImageVMAssociation()
+		if err != nil {
+			log.Error("wlavm/image_VM_association:imagePathFromVMAssociationFile() Error loading ImageVMAssociations file: %s", err.Error())
+			return ""
+		}
+	}
 
+	log.Debug("wlavm/image_VM_association:imagePathFromVMAssociationFile() Loading yaml file to vm image association structure.")
 	util.MapMtx.RLock()
 	imageAttributes, ok := util.ImageVMAssociations[imageUUID]
 	util.MapMtx.RUnlock()
