@@ -17,7 +17,7 @@ import (
 )
 
 type SigningKey struct {
-	T     tpmprovider.TpmProvider
+	T     tpmprovider.TpmFactory
 	Flags []string
 }
 

@@ -18,7 +18,7 @@ import (
 )
 
 type BindingKey struct {
-	T     tpmprovider.TpmProvider
+	T     tpmprovider.TpmFactory
 	Flags []string
 }
 

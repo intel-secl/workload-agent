@@ -6,7 +6,6 @@ package config
 
 import (
 	"fmt"
-	"intel/isecl/lib/common/v3/exec"
 	cLog "intel/isecl/lib/common/v3/log"
 	"intel/isecl/lib/common/v3/log/message"
 	cLogInt "intel/isecl/lib/common/v3/log/setup"
@@ -101,27 +100,18 @@ func GetSigningCertFromFile() (string, error) {
 	return string(f), nil
 }
 
-type CommandError struct {
-	IssuedCommand string
-	StdError      string
-}
-
-func (e CommandError) Error() string {
-	return fmt.Sprintf("config/config Command Error %s: %s", e.IssuedCommand, e.StdError)
-}
-
 // GetAikSecret function returns the AIK Secret as a byte array running the tagent export config command
 func GetAikSecret() (string, error) {
 	log.Trace("config/config:GetAikSecret() Entering")
 	defer log.Trace("config/config:GetAikSecret() Leaving")
 
 	log.Info("config/config:GetAikSecret() Getting AIK secret from trustagent configuration.")
-	aikSecret, stderr, err := exec.RunCommandWithTimeout(consts.TAConfigAikSecretCmd, 2)
+	aikSecret, err := ioutil.ReadFile(consts.DefaultTrustagentConfiguration + "/aiksecretkey")
 	if err != nil {
-		log.WithError(&CommandError{IssuedCommand: consts.TAConfigAikSecretCmd, StdError: stderr}).Error("GetAikSecret: Command Failed. Details follow")
+		log.WithError(err).Error("Error while reading from aiksecret key file")
 		return "", err
 	}
-	return strings.TrimSpace(aikSecret), nil
+	return string(aikSecret), nil
 }
 
 // Save method saves the changes in configuration file made by any of the setup tasks

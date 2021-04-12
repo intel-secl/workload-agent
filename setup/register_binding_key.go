@@ -68,6 +68,10 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 		return errors.New("setup/register_binding_key:Run() error writing binding key certificate to file")
 	}
 
+	// tagent container is run as root user, skip setting permission for tagent user in case of containerized deployment
+	if _, err := os.Stat("/.container-env"); err == nil {
+		return nil
+	}
 	return rb.setBindingKeyPemFileOwner()
 }
 

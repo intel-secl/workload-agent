@@ -22,6 +22,9 @@
 - libvirt
 - cryptsetup
 
+### Additional software requirements for building GTA container image in oci format
+- skopeo
+
 # Step By Step Build Instructions
 
 ## Install required shell commands
@@ -78,6 +81,11 @@ git clone https://github.com/intel-secl/workload-agent.git
 cd workload-policy-manager
 make installer-no-docker
 ```
+
+# Build Instructions for container image
+1. cd `workload-agent`
+2. `make oci-archive`
+3. `wlagent-<version>-<commit-version>.tar` will be in the /out subdirectory 
 
 # Third Party Dependencies
 

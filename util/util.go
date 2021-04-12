@@ -85,38 +85,18 @@ func SaveImageVMAssociation() error {
 	return nil
 }
 
-var vmStartTpm tpmprovider.TpmProvider
-
 // GetTpmInstance method is used to get an instance of TPM to perform various tpm operations
 func GetTpmInstance() (tpmprovider.TpmProvider, error) {
 	log.Trace("util/util:GetTpmInstance() Entering")
 	defer log.Trace("util/util:GetTpmInstance() Leaving")
-	if vmStartTpm == nil {
-		tpmFactory, err := tpmprovider.NewTpmFactory()
-		if err != nil {
-			return nil, errors.Wrap(err, "util/util:GetTpmInstance() Could not create TPM Factory ")
-		}
-
-		vmStartTpm, err = tpmFactory.NewTpmProvider()
-		if err != nil {
-			return nil, errors.Wrap(err, "util/util:GetTpmInstance() Could not create TPM ")
-		}
-	} else {
-		log.Debug("util/util:GetTpmInstance() Returning an existing connection to the tpm")
+	tpmFactory, err := tpmprovider.NewTpmFactory()
+	if err != nil {
+		return nil, errors.Wrap(err, "util/util:GetTpmInstance() Could not create TPM Factory ")
 	}
+
+	vmStartTpm, err := tpmFactory.NewTpmProvider()
 
 	return vmStartTpm, nil
-}
-
-// CloseTpmInstance method is used to close an instance of TPM
-func CloseTpmInstance() {
-	log.Trace("util/util:CloseTpmInstance() Entering")
-	defer log.Trace("util/util:CloseTpmInstance() Leaving")
-
-	if vmStartTpm != nil {
-		secLog.Infof("util/util:CloseTpmInstance() %s, Closing connection to the tpm", message.SU)
-		vmStartTpm.Close()
-	}
 }
 
 // UnwrapKey method is used to unbind a key using TPM
@@ -130,10 +110,10 @@ func UnwrapKey(tpmWrappedKey []byte) ([]byte, error) {
 
 	var certifiedKey tpmprovider.CertifiedKey
 	t, err := GetTpmInstance()
+	defer t.Close()
 	if err != nil {
 		return nil, errors.Wrap(err, "util/util:UnwrapKey() Could not establish connection to TPM ")
 	}
-
 	log.Debug("util/util:UnwrapKey() Reading the binding key certificate")
 	bindingKeyFilePath := consts.ConfigDirPath + consts.BindingKeyFileName
 	bindingKeyCert, fileErr := ioutil.ReadFile(bindingKeyFilePath)

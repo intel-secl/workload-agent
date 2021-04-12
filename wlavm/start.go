@@ -207,13 +207,11 @@ func createSignatureWithTPM(data []byte, alg crypto.Hash) ([]byte, error) {
 	// }
 
 	// Before we compute the hash, we need to check the version of TPM as TPM 1.2 only supports SHA1
-	TpmMtx.Lock()
-	defer TpmMtx.Unlock()
 	t, err := util.GetTpmInstance()
 	if err != nil {
 		return nil, errors.Wrap(err, "wlavm/start:createSignatureWithTPM() Error attempting to create signature - could not open TPM")
 	}
-
+	defer t.Close()
 	log.Debug("wlavm/start:createSignatureWithTPM() Computing the hash of the report to be signed by the TPM")
 	h, err := crypt.GetHashData(data, alg)
 	if err != nil {

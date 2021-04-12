@@ -24,7 +24,7 @@ var log = cLog.GetDefaultLogger()
 var secLog = cLog.GetSecurityLogger()
 
 // tpmCertifiedKeySetup calls the TPM helper library to export a binding or signing keypair
-func createKey(usage int, t tpmprovider.TpmProvider) (tpmck *tpmprovider.CertifiedKey, err error) {
+func createKey(usage int, t tpmprovider.TpmFactory) (tpmck *tpmprovider.CertifiedKey, err error) {
 	log.Trace("common/key_creation:createKey() Entering")
 	defer log.Trace("common/key_creation:createKey() Leaving")
 	if usage != tpmprovider.Binding && usage != tpmprovider.Signing {
@@ -41,21 +41,27 @@ func createKey(usage int, t tpmprovider.TpmProvider) (tpmck *tpmprovider.Certifi
 	case tpmprovider.Signing:
 		config.Configuration.SigningKeySecret = hex.EncodeToString(secretbytes)
 	}
-
 	// get the aiksecret. This will return a byte array.
 	log.Debug("common/key_creation:createKey() Getting aik secret from trusagent configuration.")
-	aiksecret, err := config.GetAikSecret()
+	aikSecret, err := config.GetAikSecret()
 	if err != nil {
 		return nil, err
 	}
 
 	secLog.Infof("common/key_creation:createKey() %s, Calling CreateCertifiedKey of tpm library to create and certify signing or binding key", message.SU)
 
+	tpm, err := t.NewTpmProvider()
+	if err != nil {
+		return nil, errors.Wrap(err, "error while getting tpm provider")
+	}
+
+	defer tpm.Close()
+
 	switch usage {
 	case tpmprovider.Binding:
-		tpmck, err = t.CreateBindingKey(config.Configuration.BindingKeySecret, aiksecret)
+		tpmck, err = tpm.CreateBindingKey(config.Configuration.BindingKeySecret, aikSecret)
 	case tpmprovider.Signing:
-		tpmck, err = t.CreateSigningKey(config.Configuration.SigningKeySecret, aiksecret)
+		tpmck, err = tpm.CreateSigningKey(config.Configuration.SigningKeySecret, aikSecret)
 	}
 	if err != nil {
 		return nil, err
@@ -112,7 +118,7 @@ func writeCertifiedKeyToDisk(tpmck *tpmprovider.CertifiedKey, filepath string) e
 // It uses the AiKSecret that is saved in the Workload Agent configuration
 // that is obtained from the trust agent, a randomn secret and uses the TPM
 // to generate a keypair that is tied to the TPM
-func GenerateKey(usage int, t tpmprovider.TpmProvider) error {
+func GenerateKey(usage int, t tpmprovider.TpmFactory) error {
 	log.Trace("common/key_creation:GenerateKey() Entering")
 	defer log.Trace("common/key_creation:GenerateKey() Leaving")
 

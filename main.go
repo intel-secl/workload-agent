@@ -163,13 +163,6 @@ func main() {
 			os.Exit(1)
 		}
 
-		t, err := tpmFactory.NewTpmProvider()
-		if err != nil {
-			fmt.Println("Error while opening a connection to TPM.")
-			os.Exit(1)
-		}
-		defer t.Close()
-
 		// Run list of setup tasks one by one
 		setupRunner := &csetup.Runner{
 			Tasks: []csetup.Task{
@@ -181,11 +174,11 @@ func main() {
 					ConsoleWriter:        os.Stdout,
 				},
 				setup.SigningKey{
-					T:     t,
+					T:     tpmFactory,
 					Flags: flags,
 				},
 				setup.BindingKey{
-					T:     t,
+					T:     tpmFactory,
 					Flags: flags,
 				},
 				setup.RegisterBindingKey{
@@ -520,7 +513,6 @@ func stop() {
 		fmt.Fprintln(os.Stderr, "Error : ", err)
 		os.Exit(1)
 	}
-	util.CloseTpmInstance()
 }
 
 func removeservice() {

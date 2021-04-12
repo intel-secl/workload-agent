@@ -250,9 +250,7 @@ func (vm *VirtualMachine) FetchKey(args *KeyInfo, outKeyInfo *KeyInfo) error {
 	if !returnCode {
 		return &rpcError{Message: "rpc/server:FetchKey() Error while retrieving the key", StatusCode: 1}
 	}
-	wlavm.TpmMtx.Lock()
 	key, err := util.UnwrapKey(wrappedKey)
-	wlavm.TpmMtx.Unlock()
 	if err != nil {
 		log.Errorf("rpc/server:FetchKey() Error while unwrapping the key %+v", err)
 		return &rpcError{Message: "rpc/server:FetchKey() Error while unwrapping the key", StatusCode: 1}
@@ -286,9 +284,7 @@ func (vm *VirtualMachine) FetchKeyWithURL(args *TransferURL, outKey *KeyOnly) er
 	if !returnCode {
 		return &rpcError{Message: "rpc/server:FetchKeyWithURL() error while unwrapping the key", StatusCode: 1}
 	}
-	wlavm.TpmMtx.Lock()
 	key, err := util.UnwrapKey(wrappedKey)
-	wlavm.TpmMtx.Unlock()
 	if err != nil {
 		return &rpcError{Message: "rpc/server:FetchKeyWithURL() error while unwrapping the key", StatusCode: 1}
 	}
