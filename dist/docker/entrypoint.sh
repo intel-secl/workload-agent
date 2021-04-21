@@ -1,5 +1,11 @@
 #!/bin/bash
 
+
+source /etc/secret-volume/secrets.txt
+export WLA_SERVICE_USERNAME
+export WLA_SERVICE_PASSWORD
+export BEARER_TOKEN
+
 COMPONENT_NAME=workload-agent
 LOG_PATH=/var/log/$COMPONENT_NAME
 CONFIG_PATH=/etc/$COMPONENT_NAME
