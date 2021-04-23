@@ -16,6 +16,7 @@ const (
 	BearerTokenEnv       = "BEARER_TOKEN"
 	LogLevelEnvVar       = "LOG_LEVEL"
 	LogEntryMaxlengthEnv = "LOG_ENTRY_MAXLENGTH"
+	EnableConsoleLogEnv  = "WLA_ENABLE_CONSOLE_LOG"
 )
 
 const (
@@ -68,8 +69,9 @@ const (
 
 // Task Names
 const (
-	SetupAllCommand           = "all"
-	DownloadRootCACertCommand = "download_ca_cert"
-	RegisterSigningKeyCommand = "RegisterSigningKey"
-	RegisterBindingKeyCommand = "RegisterBindingKey"
+	SetupAllCommand            = "all"
+	DownloadRootCACertCommand  = "download_ca_cert"
+	RegisterSigningKeyCommand  = "RegisterSigningKey"
+	RegisterBindingKeyCommand  = "RegisterBindingKey"
+	UpdateServiceConfigCommand = "update_service_config"
 )

@@ -29,6 +29,7 @@ var ErrMessageSetupIncomplete = errors.New("configuration is not complete - setu
 func (bk BindingKey) Run(c csetup.Context) error {
 	log.Trace("setup/create_binding_key:Run() Entering")
 	defer log.Trace("setup/create_binding_key:Run() Leaving")
+	fmt.Println("Running setup task: BindingKey")
 	fs := flag.NewFlagSet("BindingKey", flag.ContinueOnError)
 	force := fs.Bool("force", false, "force recreation, will overwrite any existing signing key")
 	err := fs.Parse(bk.Flags)

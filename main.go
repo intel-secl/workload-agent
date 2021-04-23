@@ -87,6 +87,14 @@ func printUsage() {
 	fmt.Printf("                           - Environment variable HVS_URL=<url> for registering the key with Verification service\n")
 	fmt.Printf("                           - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
 	fmt.Printf("                           - Environment variable TRUSTAGENT_USERNAME=<TA user> for changing binding key file ownership to TA application user\n")
+	fmt.Printf("    update-service-config  Updates service configuration\n")
+	fmt.Printf("\t\t                           - Option [--force] overwrites existing server config")
+	fmt.Printf("                           - Environment variable WLS_API_URL=<url> Workload Service URL\n")
+	fmt.Printf("                           - Environment variable WLA_SERVICE_USERNAME WLA Service Username\n")
+	fmt.Printf("                           - Environment variable WLA_SERVICE_PASSWORD WLA Service Password\n")
+	fmt.Printf("                           - Environment variable SKIP_FLAVOR_SIGNATURE_VERIFICATION=<true/false> Skip flavor signature verification if set to true\n")
+	fmt.Printf("                           - Environment variable LOG_ENTRY_MAXLENGTH=Maximum length of each entry in a log\n")
+	fmt.Printf("                           - Environment variable WLA_ENABLE_CONSOLE_LOG=<true/false> Workload Agent Enable standard output\n")
 }
 
 // main is the primary control loop for wlagent. support setup, vmstart, vmstop etc
@@ -141,7 +149,7 @@ func main() {
 
 		switch taskName {
 		case consts.SetupAllCommand, consts.DownloadRootCACertCommand,
-			consts.RegisterSigningKeyCommand, consts.RegisterBindingKeyCommand:
+			consts.RegisterSigningKeyCommand, consts.RegisterBindingKeyCommand, consts.UpdateServiceConfigCommand:
 			err := config.SaveConfiguration(context, taskName)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "main:main() Unable to save configuration in config.yml ")
@@ -185,6 +193,9 @@ func main() {
 					Flags: flags,
 				},
 				setup.RegisterSigningKey{
+					Flags: flags,
+				},
+				setup.Update_Service_Config{
 					Flags: flags,
 				},
 			},

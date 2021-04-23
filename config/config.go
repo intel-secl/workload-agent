@@ -15,7 +15,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -201,27 +200,6 @@ func SaveConfiguration(c csetup.Context, taskName string) error {
 			return errors.Wrap(err, "AAS_API_URL is not defined in environment or configuration file")
 		}
 
-		wlsAPIUrl, err := c.GetenvString(consts.WlsApiUrlEnv, "Workload Service URL")
-		if err == nil && aasAPIUrl != "" {
-			Configuration.Wls.APIURL = wlsAPIUrl
-		} else if strings.TrimSpace(Configuration.Wls.APIURL) == "" {
-			return errors.Wrap(err, "WLS_API_URL is not defined in environment or configuration file")
-		}
-
-		wlaAASUser, err := c.GetenvString(consts.WlaUsernameEnv, "WLA Service Username")
-		if err == nil && wlaAASUser != "" {
-			Configuration.Wla.APIUsername = wlaAASUser
-		} else if Configuration.Wla.APIUsername == "" {
-			return errors.Wrap(err, "WLA_SERVICE_USERNAME is not defined in environment or configuration file")
-		}
-
-		wlaAASPassword, err := c.GetenvSecret(consts.WlaPasswordEnv, "WLA Service Password")
-		if err == nil && wlaAASPassword != "" {
-			Configuration.Wla.APIPassword = wlaAASPassword
-		} else if strings.TrimSpace(Configuration.Wla.APIPassword) == "" {
-			return errors.Wrap(err, "WLA_SERVICE_PASSWORD is not defined in environment or configuration file")
-		}
-
 		// See if the 'TRUSTAGENT_USER' name has been exported to the env.  This is the name
 		// of the Linux user that the trust-agent service runs under (and requires access
 		// to /etc/workload-agent/bindingkey.pem to serve to hvs).  If the name is not in the
@@ -242,19 +220,6 @@ func SaveConfiguration(c csetup.Context, taskName string) error {
 			Configuration.TrustAgent.ConfigDir = consts.DefaultTrustagentConfiguration
 		}
 
-		if skipFlavorSignatureVerification, err := c.GetenvString(consts.SkipFlavorSignatureVerificationEnv,
-			"Skip flavor signature verification"); err == nil {
-			Configuration.SkipFlavorSignatureVerification, err = strconv.ParseBool(skipFlavorSignatureVerification)
-			if err != nil {
-				log.Warn("SKIP_FLAVOR_SIGNATURE_VERIFICATION is set to invalid value (should be true/false). " +
-					"Setting it to true by default")
-				Configuration.SkipFlavorSignatureVerification = true
-			}
-		} else {
-			log.Info("SKIP_FLAVOR_SIGNATURE_VERIFICATION is not set. Setting it to true by default")
-			Configuration.SkipFlavorSignatureVerification = true
-		}
-
 		ll, err := c.GetenvString(consts.LogLevelEnvVar, "Logging Level")
 		if err != nil {
 			log.Info("No logging level specified, using default logging level: Info")
@@ -266,25 +231,6 @@ func SaveConfiguration(c csetup.Context, taskName string) error {
 			if err != nil {
 				log.Info("Invalid logging level specified, using default logging level: Info")
 				Configuration.LogLevel = logrus.InfoLevel
-			}
-		}
-
-		logEntryMaxLength, err := c.GetenvInt(consts.LogEntryMaxlengthEnv, "Maximum length of each entry in a log")
-		if err == nil && logEntryMaxLength >= consts.MinLogEntryMaxlength {
-			Configuration.LogMaxLength = logEntryMaxLength
-		} else if Configuration.LogMaxLength != 0 {
-			log.Info("No change in Log Entry Max Length")
-		} else {
-			log.Info("Invalid Log Entry Max Length defined (should be > ", consts.MinLogEntryMaxlength, "), using default value:", consts.DefaultLogEntryMaxlength)
-			Configuration.LogMaxLength = consts.DefaultLogEntryMaxlength
-		}
-
-		Configuration.LogEnableStdout = false
-		logEnableStdout, err := c.GetenvString("WLA_ENABLE_CONSOLE_LOG", "Workload Agent Enable standard output")
-		if err == nil && logEnableStdout != "" {
-			Configuration.LogEnableStdout, err = strconv.ParseBool(logEnableStdout)
-			if err != nil {
-				log.Info("Error while parsing the variable WLA_ENABLE_CONSOLE_LOG, setting to default value false")
 			}
 		}
 

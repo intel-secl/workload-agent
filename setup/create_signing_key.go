@@ -24,6 +24,7 @@ type SigningKey struct {
 func (sk SigningKey) Run(c csetup.Context) error {
 	log.Trace("setup/create_signing_key:Run() Entering")
 	defer log.Trace("setup/create_signing_key:Run() Leaving")
+	fmt.Println("Running setup task: SigningKey")
 	fs := flag.NewFlagSet("SigningKey", flag.ContinueOnError)
 	force := fs.Bool("force", false, "force recreation, will overwrite any existing signing key")
 	err := fs.Parse(sk.Flags)
