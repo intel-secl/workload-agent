@@ -4,6 +4,8 @@ VERSION := $(or ${GITTAG}, v0.0.0)
 BUILDDATE := $(shell TZ=UTC date +%Y-%m-%dT%H:%M:%S%z)
 PROXY_EXISTS := $(shell if [[ "${https_proxy}" || "${http_proxy}" ]]; then echo 1; else echo 0; fi)
 DOCKER_PROXY_FLAGS := ""
+MONOREPO_GITURL := "ssh://git@gitlab.devtools.intel.com:29418/sst/isecl/intel-secl.git"
+MONOREPO_GITBRANCH := "v3.6/develop"
 
 .PHONY: wlagent, installer, all, clean, vmc-only
 
@@ -27,6 +29,14 @@ installer: wlagent
 	cp dist/linux/daemon.json out/wla/
 	cp -rf out/secure-docker-plugin/artifact out/wla/
 	cp dist/linux/uninstall-container-security-dependencies.sh out/wla/uninstall-container-security-dependencies.sh && chmod +x out/wla/uninstall-container-security-dependencies.sh
+
+	git archive --remote=$(MONOREPO_GITURL) $(MONOREPO_GITBRANCH) pkg/lib/common/upgrades/ | tar xvf -
+	cp -a pkg/lib/common/upgrades/* out/wla/
+	rm -rf pkg/
+	cp -a upgrades/* out/wla/
+	mv out/wla/build/* out/wla/
+	chmod +x out/wla/*.sh
+
 	makeself out/wla out/workload-agent-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 
 
 installer-no-docker: wlagent
@@ -35,6 +45,14 @@ installer-no-docker: wlagent
 	cp dist/linux/wlagent.service out/wla/wlagent.service
 	cp libvirt/qemu out/wla/qemu && chmod +x out/wla/qemu
 	cp out/wlagent out/wla/wlagent && chmod +x out/wla/wlagent
+
+	git archive --remote=$(MONOREPO_GITURL) $(MONOREPO_GITBRANCH) pkg/lib/common/upgrades/ | tar xvf -
+	cp -a pkg/lib/common/upgrades/* out/wla/
+	rm -rf pkg/
+	cp -a upgrades/* out/wla/
+	mv out/wla/build/* out/wla/
+	chmod +x out/wla/*.sh
+
 	makeself out/wla out/workload-agent-$(VERSION).bin "Workload Agent $(VERSION)" ./install.sh 
 
 package: wlagent

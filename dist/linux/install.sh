@@ -84,6 +84,14 @@ fi
 # Make sure that we are running in the same directory as the install script
 cd "$( dirname "$0" )"
 
+COMPONENT_NAME=wlagent
+# Upgrade if component is already installed
+if command -v $COMPONENT_NAME &>/dev/null; then
+  echo "$COMPONENT_NAME is installed, proceeding with the upgrade"
+  ./${COMPONENT_NAME}_upgrade.sh
+  exit $?
+fi
+
 # load installer environment file, if present
 # TODO: ISECL-8364 Resolve flow/steps for using 'env' files when installing workload-agent
 if [ -f ~/trustagent.env ]; then
