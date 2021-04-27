@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 source /etc/secret-volume/secrets.txt
 export WLA_SERVICE_USERNAME
 export WLA_SERVICE_PASSWORD
@@ -33,13 +32,16 @@ if [ ! -f $CONFIG_PATH/.setup_done ]; then
 fi
 
 if [ ! -z "$SETUP_TASK" ]; then
+  cp $CONFIG_PATH/config.yml /tmp/config.yml
   IFS=',' read -ra ADDR <<< "$SETUP_TASK"
   for task in "${ADDR[@]}"; do
     wlagent setup $task --force
     if [ $? -ne 0 ]; then
+      cp /tmp/config.yml $CONFIG_PATH/config.yml
       exit 1
     fi
   done
+  rm -rf /tmp/config.yml
 fi
 
 unset AIK_SECRET
