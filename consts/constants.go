@@ -74,4 +74,6 @@ const (
 	RegisterSigningKeyCommand  = "RegisterSigningKey"
 	RegisterBindingKeyCommand  = "RegisterBindingKey"
 	UpdateServiceConfigCommand = "update_service_config"
+	CreateBindingKey           = "BindingKey"
+	CreateSigningKey           = "SigningKey"
 )

@@ -87,7 +87,7 @@ func printUsage() {
 	fmt.Printf("                           - Environment variable HVS_URL=<url> for registering the key with Verification service\n")
 	fmt.Printf("                           - Environment variable BEARER_TOKEN=<token> for authenticating with Verification service\n")
 	fmt.Printf("                           - Environment variable TRUSTAGENT_USERNAME=<TA user> for changing binding key file ownership to TA application user\n")
-	fmt.Printf("    update-service-config  Updates service configuration\n")
+	fmt.Printf("    update_service_config  Updates service configuration\n")
 	fmt.Printf("\t\t                           - Option [--force] overwrites existing server config")
 	fmt.Printf("                           - Environment variable WLS_API_URL=<url> Workload Service URL\n")
 	fmt.Printf("                           - Environment variable WLA_SERVICE_USERNAME WLA Service Username\n")
@@ -133,9 +133,9 @@ func main() {
 		// to a function in the workload agent setup package and have it build a slice of tasks
 		// to run.
 		config.LogConfiguration(false)
-		flags := args
+		var flags []string
 		if len(args) > 1 {
-			flags = args[2:]
+			flags = args[1:]
 		} else {
 			fmt.Fprintln(os.Stderr, "Error: setup task not mentioned")
 			printUsage()
@@ -143,16 +143,18 @@ func main() {
 		}
 
 		var taskName string
-		if len(args) >= 2 {
-			taskName = args[1]
+		if len(flags) > 0 {
+			taskName = flags[0]
 		}
 
 		switch taskName {
 		case consts.SetupAllCommand, consts.DownloadRootCACertCommand,
-			consts.RegisterSigningKeyCommand, consts.RegisterBindingKeyCommand, consts.UpdateServiceConfigCommand:
+			consts.RegisterSigningKeyCommand, consts.RegisterBindingKeyCommand,
+			consts.UpdateServiceConfigCommand, consts.CreateBindingKey,
+			consts.CreateSigningKey:
 			err := config.SaveConfiguration(context, taskName)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "main:main() Unable to save configuration in config.yml ")
+				fmt.Fprintln(os.Stderr, "main:main() Unable to save configuration in config.yml")
 				log.WithError(err).Error("main:main() Unable to save configuration in config.yml")
 				os.Exit(1)
 			}
@@ -164,7 +166,7 @@ func main() {
 		}
 
 		secLog.Infof("%s, Opening tpm connection", message.SU)
-		// Workaround for tpm2-abrmd bug in RHEL 7.5
+
 		tpmFactory, err := tpmprovider.NewTpmFactory()
 		if err != nil {
 			fmt.Println("Error while creating the tpm factory.")
