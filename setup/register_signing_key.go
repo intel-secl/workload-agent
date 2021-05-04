@@ -25,7 +25,7 @@ func (rs RegisterSigningKey) Run(c csetup.Context) error {
 	log.Trace("setup/register_signing_key:Run() Entering")
 	defer log.Trace("setup/register_signing_key:Run() Leaving")
 	fmt.Println("Running setup task: RegisterSigningKey")
-	fs := flag.NewFlagSet("SigningKey", flag.ContinueOnError)
+	fs := flag.NewFlagSet(consts.RegisterSigningKeyCommand, flag.ContinueOnError)
 	force := fs.Bool("force", false, "Re-register signing key with Verification service")
 	err := fs.Parse(rs.Flags)
 	if err != nil {

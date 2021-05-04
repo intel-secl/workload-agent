@@ -135,17 +135,14 @@ func main() {
 		config.LogConfiguration(false)
 		var flags []string
 		if len(args) > 1 {
-			flags = args[1:]
+			flags = args[2:]
 		} else {
 			fmt.Fprintln(os.Stderr, "Error: setup task not mentioned")
 			printUsage()
 			os.Exit(1)
 		}
 
-		var taskName string
-		if len(flags) > 0 {
-			taskName = flags[0]
-		}
+		taskName := args[1]
 
 		switch taskName {
 		case consts.SetupAllCommand, consts.DownloadRootCACertCommand,

@@ -24,7 +24,7 @@ func (uc Update_Service_Config) Run(c csetup.Context) error {
 	log.Trace("setup/update_service_config:Run() Entering")
 	defer log.Trace("setup/update_service_config:Run() Leaving")
 	fmt.Println("Running setup task: update_service_config")
-	fs := flag.NewFlagSet("Update_Service_Config", flag.ContinueOnError)
+	fs := flag.NewFlagSet(consts.UpdateServiceConfigCommand, flag.ContinueOnError)
 
 	force := fs.Bool("force", false, "force recreation, will overwrite any existing signing key")
 	err := fs.Parse(uc.Flags)
@@ -95,7 +95,7 @@ func (uc Update_Service_Config) Run(c csetup.Context) error {
 	return config.Save()
 }
 
-func (u Update_Service_Config) Validate(c csetup.Context) error {
+func (uc Update_Service_Config) Validate(c csetup.Context) error {
 	log.Trace("setup/update_service_config:Validate() Entering")
 	defer log.Trace("setup/update_service_config:Validate() Leaving")
 

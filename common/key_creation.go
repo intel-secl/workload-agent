@@ -116,7 +116,7 @@ func writeCertifiedKeyToDisk(tpmck *tpmprovider.CertifiedKey, filepath string) e
 
 // GenerateKey creates a TPM binding or signing key
 // It uses the AiKSecret that is saved in the Workload Agent configuration
-// that is obtained from the trust agent, a randomn secret and uses the TPM
+// that is obtained from the trust agent, a random secret and uses the TPM
 // to generate a keypair that is tied to the TPM
 func GenerateKey(usage int, t tpmprovider.TpmFactory) error {
 	log.Trace("common/key_creation:GenerateKey() Entering")

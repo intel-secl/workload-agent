@@ -7,13 +7,13 @@ package setup
 import (
 	"flag"
 	"fmt"
+	"github.com/pkg/errors"
 	csetup "intel/isecl/lib/common/v3/setup"
 	"intel/isecl/lib/tpmprovider/v3"
 	"intel/isecl/wlagent/v3/common"
 	"intel/isecl/wlagent/v3/config"
+	"intel/isecl/wlagent/v3/consts"
 	"os"
-
-	"github.com/pkg/errors"
 )
 
 type SigningKey struct {
@@ -25,7 +25,7 @@ func (sk SigningKey) Run(c csetup.Context) error {
 	log.Trace("setup/create_signing_key:Run() Entering")
 	defer log.Trace("setup/create_signing_key:Run() Leaving")
 	fmt.Println("Running setup task: SigningKey")
-	fs := flag.NewFlagSet("SigningKey", flag.ContinueOnError)
+	fs := flag.NewFlagSet(consts.CreateSigningKey, flag.ContinueOnError)
 	force := fs.Bool("force", false, "force recreation, will overwrite any existing signing key")
 	err := fs.Parse(sk.Flags)
 	if err != nil {

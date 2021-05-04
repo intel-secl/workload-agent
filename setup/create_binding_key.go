@@ -12,6 +12,7 @@ import (
 	"intel/isecl/lib/tpmprovider/v3"
 	"intel/isecl/wlagent/v3/common"
 	"intel/isecl/wlagent/v3/config"
+	"intel/isecl/wlagent/v3/consts"
 	"os"
 
 	"github.com/pkg/errors"
@@ -30,8 +31,8 @@ func (bk BindingKey) Run(c csetup.Context) error {
 	log.Trace("setup/create_binding_key:Run() Entering")
 	defer log.Trace("setup/create_binding_key:Run() Leaving")
 	fmt.Println("Running setup task: BindingKey")
-	fs := flag.NewFlagSet("BindingKey", flag.ContinueOnError)
-	force := fs.Bool("force", false, "force recreation, will overwrite any existing signing key")
+	fs := flag.NewFlagSet(consts.CreateBindingKey, flag.ContinueOnError)
+	force := fs.Bool("force", false, "force recreation, will overwrite any existing binding key")
 	err := fs.Parse(bk.Flags)
 	if err != nil {
 		return errors.Wrap(err, "setup/create_binding_key:Run() Unable to parse flags")

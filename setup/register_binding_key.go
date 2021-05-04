@@ -31,7 +31,7 @@ func (rb RegisterBindingKey) Run(c csetup.Context) error {
 	log.Trace("setup/register_binding_key:Run() Entering")
 	defer log.Trace("setup/register_binding_key:Run() Leaving")
 	fmt.Println("Running setup task: RegisterBindingKey")
-	fs := flag.NewFlagSet("RegisterBindingKey", flag.ContinueOnError)
+	fs := flag.NewFlagSet(consts.RegisterBindingKeyCommand, flag.ContinueOnError)
 	force := fs.Bool("force", false, "Re-register binding key with Verification service")
 	err := fs.Parse(rb.Flags)
 	if err != nil {
