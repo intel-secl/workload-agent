@@ -219,6 +219,9 @@ for directory in $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_CA $WORKLOAD_AGEN
   chmod 700 $directory
 done
 
+# log file permission change
+chmod 740 $WORKLOAD_AGENT_LOGS
+
 # Copy workload agent installer to workload-agent bin directory and create a symlink
 cp -f wlagent $WORKLOAD_AGENT_BIN
 chown $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $WORKLOAD_AGENT_BIN/wlagent

@@ -270,8 +270,8 @@ func SaveConfiguration(c csetup.Context, taskName string) error {
 func LogConfiguration(isStdOut bool) {
 	// creating the log file if not preset
 	var ioWriterDefault io.Writer
-	secLogFile, _ := os.OpenFile(consts.SecurityLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	defaultLogFile, _ := os.OpenFile(consts.DefaultLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	secLogFile, _ := os.OpenFile(consts.SecurityLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0640)
+	defaultLogFile, _ := os.OpenFile(consts.DefaultLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0640)
 
 	ioWriterDefault = defaultLogFile
 
