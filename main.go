@@ -246,6 +246,8 @@ func main() {
 			secLog.Errorf("main:main() start-vm: Failed to dial wlagent.sock, %s", message.BadConnection)
 			os.Exit(1)
 		}
+		defer conn.Close()
+
 		client := rpc.NewClient(conn)
 		defer client.Close()
 
@@ -282,6 +284,8 @@ func main() {
 			secLog.Errorf("main:main() prepare-vm: Failed to dial wlagent.sock, %s", message.BadConnection)
 			os.Exit(1)
 		}
+		defer conn.Close()
+
 		client := rpc.NewClient(conn)
 		defer client.Close()
 
@@ -317,6 +321,7 @@ func main() {
 			secLog.Errorf("main:main() stop-vm: Failed to dial wlagent.sock, %s", message.BadConnection)
 			os.Exit(1)
 		}
+		defer conn.Close()
 
 		// validate domainXML input
 		if err = validation.ValidateXMLString(args[1]); err != nil {
@@ -353,6 +358,8 @@ func main() {
 			log.WithError(err).Errorf("main:main() create-instance-trust-report: failed to dial wlagent.sock, %s", message.BadConnection)
 			os.Exit(1)
 		}
+		defer conn.Close()
+
 		client := rpc.NewClient(conn)
 		defer client.Close()
 		var args = wlrpc.ManifestString{
@@ -378,6 +385,7 @@ func main() {
 			secLog.WithError(err).Errorf("main:main() fetch-flavor: failed to dial wlagent.sock, %s", message.BadConnection)
 			os.Exit(1)
 		}
+		defer conn.Close()
 
 		// validate input
 		if err = validation.ValidateUUIDv4(args[1]); err != nil {
@@ -415,6 +423,7 @@ func main() {
 			secLog.WithError(err).Errorf("main:main() fetch-key-url: failed to dial wlagent.sock, %s", message.BadConnection)
 			os.Exit(1)
 		}
+		defer conn.Close()
 
 		client := rpc.NewClient(conn)
 		defer client.Close()
@@ -541,8 +550,6 @@ func removeservice() {
 func runservice() {
 	log.Trace("main:runservice() Entering")
 	defer log.Trace("main:runservice() Leaving")
-	// Save log configurations
-	//TODO : daemon log configuration - does it need to be passed in?
 
 	//check if the wlagent run directory path is already created
 	if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
@@ -557,12 +564,13 @@ func runservice() {
 	}
 
 	// open a connection to TPM
-	_, err := util.GetTpmInstance()
+	vtpmInstance, err := util.GetTpmInstance()
 	if err != nil {
 		log.WithError(err).Error("main:runservice() Could not open a new connection to the TPM")
 		secLog.Info(message.AppRuntimeErr)
 		os.Exit(1)
 	}
+	vtpmInstance.Close()
 
 	fileWatcher, err := filewatch.NewWatcher()
 	if err != nil {
@@ -596,38 +604,42 @@ func runservice() {
 	}
 	go func() {
 		defer proc.TaskDone()
-		for {
-			RPCSocketFilePath := consts.RunDirPath + consts.RPCSocketFileName
-			// When the socket is closed, the file handle on the socket file isn't handled.
-			// This code is added to manually remove any stale socket file before the connection
-			// is reopened; prevent error: bind address already in use
-			// ensure that the socket file exists before removal
-			if _, err = os.Stat(RPCSocketFilePath); err == nil {
-				err = os.Remove(RPCSocketFilePath)
-				if err != nil {
-					log.WithError(err).Error("main:runservice() Failed to remove socket file")
-				}
-			}
-			// block and loop, daemon doesnt need to run on go routine
-			l, err := net.Listen("unix", RPCSocketFilePath)
+		RPCSocketFilePath := consts.RunDirPath + consts.RPCSocketFileName
+		// When the socket is closed, the file handle on the socket file isn't handled.
+		// This code is added to manually remove any stale socket file before the connection
+		// is reopened; prevent error: bind address already in use
+		// ensure that the socket file exists before removal
+		if _, err = os.Stat(RPCSocketFilePath); err == nil {
+			err = os.Remove(RPCSocketFilePath)
 			if err != nil {
-				log.Error(err)
-				secLog.Info(message.AppRuntimeErr)
-				return
+				log.WithError(err).Error("main:runservice() Failed to remove socket file")
 			}
-			r := rpc.NewServer()
-			vm := &wlrpc.VirtualMachine{
-				Watcher: fileWatcher,
-			}
+		}
+		l, err := net.Listen("unix", RPCSocketFilePath)
+		if err != nil {
+			log.Error(err)
+			secLog.Errorf(message.AppRuntimeErr + " Failed to initialize up WLA Unix socket")
+			return
+		}
+		defer l.Close()
 
-			err = r.Register(vm)
-			if err != nil {
-				log.WithError(err).Error("main:runservice() Unable to Register vm wathcer")
-				log.Tracef("%+v", err)
-				secLog.Info(message.AppRuntimeErr)
-				return
-			}
+		r := rpc.NewServer()
+		vm := &wlrpc.VirtualMachine{
+			Watcher: fileWatcher,
+		}
+
+		err = r.Register(vm)
+		if err != nil {
+			log.WithError(err).Error("main:runservice() Unable to Register vm wathcer")
+			log.Tracef("%+v", err)
+			secLog.Info(message.AppRuntimeErr)
+			return
+		}
+		for {
+			log.Trace("main:runservice() Listen and Serve enter")
+			// block and loop, daemon doesnt need to run on go routine
 			r.Accept(l)
+			log.Trace("main:runservice() Listen and Serve exit")
 		}
 	}()
 	secLog.Info(message.ServiceStart)
