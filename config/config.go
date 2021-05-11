@@ -270,9 +270,18 @@ func SaveConfiguration(c csetup.Context, taskName string) error {
 func LogConfiguration(isStdOut bool) {
 	// creating the log file if not preset
 	var ioWriterDefault io.Writer
+	var err error = nil
 	secLogFile, _ := os.OpenFile(consts.SecurityLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0640)
-	defaultLogFile, _ := os.OpenFile(consts.DefaultLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0640)
+	err = os.Chmod(consts.SecurityLogFile, 0640)
+	if err != nil {
+		log.Errorf("config/config:LogConfiguration() error in setting file permission for file : %s", secLogFile)
+	}
 
+	defaultLogFile, _ := os.OpenFile(consts.DefaultLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0640)
+	err = os.Chmod(consts.DefaultLogFile, 0640)
+	if err != nil {
+		log.Errorf("config/config:LogConfiguration() error in setting file permission for file : %s", defaultLogFile)
+	}
 	ioWriterDefault = defaultLogFile
 
 	if isStdOut {
