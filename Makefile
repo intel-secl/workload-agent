@@ -31,10 +31,9 @@ installer: wlagent
 	cp -rf out/secure-docker-plugin/artifact out/wla/
 	cp dist/linux/uninstall-container-security-dependencies.sh out/wla/uninstall-container-security-dependencies.sh && chmod +x out/wla/uninstall-container-security-dependencies.sh
 
-	tmpdir=$(mktemp)
-	git clone --depth 1 -b $(MONOREPO_GITBRANCH) $(MONOREPO_GITURL) $tmpdir
-	cp -a $tmpdir/pkg/lib/common/upgrades/* out/wla/
-	rm -rf $tmpdir
+	git clone --depth 1 -b $(MONOREPO_GITBRANCH) $(MONOREPO_GITURL) tmp_monorepo
+	cp -a tmp_monorepo/pkg/lib/common/upgrades/* out/wla/
+	rm -rf tmp_monorepo
 	cp -a upgrades/* out/wla/
 	mv out/wla/build/* out/wla/
 	chmod +x out/wla/*.sh
@@ -48,10 +47,9 @@ installer-no-docker: wlagent
 	cp libvirt/qemu out/wla/qemu && chmod +x out/wla/qemu
 	cp out/wlagent out/wla/wlagent && chmod +x out/wla/wlagent
 
-	tmpdir=$(mktemp)
-	git clone --depth 1 -b $(MONOREPO_GITBRANCH) $(MONOREPO_GITURL) $tmpdir
-	cp -a $tmpdir/pkg/lib/common/upgrades/* out/wla/
-	rm -rf $tmpdir
+	git clone --depth 1 -b $(MONOREPO_GITBRANCH) $(MONOREPO_GITURL) tmp_monorepo
+	cp -a tmp_monorepo/pkg/lib/common/upgrades/* out/wla/
+	rm -rf tmp_monorepo
 	cp -a upgrades/* out/wla/
 	mv out/wla/build/* out/wla/
 	chmod +x out/wla/*.sh
