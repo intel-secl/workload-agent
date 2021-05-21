@@ -6,7 +6,7 @@ BUILDDATE := $(shell TZ=UTC date +%Y-%m-%dT%H:%M:%S%z)
 PROXY_EXISTS := $(shell if [[ "${https_proxy}" || "${http_proxy}" ]]; then echo 1; else echo 0; fi)
 DOCKER_PROXY_FLAGS := ""
 MONOREPO_GITURL := "https://github.com/intel-secl/intel-secl.git"
-MONOREPO_GITBRANCH := "v3.6/develop"
+MONOREPO_GITBRANCH := "v3.6.0"
 
 .PHONY: wlagent, installer, all, clean, vmc-only
 
@@ -31,9 +31,10 @@ installer: wlagent
 	cp -rf out/secure-docker-plugin/artifact out/wla/
 	cp dist/linux/uninstall-container-security-dependencies.sh out/wla/uninstall-container-security-dependencies.sh && chmod +x out/wla/uninstall-container-security-dependencies.sh
 
-	git archive --remote=$(MONOREPO_GITURL) $(MONOREPO_GITBRANCH) pkg/lib/common/upgrades/ | tar xvf -
-	cp -a pkg/lib/common/upgrades/* out/wla/
-	rm -rf pkg/
+	tmpdir=$(mktemp)
+	git clone --depth 1 -b $(MONOREPO_GITBRANCH) $(MONOREPO_GITURL) $tmpdir
+	cp -a $tmpdir/pkg/lib/common/upgrades/* out/wla/
+	rm -rf $tmpdir
 	cp -a upgrades/* out/wla/
 	mv out/wla/build/* out/wla/
 	chmod +x out/wla/*.sh
@@ -47,9 +48,10 @@ installer-no-docker: wlagent
 	cp libvirt/qemu out/wla/qemu && chmod +x out/wla/qemu
 	cp out/wlagent out/wla/wlagent && chmod +x out/wla/wlagent
 
-	git archive --remote=$(MONOREPO_GITURL) $(MONOREPO_GITBRANCH) pkg/lib/common/upgrades/ | tar xvf -
-	cp -a pkg/lib/common/upgrades/* out/wla/
-	rm -rf pkg/
+	tmpdir=$(mktemp)
+	git clone --depth 1 -b $(MONOREPO_GITBRANCH) $(MONOREPO_GITURL) $tmpdir
+	cp -a $tmpdir/pkg/lib/common/upgrades/* out/wla/
+	rm -rf $tmpdir
 	cp -a upgrades/* out/wla/
 	mv out/wla/build/* out/wla/
 	chmod +x out/wla/*.sh
