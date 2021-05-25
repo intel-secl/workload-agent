@@ -6,9 +6,9 @@
 package flavor
 
 import (
-	wlsModel "github.com/intel-secl/intel-secl/v3/pkg/model/wls"
-	pinfo "intel/isecl/lib/platform-info/v3/platforminfo"
-	wlsclient "intel/isecl/wlagent/v3/clients"
+	wlsModel "github.com/intel-secl/intel-secl/v4/pkg/model/wls"
+	pinfo "intel/isecl/lib/platform-info/v4/platforminfo"
+	wlsclient "intel/isecl/wlagent/v4/clients"
 )
 
 // RetrieveKey retrieves an Image decryption key

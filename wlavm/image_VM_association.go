@@ -6,8 +6,8 @@ package wlavm
 
 import (
 	"github.com/pkg/errors"
-	cLog "intel/isecl/lib/common/v3/log"
-	"intel/isecl/wlagent/v3/util"
+	cLog "intel/isecl/lib/common/v4/log"
+	"intel/isecl/wlagent/v4/util"
 )
 
 var log = cLog.GetDefaultLogger()

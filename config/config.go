@@ -6,11 +6,11 @@ package config
 
 import (
 	"fmt"
-	cLog "intel/isecl/lib/common/v3/log"
-	"intel/isecl/lib/common/v3/log/message"
-	cLogInt "intel/isecl/lib/common/v3/log/setup"
-	csetup "intel/isecl/lib/common/v3/setup"
-	"intel/isecl/wlagent/v3/consts"
+	cLog "intel/isecl/lib/common/v4/log"
+	"intel/isecl/lib/common/v4/log/message"
+	cLogInt "intel/isecl/lib/common/v4/log/setup"
+	csetup "intel/isecl/lib/common/v4/setup"
+	"intel/isecl/wlagent/v4/consts"
 	"io"
 	"io/ioutil"
 	"os"

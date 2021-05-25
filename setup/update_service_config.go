@@ -7,9 +7,9 @@ package setup
 import (
 	"flag"
 	"fmt"
-	csetup "intel/isecl/lib/common/v3/setup"
-	"intel/isecl/wlagent/v3/config"
-	"intel/isecl/wlagent/v3/consts"
+	csetup "intel/isecl/lib/common/v4/setup"
+	"intel/isecl/wlagent/v4/config"
+	"intel/isecl/wlagent/v4/consts"
 	"strconv"
 	"strings"
 

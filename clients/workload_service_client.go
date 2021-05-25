@@ -5,11 +5,11 @@
 package clients
 
 import (
-	"github.com/intel-secl/intel-secl/v3/pkg/clients/wlsclient"
-	wlsModel "github.com/intel-secl/intel-secl/v3/pkg/model/wls"
+	"github.com/intel-secl/intel-secl/v4/pkg/clients/wlsclient"
+	wlsModel "github.com/intel-secl/intel-secl/v4/pkg/model/wls"
 	"github.com/pkg/errors"
-	"intel/isecl/wlagent/v3/config"
-	"intel/isecl/wlagent/v3/consts"
+	"intel/isecl/wlagent/v4/config"
+	"intel/isecl/wlagent/v4/consts"
 	"net/url"
 	"strings"
 )

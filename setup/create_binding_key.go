@@ -7,12 +7,12 @@ package setup
 import (
 	"flag"
 	"fmt"
-	cLog "intel/isecl/lib/common/v3/log"
-	csetup "intel/isecl/lib/common/v3/setup"
-	"intel/isecl/lib/tpmprovider/v3"
-	"intel/isecl/wlagent/v3/common"
-	"intel/isecl/wlagent/v3/config"
-	"intel/isecl/wlagent/v3/consts"
+	cLog "intel/isecl/lib/common/v4/log"
+	csetup "intel/isecl/lib/common/v4/setup"
+	"intel/isecl/lib/tpmprovider/v4"
+	"intel/isecl/wlagent/v4/common"
+	"intel/isecl/wlagent/v4/config"
+	"intel/isecl/wlagent/v4/consts"
 	"os"
 
 	"github.com/pkg/errors"

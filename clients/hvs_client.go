@@ -7,13 +7,13 @@ package clients
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/intel-secl/intel-secl/v3/pkg/clients/hvsclient"
-	wlaModel "github.com/intel-secl/intel-secl/v3/pkg/model/wlagent"
+	"github.com/intel-secl/intel-secl/v4/pkg/clients/hvsclient"
+	wlaModel "github.com/intel-secl/intel-secl/v4/pkg/model/wlagent"
 	"github.com/pkg/errors"
-	cLog "intel/isecl/lib/common/v3/log"
-	csetup "intel/isecl/lib/common/v3/setup"
-	"intel/isecl/wlagent/v3/config"
-	"intel/isecl/wlagent/v3/consts"
+	cLog "intel/isecl/lib/common/v4/log"
+	csetup "intel/isecl/lib/common/v4/setup"
+	"intel/isecl/wlagent/v4/config"
+	"intel/isecl/wlagent/v4/consts"
 	"os"
 )
 

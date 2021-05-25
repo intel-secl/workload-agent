@@ -6,7 +6,7 @@ package libvirt
 
 import (
 	"encoding/xml"
-	cLog "intel/isecl/lib/common/v3/log"
+	cLog "intel/isecl/lib/common/v4/log"
 )
 
 // QemuIntercept is used to get the qemu intercept call
