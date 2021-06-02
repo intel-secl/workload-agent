@@ -15,9 +15,9 @@ stages:
 
 build:gta:
   stage: build
-  image: gta-devel
+  image: tpm-devel
   tags:
-    - gta
+    - tpm-devel
   script:
     - make package
   artifacts:
@@ -25,55 +25,55 @@ build:gta:
       - "out/workload-agent-*.bin"
     expire_in: 1 week
 
-Stylechecker:
-  stage: scan
-  only:
-    - merge_requests
-  image: gta-devel
-  tags:
-    - gta
-  script:
-    - gofmt -l .
-    - |
-         if [ "$(gofmt -l . | wc -l)"  -gt 0 ]; then
-                exit 1
-         fi
+# Stylechecker:
+#   stage: scan
+#   only:
+#     - merge_requests
+#   image: gta-devel
+#   tags:
+#     - gta
+#   script:
+#     - gofmt -l .
+#     - |
+#          if [ "$(gofmt -l . | wc -l)"  -gt 0 ]; then
+#                 exit 1
+#          fi
     
-checkmarx:
-  stage: scan
-  only:
-     - merge_requests
-  allow_failure: true
-  services:
-      - docker:dind
-  image:
-    name: ${DOCKER_REGISTRY_SERVER}:${DOCKER_REGISTRY_PORT}/checkmarx:isecl
-    entrypoint: ['']
-  tags:
-    - docker-checkmarx
-  script:
-    - cat ${CX_FLOW_CONFIG} > application.yml
-    - |
-      if [ "$CI_PIPELINE_SOURCE" == "merge_request_event" ]; then 
-        java -jar /app/cx-flow.jar --spring.config.location=./application.yml \
-          --scan \
-          --cx-team="${CHECKMARX_TEAM}" \
-          --cx-project="${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}" \
-          --app="${CI_PROJECT_NAME}" \
-          --project-id=${CI_PROJECT_ID} \
-          --merge-id=${CI_MERGE_REQUEST_IID} \
-          --bug-tracker=GITLABMERGE \
-          --cx-flow.break-build=false \
-          --f=.
-      else
-        java -jar /app/cx-flow.jar --spring.config.location=./application.yml \
-          --scan \
-          --cx-team="${CHECKMARX_TEAM}" \
-          --cx-project="${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}" \
-          --app="${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}" \
-          --branch="${CI_COMMIT_REF_NAME}" \
-          --repo-name="${CI_PROJECT_NAME}" \
-          --namespace="${CI_PROJECT_NAMESPACE##*/}" \
-          --cx-flow.break-build=false \
-          --f=.
-      fi
+# checkmarx:
+#   stage: scan
+#   only:
+#      - merge_requests
+#   allow_failure: true
+#   services:
+#       - docker:dind
+#   image:
+#     name: ${DOCKER_REGISTRY_SERVER}:${DOCKER_REGISTRY_PORT}/checkmarx:isecl
+#     entrypoint: ['']
+#   tags:
+#     - docker-checkmarx
+#   script:
+#     - cat ${CX_FLOW_CONFIG} > application.yml
+#     - |
+#       if [ "$CI_PIPELINE_SOURCE" == "merge_request_event" ]; then 
+#         java -jar /app/cx-flow.jar --spring.config.location=./application.yml \
+#           --scan \
+#           --cx-team="${CHECKMARX_TEAM}" \
+#           --cx-project="${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}" \
+#           --app="${CI_PROJECT_NAME}" \
+#           --project-id=${CI_PROJECT_ID} \
+#           --merge-id=${CI_MERGE_REQUEST_IID} \
+#           --bug-tracker=GITLABMERGE \
+#           --cx-flow.break-build=false \
+#           --f=.
+#       else
+#         java -jar /app/cx-flow.jar --spring.config.location=./application.yml \
+#           --scan \
+#           --cx-team="${CHECKMARX_TEAM}" \
+#           --cx-project="${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}" \
+#           --app="${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}" \
+#           --branch="${CI_COMMIT_REF_NAME}" \
+#           --repo-name="${CI_PROJECT_NAME}" \
+#           --namespace="${CI_PROJECT_NAMESPACE##*/}" \
+#           --cx-flow.break-build=false \
+#           --f=.
+#       fi
