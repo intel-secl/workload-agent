@@ -41,12 +41,6 @@ func createKey(usage int, t tpmprovider.TpmFactory) (tpmck *tpmprovider.Certifie
 	case tpmprovider.Signing:
 		config.Configuration.SigningKeySecret = hex.EncodeToString(secretbytes)
 	}
-	// get the aiksecret. This will return a byte array.
-	log.Debug("common/key_creation:createKey() Getting aik secret from trusagent configuration.")
-	aikSecret, err := config.GetAikSecret()
-	if err != nil {
-		return nil, err
-	}
 
 	secLog.Infof("common/key_creation:createKey() %s, Calling CreateCertifiedKey of tpm library to create and certify signing or binding key", message.SU)
 
@@ -59,9 +53,9 @@ func createKey(usage int, t tpmprovider.TpmFactory) (tpmck *tpmprovider.Certifie
 
 	switch usage {
 	case tpmprovider.Binding:
-		tpmck, err = tpm.CreateBindingKey(config.Configuration.BindingKeySecret, aikSecret)
+		tpmck, err = tpm.CreateBindingKey(config.Configuration.BindingKeySecret)
 	case tpmprovider.Signing:
-		tpmck, err = tpm.CreateSigningKey(config.Configuration.SigningKeySecret, aikSecret)
+		tpmck, err = tpm.CreateSigningKey(config.Configuration.SigningKeySecret)
 	}
 	if err != nil {
 		return nil, err
