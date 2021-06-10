@@ -19,7 +19,7 @@ build:gta:
   tags:
     - tpm-devel
   script:
-    - make package
+    - make installer
   artifacts:
     paths:
       - "out/workload-agent-*.bin"

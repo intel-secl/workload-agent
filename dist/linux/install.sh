@@ -8,7 +8,7 @@
 # *** do NOT use TABS for indentation, use SPACES
 # *** TABS will cause errors in some linux distributions
 
-# WORKLOAD_AGENT install script 
+# WORKLOAD_AGENT install script
 # Outline:
 # Check if installer is running as a root
 # Load the environment file
@@ -65,7 +65,6 @@ echo_warning() {
   return 1
 }
 
-
 echo_info() {
   if [ "$TERM_DISPLAY_MODE" = "color" ]; then echo -en "${TERM_COLOR_CYAN}"; fi
   echo ${@:-"[INFO]"}
@@ -76,13 +75,13 @@ echo_info() {
 ############################################################################################################
 
 # Product installation is only allowed if we are running as root
-if [ $EUID -ne 0 ];  then
+if [ $EUID -ne 0 ]; then
   echo "Workload agent installation has to run as root. Exiting"
   exit 1
 fi
 
 # Make sure that we are running in the same directory as the install script
-cd "$( dirname "$0" )"
+cd "$(dirname "$0")"
 
 COMPONENT_NAME=wlagent
 # Upgrade if component is already installed
@@ -127,7 +126,6 @@ auto_install() {
   yum -y install $yum_packages
 }
 
-
 # SCRIPT EXECUTION
 
 logRotate_clear() {
@@ -135,8 +133,8 @@ logRotate_clear() {
 }
 
 logRotate_detect() {
-  local logrotaterc=`ls -1 /etc/logrotate.conf 2>/dev/null | tail -n 1`
-  logrotate=`which logrotate 2>/dev/null`
+  local logrotaterc=$(ls -1 /etc/logrotate.conf 2>/dev/null | tail -n 1)
+  logrotate=$(which logrotate 2>/dev/null)
   if [ -z "$logrotate" ] && [ -f "/usr/sbin/logrotate" ]; then
     logrotate="/usr/sbin/logrotate"
   fi
@@ -146,14 +144,18 @@ logRotate_install() {
   LOGROTATE_YUM_PACKAGES="logrotate"
   if [ "$(whoami)" == "root" ]; then
     auto_install "Log Rotate" "LOGROTATE"
-    if [ $? -ne 0 ]; then echo_failure "Failed to install logrotate"; exit 1; fi
-  fi
-  logRotate_clear; logRotate_detect;
-    if [ -z "$logrotate" ]; then
-      echo_failure "logrotate is not installed"
-    else
-      echo  "logrotate installed in $logrotate"
+    if [ $? -ne 0 ]; then
+      echo_failure "Failed to install logrotate"
+      exit 1
     fi
+  fi
+  logRotate_clear
+  logRotate_detect
+  if [ -z "$logrotate" ]; then
+    echo_failure "logrotate is not installed"
+  else
+    echo "logrotate installed in $logrotate"
+  fi
 }
 
 logRotate_install
@@ -168,7 +170,7 @@ export LOG_OLD=${LOG_OLD:-12}
 mkdir -p /etc/logrotate.d
 
 if [ ! -a /etc/logrotate.d/wlagent ]; then
- echo "/var/log/workload-agent/*.log {
+  echo "/var/log/workload-agent/*.log {
     missingok
     notifempty
     rotate $LOG_OLD
@@ -178,17 +180,15 @@ if [ ! -a /etc/logrotate.d/wlagent ]; then
     $LOG_COMPRESS
     $LOG_DELAYCOMPRESS
     $LOG_COPYTRUNCATE
-}" > /etc/logrotate.d/wlagent
+}" >/etc/logrotate.d/wlagent
 fi
 
-
 # Check if trustagent is intalled; if not output error
-hash tagent 2>/dev/null || 
-{
-  echo_failure >&2 "Trust agent is not installed. Exiting."; 
-  exit 1; 
-}
-
+hash tagent 2>/dev/null ||
+  {
+    echo_failure >&2 "Trust agent is not installed. Exiting."
+    exit 1
+  }
 
 # Use tagent user
 #### Using trustagent user here as trustagent needs permissions to access files from workload agent
@@ -209,13 +209,13 @@ fi
 
 # Load local configurations
 directory_layout() {
-export WORKLOAD_AGENT_CONFIGURATION=/etc/workload-agent
-export WORKLOAD_AGENT_CA=$WORKLOAD_AGENT_CONFIGURATION/certs/trustedca
-export WORKLOAD_AGENT_FLAVORSIGN=$WORKLOAD_AGENT_CONFIGURATION/certs/flavorsign
-export WORKLOAD_AGENT_JWT_CERT=$WORKLOAD_AGENT_CONFIGURATION/certs/trustedjwt
-export WORKLOAD_AGENT_LOGS=/var/log/workload-agent
-export WORKLOAD_AGENT_HOME=/opt/workload-agent
-export WORKLOAD_AGENT_BIN=$WORKLOAD_AGENT_HOME/bin
+  export WORKLOAD_AGENT_CONFIGURATION=/etc/workload-agent
+  export WORKLOAD_AGENT_CA=$WORKLOAD_AGENT_CONFIGURATION/certs/trustedca
+  export WORKLOAD_AGENT_FLAVORSIGN=$WORKLOAD_AGENT_CONFIGURATION/certs/flavorsign
+  export WORKLOAD_AGENT_JWT_CERT=$WORKLOAD_AGENT_CONFIGURATION/certs/trustedjwt
+  export WORKLOAD_AGENT_LOGS=/var/log/workload-agent
+  export WORKLOAD_AGENT_HOME=/opt/workload-agent
+  export WORKLOAD_AGENT_BIN=$WORKLOAD_AGENT_HOME/bin
 }
 directory_layout
 
@@ -224,7 +224,7 @@ echo "Installing workload agent..."
 # Create application directories (chown will be repeated near end of this script, after setup)
 for directory in $WORKLOAD_AGENT_CONFIGURATION $WORKLOAD_AGENT_CA $WORKLOAD_AGENT_BIN $WORKLOAD_AGENT_LOGS $WORKLOAD_AGENT_FLAVORSIGN $WORKLOAD_AGENT_JWT_CERT; do
   # mkdir -p will return 0 if directory exists or is a symlink to an existing directory or directory and parents can be created
-  mkdir -p $directory 
+  mkdir -p $directory
   if [ $? -ne 0 ]; then
     echo_failure "Cannot create directory: $directory"
     exit 1
@@ -244,22 +244,19 @@ ln -sfT $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/wlagent
 cp -f wlagent.service $WORKLOAD_AGENT_HOME
 systemctl enable $WORKLOAD_AGENT_HOME/wlagent.service
 
-
 # exit workload-agent setup if WORKLOAD_AGENT_NOSETUP is set
 if [ "$WORKLOAD_AGENT_NOSETUP" == "true" ]; then
   echo "$WORKLOAD_AGENT_NOSETUP is set. So, skipping the workload-agent setup task."
   exit 0
 fi
 
-
-
 # a global value to indicate if all the needed environment variables are present
 # this is initially set to true. The check_env_var_present function would set this
-# to false if and of the conditions are not met. This will be used to later decide 
+# to false if and of the conditions are not met. This will be used to later decide
 # whether to proceed with the setup
 all_env_vars_present=1
 
-# check_env_var_present is used to check if an environment variable that we expect 
+# check_env_var_present is used to check if an environment variable that we expect
 # is present. It prints a warning to the console if it does not exist
 # Also, sets the the all_env_vars_present to false
 # Arguments
@@ -268,10 +265,10 @@ all_env_vars_present=1
 #           to be present - but it is acceptable for it to be empty
 #           For most variables that we use, we won't pass it meaning that empty
 #           strings are not acceptable
-# Return 
+# Return
 #      0 - function succeeds
 #      1 - function fauls
-check_env_var_present(){
+check_env_var_present() {
   # check if we were passed in an empty string
   if [[ -z $1 ]]; then return 1; fi
 
@@ -294,9 +291,8 @@ check_env_var_present(){
   fi
 }
 
-
-# Validate the required environment variables for the setup. We are validating this in the 
-# binary. However, for someone to figure out what are the ones that need to be set, they can 
+# Validate the required environment variables for the setup. We are validating this in the
+# binary. However, for someone to figure out what are the ones that need to be set, they can
 # check here
 
 # start with all_env_vars_present=1 and let the the check_env_vars_present() method override
@@ -314,7 +310,7 @@ setup_complete=0
 if [[ $all_env_vars_present -eq 1 ]]; then
   wlagent setup all
   setup_complete=$?
-else 
+else
   echo_failure "One or more environment variables are not present. Setup cannot proceed. Aborting..."
   echo_failure "Please export the missing environment variables and run setup again"
   exit 1
@@ -323,92 +319,14 @@ fi
 # Enable systemd service and start it
 systemctl start wlagent
 
-is_docker_installed(){
-  which docker 2>/dev/null
-  if [ $? -ne 0 ]; then
-    echo_failure "Container Security requires Docker 19.03 to be installed on this system, but docker is not installed"
-    exit 1
-  fi
-}
-
-install_secure_docker_plugin(){
-
-mkdir /etc/systemd/system/secure-docker-plugin.service.d 2>1 /dev/null
-
-cat > /etc/systemd/system/secure-docker-plugin.service.d/securedockerplugin.conf <<EOF
-[Service]
-Environment="INSECURE_SKIP_VERIFY=${INSECURE_SKIP_VERIFY:-true}"
-Environment="NO_PROXY=${NO_PROXY}"
-Environment="REGISTRY_SCHEME_TYPE=${REGISTRY_SCHEME_TYPE:-https}"
-Environment="REGISTRY_USERNAME=${REGISTRY_USERNAME}"
-Environment="REGISTRY_PASSWORD=${REGISTRY_PASSWORD}"
-Environment="HTTPS_PROXY=${HTTPS_PROXY}"
-EOF
-
-cp secure-docker-plugin /usr/bin/
-cp artifact/* /lib/systemd/system/
-
-systemctl daemon-reload
-systemctl enable secure-docker-plugin.service 2>/dev/null
-systemctl start secure-docker-plugin.service
-
-}
-
-
-#Install secure docker daemon with WA only if WA_WITH_CONTAINER_SECURITY_DOCKER is enabled in workload-agent.env
-if [ "$WA_WITH_CONTAINER_SECURITY_DOCKER" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY_DOCKER" == "Y" ] || [ "$WA_WITH_CONTAINER_SECURITY_DOCKER" == "yes" ]; then
-  is_docker_installed
-
-  which cryptsetup 2>/dev/null
-  if [ $? -ne 0 ]; then
-    yum install -y cryptsetup
-    CRYPTSETUP_RESULT=$?
-    if [ $CRYPTSETUP_RESULT -ne 0 ]; then
-      echo_failure "Error: Secure Docker Daemon requires cryptsetup - Install failed. Exiting."
-      exit $CRYPTSETUP_RESULT
-    fi
-  fi
-  echo "Installing secure docker daemon"
-  systemctl stop docker
-
-  # Take backup of existing docker CLI and daemon binaries and configs
-  mkdir -p $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-  cp /usr/bin/docker $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-  chown -R root:root docker-daemon/
-    
-  cp -f docker-daemon/docker /usr/bin/
-  which /usr/bin/dockerd-ce 2>/dev/null
-  if [ $? -ne 0 ]; then
-    cp /usr/bin/dockerd $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-    cp -f docker-daemon/dockerd-ce /usr/bin/dockerd
-  else
-    cp /usr/bin/dockerd-ce $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-    cp -f docker-daemon/dockerd-ce /usr/bin/dockerd-ce
-  fi
-
-    # backup config files
-  if [ -f "/etc/docker/daemon.json" ]; then
-    cp /etc/docker/daemon.json $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-  fi
-  cp /lib/systemd/system/docker.service $WORKLOAD_AGENT_HOME/secure-docker-daemon/backup/
-
-  install_secure_docker_plugin
-
-  echo "Starting secure docker engine"
-  mkdir -p /etc/docker
-  cp daemon.json /etc/docker/
-  systemctl daemon-reload
-  systemctl start docker
-  cp uninstall-container-security-dependencies.sh $WORKLOAD_AGENT_HOME/secure-docker-daemon/
-elif [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "Y" ] || [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "yes" ]; then
+if [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "Y" ] || [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "yes" ]; then
   isinstalled=$(rpm -q cri-o)
   if [ "$isinstalled" == "package cri-o is not installed" ]; then
     echo_warning "Prerequisite cri-o is not installed, please install cri-o runtime before proceeding with container confidentiality"
   fi
 else
   yum_packages=(libvirt cryptsetup)
-  for i in ${yum_packages[*]}
-  do
+  for i in ${yum_packages[*]}; do
     isinstalled=$(rpm -q $i)
     if [ "$isinstalled" == "package $i is not installed" ]; then
       echo_warning "Prerequisite $i is not installed"
@@ -416,7 +334,7 @@ else
   done
 
   isinstalled=$(rpm -q libvirt)
-  if [ "$isinstalled" == "package $i is not installed" ]; then 
+  if [ "$isinstalled" == "package $i is not installed" ]; then
     echo_warning "failed to setup libvirt hook: libvirt not installed"
     echo_warning "setup libvirt hook with $WORKLOAD_AGENT_HOME/qemu"
     cp -f qemu $WORKLOAD_AGENT_HOME
@@ -432,8 +350,8 @@ else
       echo_warning "libvirtd system service is not active. Exiting"
       exit 0
     fi
-    ## TODO: Above - Should we exit if libvirt restart does not work? 
-    ## Maybe we should have a separated setup.sh that can just do the setup tasks. 
+    ## TODO: Above - Should we exit if libvirt restart does not work?
+    ## Maybe we should have a separated setup.sh that can just do the setup tasks.
   fi
 fi
 

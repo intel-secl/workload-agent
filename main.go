@@ -18,7 +18,6 @@ import (
 	"intel/isecl/wlagent/v4/config"
 	"intel/isecl/wlagent/v4/consts"
 	"intel/isecl/wlagent/v4/filewatch"
-	"intel/isecl/wlagent/v4/flavor"
 	wlrpc "intel/isecl/wlagent/v4/rpc"
 	"intel/isecl/wlagent/v4/setup"
 	"intel/isecl/wlagent/v4/util"
@@ -347,71 +346,6 @@ func main() {
 			os.Exit(0)
 		}
 
-	case "create-instance-trust-report":
-		if len(args[1:]) < 1 {
-			secLog.Infof("main:main() create-instance-trust-report, Invalid number of parameters, %s", message.InvalidInputProtocolViolation)
-			os.Exit(1)
-		}
-		secLog.Info("main:main()  wlagent create-instance-trust-report called")
-		conn, err := net.Dial("unix", rpcSocketFilePath)
-		if err != nil {
-			log.WithError(err).Errorf("main:main() create-instance-trust-report: failed to dial wlagent.sock, %s", message.BadConnection)
-			os.Exit(1)
-		}
-		defer conn.Close()
-
-		client := rpc.NewClient(conn)
-		defer client.Close()
-		var args = wlrpc.ManifestString{
-			Manifest: args[1],
-		}
-		var status bool
-		err = client.Call("VirtualMachine.CreateInstanceTrustReport", &args, &status)
-		if err != nil {
-			log.WithError(err).Error("main:main() create-instance-trust-report: Error while creating trust report")
-			os.Exit(1)
-		}
-		log.Info("main:main() create-instance-trust-report Successfully created trust report")
-		os.Exit(0)
-
-	case "fetch-flavor":
-		if len(args[1:]) < 1 {
-			secLog.Errorf("main:main() fetch-flavor: Invalid number of parameters, %s", message.InvalidInputProtocolViolation)
-			os.Exit(1)
-		}
-
-		conn, err := net.Dial("unix", rpcSocketFilePath)
-		if err != nil {
-			secLog.WithError(err).Errorf("main:main() fetch-flavor: failed to dial wlagent.sock, %s", message.BadConnection)
-			os.Exit(1)
-		}
-		defer conn.Close()
-
-		// validate input
-		if err = validation.ValidateUUIDv4(args[1]); err != nil {
-			secLog.Errorf("main:main() fetch-flavor: %s, Invalid Image UUID format", message.InvalidInputBadParam)
-			os.Exit(1)
-		}
-
-		client := rpc.NewClient(conn)
-		defer client.Close()
-		var outFlavor flavor.OutFlavor
-		var args = wlrpc.FlavorInfo{
-			ImageID: args[1],
-		}
-
-		err = client.Call("VirtualMachine.FetchFlavor", &args, &outFlavor)
-		if err != nil {
-			log.Error("main:main() fetch-flavor: Client call failed")
-			log.Tracef("%+v", err)
-		}
-		if !outFlavor.ReturnCode {
-			os.Exit(1)
-		} else {
-			fmt.Print(outFlavor.ImageFlavor)
-			os.Exit(0)
-		}
-
 	case "fetch-key-url":
 		if len(args[1:]) < 1 {
 			secLog.Errorf("main:main() fetch-key-url: Invalid number of parameters, %s", message.InvalidInputProtocolViolation)
@@ -449,17 +383,6 @@ func main() {
 	case "uninstall":
 		config.LogConfiguration(false)
 
-		_, err := os.Stat(consts.OptDirPath + "secure-docker-daemon")
-		if err == nil {
-			removeSecureDockerDaemon()
-
-			// restart docker daemon
-			commandArgs := []string{"start", "docker"}
-			_, err = exec.ExecuteCommand("systemctl", commandArgs)
-			if err != nil {
-				fmt.Print("Error starting docker daemon post-uninstall. Refer dockerd logs for more information.")
-			}
-		}
 		stop()
 		removeservice()
 
@@ -482,18 +405,6 @@ func main() {
 	case "help", "-help", "--help":
 		config.LogConfiguration(false)
 		printUsage()
-	}
-}
-
-func removeSecureDockerDaemon() {
-	log.Trace("main/main:removeSecureDockerDaemon() Entering")
-	defer log.Trace("main/main:removeSecureDockerDaemon() Leaving")
-
-	commandArgs := []string{consts.OptDirPath + "secure-docker-daemon/uninstall-container-security-dependencies.sh"}
-
-	_, err := exec.ExecuteCommand("/bin/bash", commandArgs)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
 	}
 }
 
