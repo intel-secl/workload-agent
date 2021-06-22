@@ -61,16 +61,6 @@ cd workload-agent
 make installer
 ```
 
-### Build installer without the secure docker daemon
-### This is used for Skopeo encryption and Cri-o decryption for container confidentiality.
-### Note: This installer should also be used if exclusively using ISecL for virtual machine confidentiality.
-
-```shell
-git clone https://github.com/intel-secl/workload-agent.git
-cd workload-policy-manager
-make installer-no-docker
-```
-
 # Build Instructions for container image
 1. cd `workload-agent`
 2. `make oci-archive`
