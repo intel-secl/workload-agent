@@ -11,4 +11,11 @@ COPY dist/docker/entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh && touch /.container-env
 
+#Copy upgrade scripts
+COPY out/upgrades/container_upgrade.sh /container_upgrade.sh
+COPY out/upgrades/config_upgrade.sh /config_upgrade.sh
+COPY upgrades/config/* /config/
+
+RUN chmod -R +x /container_upgrade.sh /config_upgrade.sh /config
+
 CMD ["/entrypoint.sh"]
