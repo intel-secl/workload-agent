@@ -4,8 +4,7 @@ COMPONENT_NAME=workload-agent
 BINARY_NAME=wlagent
 
 if [ -f "/.container-env" ]; then
-  source /etc/secret-volume/secrets.txt
-  export BEARER_TOKEN
+  set -a; source /etc/secret-volume/secrets.txt; set +a;
   ln -sfT /usr/bin/$BINARY_NAME /$BINARY_NAME
 fi
 
