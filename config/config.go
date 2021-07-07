@@ -274,20 +274,20 @@ func LogConfiguration(isStdOut bool) {
 	var err error
 	secLogFile, err := os.OpenFile(consts.SecurityLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0640)
 	if err != nil {
-		log.Errorf("config/config:LogConfiguration() error in opening a security log file")
+		log.Error("config/config:LogConfiguration() error in opening a security log file")
 	}
 	err = os.Chmod(consts.SecurityLogFile, 0640)
 	if err != nil {
-		log.Errorf("config/config:LogConfiguration() error in setting file permission for file : %s", secLogFile)
+		log.Errorf("config/config:LogConfiguration() error in setting file permission for file : %s", consts.SecurityLogFile)
 	}
 
 	defaultLogFile, err := os.OpenFile(consts.DefaultLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0640)
 	if err != nil {
-		log.Errorf("config/config:LogConfiguration() error in opening a default log file")
+		log.Error("config/config:LogConfiguration() error in opening a default log file")
 	}
 	err = os.Chmod(consts.DefaultLogFile, 0640)
 	if err != nil {
-		log.Errorf("config/config:LogConfiguration() error in setting file permission for file : %s", defaultLogFile)
+		log.Errorf("config/config:LogConfiguration() error in setting file permission for file : %s", consts.DefaultLogFile)
 	}
 
 	ioWriterDefault = defaultLogFile
