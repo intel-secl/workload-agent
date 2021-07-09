@@ -83,6 +83,27 @@ fi
 # Make sure that we are running in the same directory as the install script
 cd "$(dirname "$0")"
 
+# load installer environment file, if present
+# TODO: ISECL-8364 Resolve flow/steps for using 'env' files when installing workload-agent
+if [ -f ~/trustagent.env ]; then
+  echo "Loading environment variables from $(cd ~ && pwd)/trustagent.env"
+  . ~/trustagent.env
+  env_file_exports=$(cat ~/trustagent.env | grep -E '^[A-Z0-9_]+\s*=' | cut -d = -f 1)
+  if [ -n "$env_file_exports" ]; then eval export $env_file_exports; fi
+else
+  echo "trustagent.env not found. Using existing exported variables or default ones"
+fi
+
+export LOG_LEVEL=${LOG_LEVEL:-"info"}
+
+auto_install() {
+  local component=${1}
+  local cprefix=${2}
+  local yum_packages=$(eval "echo \$${cprefix}_YUM_PACKAGES")
+  # detect available package management tools. start with the less likely ones to differentiate.
+  yum -y install $yum_packages
+}
+
 COMPONENT_NAME=wlagent
 # Upgrade if component is already installed
 if command -v $COMPONENT_NAME &>/dev/null; then
@@ -104,27 +125,6 @@ if command -v $COMPONENT_NAME &>/dev/null; then
   echo "Exiting the installation.."
   exit 0
 fi
-
-# load installer environment file, if present
-# TODO: ISECL-8364 Resolve flow/steps for using 'env' files when installing workload-agent
-if [ -f ~/trustagent.env ]; then
-  echo "Loading environment variables from $(cd ~ && pwd)/trustagent.env"
-  . ~/trustagent.env
-  env_file_exports=$(cat ~/trustagent.env | grep -E '^[A-Z0-9_]+\s*=' | cut -d = -f 1)
-  if [ -n "$env_file_exports" ]; then eval export $env_file_exports; fi
-else
-  echo "trustagent.env not found. Using existing exported variables or default ones"
-fi
-
-export LOG_LEVEL=${LOG_LEVEL:-"info"}
-
-auto_install() {
-  local component=${1}
-  local cprefix=${2}
-  local yum_packages=$(eval "echo \$${cprefix}_YUM_PACKAGES")
-  # detect available package management tools. start with the less likely ones to differentiate.
-  yum -y install $yum_packages
-}
 
 # SCRIPT EXECUTION
 
