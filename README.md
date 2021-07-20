@@ -17,7 +17,7 @@
 ## Software requirements
 - git
 - makeself
-- `go` version >= `go1.12.1` & <= `go1.14.4`
+- `go` version 1.14.4
 - docker 18.06 or higher
 - libvirt
 - cryptsetup
@@ -34,8 +34,8 @@
 sudo yum install -y git wget makeself
 ```
 
-### Install `go` version >= `go1.12.1` & <= `go1.14.4`
-The `Workload Agent` requires Go version 1.12.1 that has support for `go modules`. The build was validated with the latest version go1.14.4 of `go`. It is recommended that you use go1.14.4 version of `go`. You can use the following to install `go`.
+### Install `go` version 1.14.4
+The `Workload Agent` requires Go version 1.14.4 that has support for `go modules`. The build was validated with the latest version go1.14.4 of `go`. It is recommended that you use go1.14.4 version of `go`. You can use the following to install `go`.
 ```shell
 wget https://dl.google.com/go/go1.14.4.linux-amd64.tar.gz
 tar -xzf go1.14.4.linux-amd64.tar.gz
