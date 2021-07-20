@@ -9,8 +9,8 @@ ifeq ($(PROXY_EXISTS),1)
 else
 	undefine DOCKER_PROXY_FLAGS
 endif
-MONOREPO_GITURL := "https://gitlab.devtools.intel.com/sst/isecl/intel-secl.git"
-MONOREPO_GITBRANCH := "v4.0/develop"
+MONOREPO_GITURL := "https://github.com/intel-secl/intel-secl.git"
+MONOREPO_GITBRANCH := "v4.0.0"
 
 .PHONY: wlagent, installer, all, clean, vmc-only
 

@@ -15,12 +15,11 @@ require (
 )
 
 replace (
-	github.com/intel-secl/intel-secl/v4 => gitlab.devtools.intel.com/sst/isecl/intel-secl.git/v4 v4.0/develop
 	github.com/vmware/govmomi => github.com/arijit8972/govmomi fix-tpm-attestation-output
-	intel/isecl/lib/common/v4 => gitlab.devtools.intel.com/sst/isecl/lib/common.git/v4 v4.0/develop
-	intel/isecl/lib/flavor/v4 => gitlab.devtools.intel.com/sst/isecl/lib/flavor.git/v4 v4.0/develop
-	intel/isecl/lib/platform-info/v4 => gitlab.devtools.intel.com/sst/isecl/lib/platform-info.git/v4 v4.0/develop
-	intel/isecl/lib/tpmprovider/v4 => gitlab.devtools.intel.com/sst/isecl/lib/tpm-provider.git/v4 v4.0/develop
-	intel/isecl/lib/verifier/v4 =>  gitlab.devtools.intel.com/sst/isecl/lib/verifier.git/v4 v4.0/develop
-	intel/isecl/lib/vml/v4 => gitlab.devtools.intel.com/sst/isecl/lib/volume-management.git/v4 v4.0/develop
+	intel/isecl/lib/common/v4 => github.com/intel-secl/common/v4 v4.0.0
+	intel/isecl/lib/flavor/v4 => github.com/intel-secl/flavor/v4 v4.0.0
+	intel/isecl/lib/platform-info/v4 => github.com/intel-secl/platform-info/v4 v4.0.0
+	intel/isecl/lib/tpmprovider/v4 => github.com/intel-secl/tpm-provider/v4 v4.0.0
+	intel/isecl/lib/verifier/v4 =>  github.com/intel-secl/verifier/v4 v4.0.0
+	intel/isecl/lib/vml/v4 => github.com/intel-secl/volume-management-library/v4 v4.0.0
 )
