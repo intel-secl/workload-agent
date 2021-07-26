@@ -16,7 +16,7 @@ MONOREPO_GITBRANCH := "v4.1/develop"
 
 wlagent:
 	export CGO_CFLAGS_ALLOW="-f.*"; \
-	env GOOS=linux GOSUMDB=off GOPROXY=direct go build -ldflags "-X main.Version=$(VERSION) -X main.GitHash=$(GITCOMMIT) -X main.BuildDate=$(BUILDDATE)"  -o out/wlagent main.go
+	env GOOS=linux GOSUMDB=off GOPROXY=direct go build -ldflags "-extldflags=-Wl,--allow-multiple-definition -X main.Version=$(VERSION) -X main.GitHash=$(GITCOMMIT) -X main.BuildDate=$(BUILDDATE)"  -o out/wlagent main.go
 
 installer: wlagent download_upgrade_scripts
 	mkdir -p out/wla

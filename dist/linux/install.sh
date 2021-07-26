@@ -108,19 +108,18 @@ COMPONENT_NAME=wlagent
 # Upgrade if component is already installed
 if command -v $COMPONENT_NAME &>/dev/null; then
   n=0
-  until [ "$n" -ge 3 ]
-  do
-  echo "$COMPONENT_NAME is already installed, Do you want to proceed with the upgrade? [y/n]"
-  read UPGRADE_NEEDED
-  if [ $UPGRADE_NEEDED == "y" ] || [ $UPGRADE_NEEDED == "Y" ] ; then
-    echo "Proceeding with the upgrade.."
-    ./${COMPONENT_NAME}_upgrade.sh
-    exit $?
-  elif [ $UPGRADE_NEEDED == "n" ] || [ $UPGRADE_NEEDED == "N" ] ; then
-    echo "Exiting the installation.."
-    exit 0
-  fi
-  n=$((n+1))
+  until [ "$n" -ge 3 ]; do
+    echo "$COMPONENT_NAME is already installed, Do you want to proceed with the upgrade? [y/n]"
+    read UPGRADE_NEEDED
+    if [ $UPGRADE_NEEDED == "y" ] || [ $UPGRADE_NEEDED == "Y" ]; then
+      echo "Proceeding with the upgrade.."
+      ./${COMPONENT_NAME}_upgrade.sh
+      exit $?
+    elif [ $UPGRADE_NEEDED == "n" ] || [ $UPGRADE_NEEDED == "N" ]; then
+      echo "Exiting the installation.."
+      exit 0
+    fi
+    n=$((n + 1))
   done
   echo "Exiting the installation.."
   exit 0
@@ -241,9 +240,6 @@ cp -f wlagent $WORKLOAD_AGENT_BIN
 chown $TRUSTAGENT_USERNAME:$TRUSTAGENT_USERNAME $WORKLOAD_AGENT_BIN/wlagent
 ln -sfT $WORKLOAD_AGENT_BIN/wlagent /usr/local/bin/wlagent
 
-cp -f wlagent.service $WORKLOAD_AGENT_HOME
-systemctl enable $WORKLOAD_AGENT_HOME/wlagent.service
-
 # exit workload-agent setup if WORKLOAD_AGENT_NOSETUP is set
 if [ "$WORKLOAD_AGENT_NOSETUP" == "true" ]; then
   echo "$WORKLOAD_AGENT_NOSETUP is set. So, skipping the workload-agent setup task."
@@ -316,14 +312,23 @@ else
   exit 1
 fi
 
-# Enable systemd service and start it
-systemctl start wlagent
-
 if [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "y" ] || [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "Y" ] || [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "yes" ]; then
-  isinstalled=$(rpm -q cri-o)
-  if [ "$isinstalled" == "package cri-o is not installed" ]; then
-    echo_warning "Prerequisite cri-o is not installed, please install cri-o runtime before proceeding with container confidentiality"
+  #CRIO_VERSION=$(crio -v | grep -w Version)
+  REQUIRED_CRIO_VERSION=1210 #crio-1.21.0
+  which crio 2>/dev/null
+  if [ $? != 0 ]; then
+    echo_failure "Prerequisite cri-o v1.21.0 is not installed, please install cri-o v1.21.0 container runtime. Exiting..."
+    exit 1
+  else
+    CRIO_VERSION=$(crio -v | grep -w Version | cut -d':' -f2 | xargs | sed 's/\.//g')
+    if [ $CRIO_VERSION -lt $REQUIRED_CRIO_VERSION ]; then
+      echo_failure "Prerequisite cri-o installed version: $(crio -v | grep -w Version | cut -d':' -f2 | xargs), please install cri-o >=v1.21.0 container runtime. Exiting..."
+      exit 1
+    fi
   fi
+
+  sed -i "s/runservice/rungrpcservice/g" wlagent.service
+  mkdir /var/run/workload-agent/
 else
   yum_packages=(libvirt cryptsetup)
   for i in ${yum_packages[*]}; do
@@ -353,7 +358,13 @@ else
     ## TODO: Above - Should we exit if libvirt restart does not work?
     ## Maybe we should have a separated setup.sh that can just do the setup tasks.
   fi
-fi
+fiecvh
+
+cp -f wlagent.service $WORKLOAD_AGENT_HOME
+systemctl enable $WORKLOAD_AGENT_HOME/wlagent.service
+
+# Enable systemd service and start it
+systemctl start wlagent
 
 if [ $setup_complete -ne 0 ]; then
   echo_failure "Installation completed completed with errors. Please check log file"

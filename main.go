@@ -5,9 +5,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	keyproviderpb "github.com/containers/ocicrypt/utils/keyprovider"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 	"intel/isecl/lib/common/v4/exec"
 	cLog "intel/isecl/lib/common/v4/log"
 	"intel/isecl/lib/common/v4/log/message"
@@ -18,13 +21,16 @@ import (
 	"intel/isecl/wlagent/v4/config"
 	"intel/isecl/wlagent/v4/consts"
 	"intel/isecl/wlagent/v4/filewatch"
+	kpgrpc "intel/isecl/wlagent/v4/keyprovider-grpc"
 	wlrpc "intel/isecl/wlagent/v4/rpc"
 	"intel/isecl/wlagent/v4/setup"
 	"intel/isecl/wlagent/v4/util"
 	"net"
 	"net/rpc"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -213,6 +219,9 @@ func main() {
 
 	case "runservice":
 		runservice()
+
+	case "rungrpcservice":
+		runGRPCService()
 
 	case "start":
 		start()
@@ -561,4 +570,58 @@ func runservice() {
 		log.WithError(err).Error("main:runservice() Error while clean up")
 	}
 	secLog.Info(message.ServiceStop)
+}
+
+func runGRPCService() {
+
+	RPCSocketFilePath := consts.RunDirPath + consts.RPCSocketFileName
+	// When the socket is closed, the file handle on the socket file isn't handled.
+	// This code is added to manually remove any stale socket file before the connection
+	// is reopened; prevent error: bind address already in use
+	// ensure that the socket file exists before removal
+	if _, err := os.Stat(RPCSocketFilePath); err == nil {
+		err = os.Remove(RPCSocketFilePath)
+		if err != nil {
+			log.WithError(err).Error("main:runGRPCService() Failed to remove socket file")
+			os.Exit(1)
+		}
+	}
+
+	serverAddr, err := net.ResolveUnixAddr("unix", RPCSocketFilePath)
+	if err != nil {
+		log.Errorf("Error while creating unix socket address %v", err)
+		os.Exit(1)
+	}
+
+	lis, err := net.ListenUnix("unix", serverAddr)
+	if err != nil {
+		log.Errorf("Error while listening to unix socket %v", err)
+		os.Exit(1)
+	}
+
+	s := grpc.NewServer()
+	if s == nil {
+		log.Errorf("Error creating grpc server")
+		os.Exit(1)
+	}
+	keyproviderpb.RegisterKeyProviderServiceServer(s, &kpgrpc.GRPCServer{})
+
+	stop := make(chan os.Signal)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	// dispatch grpc go routine
+	go func() {
+		if err := s.Serve(lis); err != nil {
+			log.WithError(err).Fatal("main:runGRPCService() Failed to start GRPC server")
+			stop <- syscall.SIGTERM
+		}
+	}()
+
+	log.Info(message.ServiceStart)
+	<-stop
+	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	s.GracefulStop()
+
+	log.Info(message.ServiceStop)
+
 }
