@@ -358,7 +358,7 @@ else
     ## TODO: Above - Should we exit if libvirt restart does not work?
     ## Maybe we should have a separated setup.sh that can just do the setup tasks.
   fi
-fiecvh
+fi
 
 cp -f wlagent.service $WORKLOAD_AGENT_HOME
 systemctl enable $WORKLOAD_AGENT_HOME/wlagent.service
