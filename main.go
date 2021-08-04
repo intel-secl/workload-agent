@@ -538,7 +538,7 @@ func runservice() {
 		l, err := net.Listen("unix", RPCSocketFilePath)
 		if err != nil {
 			log.Error(err)
-			secLog.Errorf(message.AppRuntimeErr + " Failed to initialize up WLA Unix socket")
+			secLog.Error(message.AppRuntimeErr + " Failed to initialize up WLA Unix socket")
 			return
 		}
 		defer l.Close()
@@ -550,7 +550,7 @@ func runservice() {
 
 		err = r.Register(vm)
 		if err != nil {
-			log.WithError(err).Error("main:runservice() Unable to Register vm wathcer")
+			log.WithError(err).Error("main:runservice() Unable to Register vm watcher")
 			log.Tracef("%+v", err)
 			secLog.Info(message.AppRuntimeErr)
 			return
@@ -587,30 +587,36 @@ func runGRPCService() {
 		}
 	}
 
-	serverAddr, err := net.ResolveUnixAddr("unix", RPCSocketFilePath)
-	if err != nil {
-		log.Errorf("Error while creating unix socket address %v", err)
-		os.Exit(1)
+	if _, err := os.Stat(consts.RunDirPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(consts.RunDirPath, 0600); err != nil {
+			log.WithError(err).Fatalf("main:runGRPCService() Could not create directory: %s, err: %s", consts.RunDirPath, err)
+		}
 	}
 
-	lis, err := net.ListenUnix("unix", serverAddr)
+	l, err := net.Listen("unix", RPCSocketFilePath)
 	if err != nil {
-		log.Errorf("Error while listening to unix socket %v", err)
-		os.Exit(1)
+		log.Error(err)
+		secLog.Error(message.AppRuntimeErr + " Failed to initialize up WLA Unix socket")
+		return
 	}
+	defer l.Close()
 
 	s := grpc.NewServer()
 	if s == nil {
-		log.Errorf("Error creating grpc server")
+		log.Error("Error creating grpc server")
 		os.Exit(1)
 	}
 	keyproviderpb.RegisterKeyProviderServiceServer(s, &kpgrpc.GRPCServer{})
 
 	stop := make(chan os.Signal)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	_, err = proc.AddTask(false)
+	if err != nil {
+		log.WithError(err).Fatal("main:runGRPCService() could not add the task for rpc service")
+	}
 	// dispatch grpc go routine
 	go func() {
-		if err := s.Serve(lis); err != nil {
+		if err := s.Serve(l); err != nil {
 			log.WithError(err).Fatal("main:runGRPCService() Failed to start GRPC server")
 			stop <- syscall.SIGTERM
 		}
@@ -621,7 +627,11 @@ func runGRPCService() {
 	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	s.GracefulStop()
-
+	// block until stop channel receives
+	err = proc.WaitForQuitAndCleanup(10 * time.Second)
+	if err != nil {
+		log.WithError(err).Error("main:runGRPCService() Error while clean up")
+	}
 	log.Info(message.ServiceStop)
 
 }

@@ -328,7 +328,6 @@ if [ "$WA_WITH_CONTAINER_SECURITY_CRIO" == "y" ] || [ "$WA_WITH_CONTAINER_SECURI
   fi
 
   sed -i "s/runservice/rungrpcservice/g" wlagent.service
-  mkdir /var/run/workload-agent/
 else
   yum_packages=(libvirt cryptsetup)
   for i in ${yum_packages[*]}; do
