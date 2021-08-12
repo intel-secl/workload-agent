@@ -5,7 +5,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	keyproviderpb "github.com/containers/ocicrypt/utils/keyprovider"
@@ -616,6 +615,7 @@ func runGRPCService() {
 	}
 	// dispatch grpc go routine
 	go func() {
+		defer proc.TaskDone()
 		if err := s.Serve(l); err != nil {
 			log.WithError(err).Fatal("main:runGRPCService() Failed to start GRPC server")
 			stop <- syscall.SIGTERM
@@ -623,15 +623,13 @@ func runGRPCService() {
 	}()
 
 	log.Info(message.ServiceStart)
-	<-stop
-	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	s.GracefulStop()
 	// block until stop channel receives
 	err = proc.WaitForQuitAndCleanup(10 * time.Second)
 	if err != nil {
 		log.WithError(err).Error("main:runGRPCService() Error while clean up")
 	}
+	s.GracefulStop()
+
 	log.Info(message.ServiceStop)
 
 }
