@@ -15,6 +15,7 @@ MONOREPO_GITBRANCH := "v4.1/develop"
 .PHONY: wlagent, installer, all, clean, vmc-only
 
 wlagent:
+	env GOOS=linux GOSUMDB=off GOPROXY=direct go mod tidy
 	export CGO_CFLAGS_ALLOW="-f.*"; \
 	env GOOS=linux GOSUMDB=off GOPROXY=direct go build -ldflags "-extldflags=-Wl,--allow-multiple-definition -X main.Version=$(VERSION) -X main.GitHash=$(GITCOMMIT) -X main.BuildDate=$(BUILDDATE)"  -o out/wlagent main.go
 
