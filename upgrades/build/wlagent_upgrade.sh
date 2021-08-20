@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SERVICE_NAME=wlagent
-CURRENT_VERSION=v3.6.0
+CURRENT_VERSION=v3.6.1
 BACKUP_PATH=${BACKUP_PATH:-"/tmp/"}
 INSTALLED_EXEC_PATH="/opt/workload-agent/bin/$SERVICE_NAME"
 CONFIG_PATH="/etc/workload-agent/"

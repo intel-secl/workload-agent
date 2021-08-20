@@ -15,11 +15,12 @@ stages:
 
 build:gta:
   stage: build
-  image: gta-devel
+  image: golang:1.14
   tags:
-    - gta
+    - go
   script:
-    - make package
+    - apt -yq update && apt -yq install libtss2-dev libssl-dev makeself
+    - make installer
   artifacts:
     paths:
       - "out/workload-agent-*.bin"
@@ -29,15 +30,15 @@ Stylechecker:
   stage: scan
   only:
     - merge_requests
-  image: gta-devel
+  image: golang:1.14
   tags:
     - gta
   script:
     - gofmt -l .
     - |
-         if [ "$(gofmt -l . | wc -l)"  -gt 0 ]; then
-                exit 1
-         fi
+      if [ "$(gofmt -l . | wc -l)"  -gt 0 ]; then
+             exit 1
+      fi
     
 checkmarx:
   stage: scan
