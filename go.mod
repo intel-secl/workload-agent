@@ -17,7 +17,6 @@ require (
 )
 
 replace (
-	github.com/vmware/govmomi => github.com/arijit8972/govmomi fix-tpm-attestation-output
 	intel/isecl/lib/common/v4 => gitlab.devtools.intel.com/sst/isecl/lib/common.git/v4 v4.1/develop
 	intel/isecl/lib/flavor/v4 => gitlab.devtools.intel.com/sst/isecl/lib/flavor.git/v4 v4.1/develop
 	intel/isecl/lib/platform-info/v4 => gitlab.devtools.intel.com/sst/isecl/lib/platform-info.git/v4 v4.1/develop
