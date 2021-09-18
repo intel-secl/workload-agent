@@ -3,19 +3,16 @@
  
 FROM centos:8
 
-RUN yum install -y tpm2-tss dmidecode
-
 COPY out/wlagent /usr/bin/
-
 COPY dist/docker/entrypoint.sh /entrypoint.sh
-
-RUN chmod +x /entrypoint.sh && touch /.container-env
 
 #Copy upgrade scripts
 COPY out/upgrades/container_upgrade.sh /container_upgrade.sh
 COPY out/upgrades/config_upgrade.sh /config_upgrade.sh
 COPY upgrades/config/* /config/
 
-RUN chmod -R +x /container_upgrade.sh /config_upgrade.sh /config
+RUN yum install -y tpm2-tss dmidecode && \
+    rm -rf /var/cache /var/log/dnf* /var/log/yum.* && \
+    chmod -R +x /container_upgrade.sh /config_upgrade.sh /config /entrypoint.sh && touch /.container-env
 
 CMD ["/entrypoint.sh"]
