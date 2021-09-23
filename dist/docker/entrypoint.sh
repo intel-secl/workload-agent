@@ -45,4 +45,4 @@ if [ ! -z "$SETUP_TASK" ]; then
 fi
 
 unset AIK_SECRET
-wlagent runservice
+wlagent rungrpcservice
