@@ -1,9 +1,10 @@
 #!/bin/bash
 
-source /etc/secret-volume/secrets.txt
-export WLA_SERVICE_USERNAME
-export WLA_SERVICE_PASSWORD
-export BEARER_TOKEN
+SECRETS=/etc/secrets
+IFS=$'\r\n' GLOBIGNORE='*' command eval 'secretFiles=($(ls  $SECRETS))'
+for i in "${secretFiles[@]}"; do
+    export $i=$(cat $SECRETS/$i)
+done
 
 COMPONENT_NAME=workload-agent
 LOG_PATH=/var/log/$COMPONENT_NAME
@@ -45,4 +46,8 @@ if [ ! -z "$SETUP_TASK" ]; then
 fi
 
 unset AIK_SECRET
+for i in "${secretFiles[@]}"; do
+    unset $i
+done
+
 wlagent rungrpcservice
