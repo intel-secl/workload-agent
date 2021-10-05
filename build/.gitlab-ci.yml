@@ -15,29 +15,30 @@ stages:
 
 build:gta:
   stage: build
-  image: tpm-devel
+  image: golang:1.14
   tags:
-    - tpm-devel
+    - go
   script:
+    - apt -yq update && apt -yq install libtss2-dev libssl-dev makeself
     - make installer
   artifacts:
     paths:
       - "out/workload-agent-*.bin"
     expire_in: 1 week
 
-# Stylechecker:
-#   stage: scan
-#   only:
-#     - merge_requests
-#   image: gta-devel
-#   tags:
-#     - gta
-#   script:
-#     - gofmt -l .
-#     - |
-#          if [ "$(gofmt -l . | wc -l)"  -gt 0 ]; then
-#                 exit 1
-#          fi
+Stylechecker:
+  stage: scan
+  only:
+    - merge_requests
+  image: golang:1.14
+  tags:
+    - gta
+  script:
+    - gofmt -l .
+    - |
+      if [ "$(gofmt -l . | wc -l)"  -gt 0 ]; then
+             exit 1
+      fi
     
 # checkmarx:
 #   stage: scan
