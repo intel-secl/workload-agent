@@ -40,7 +40,7 @@ download_upgrade_scripts:
 	rm -rf tmp_monorepo
 
 oci-archive: wlagent download_upgrade_scripts
-	docker build ${DOCKER_PROXY_FLAGS} -t isecl/wlagent:$(VERSION) -f dist/docker/Dockerfile .
+	docker build ${DOCKER_PROXY_FLAGS} -t isecl/wlagent:$(VERSION) --label org.label-schema.build-date=$(BUILDDATE) -f dist/docker/Dockerfile .
 	skopeo copy docker-daemon:isecl/wlagent:$(VERSION) oci-archive:out/wlagent-$(VERSION)-$(GITCOMMIT).tar
 
 k8s: oci-archive

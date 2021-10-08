@@ -3,6 +3,11 @@
  
 FROM centos:8
 
+LABEL org.label-schema.name="Workload Agent" \
+      org.label-schema.vendor="Intel Corporation" \
+      org.label-schema.license="BSD-3-Clause" \
+      org.label-schema.url="https://github.com/intel-secl/intel-secl"
+
 COPY out/wlagent /usr/bin/
 COPY dist/docker/entrypoint.sh /entrypoint.sh
 
