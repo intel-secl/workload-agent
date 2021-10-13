@@ -25,9 +25,7 @@ build:gta:
     paths:
       - "out/workload-agent-*.bin"
     expire_in: 1 week
-    
-    
-    
+
 snykscan:
   stage: scan
   only:
@@ -46,10 +44,6 @@ snykscan:
   artifacts:
     paths:
       - snyc-scan.json
-    
-    
-
-    
 
 Stylechecker:
   stage: scan
