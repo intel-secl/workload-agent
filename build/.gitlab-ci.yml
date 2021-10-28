@@ -47,12 +47,13 @@ snykscan:
 
 Stylechecker:
   stage: scan
+  image: golang:1.16
   only:
     - merge_requests
-  image: golang:1.16
   tags:
-    - gta
+    - go
   script:
+    - GOOS=linux GOSUMDB=off GOPROXY=direct go mod tidy
     - gofmt -l .
     - |
       if [ "$(gofmt -l . | wc -l)"  -gt 0 ]; then
