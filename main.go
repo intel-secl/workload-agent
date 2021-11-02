@@ -354,40 +354,6 @@ func main() {
 			os.Exit(0)
 		}
 
-	case "fetch-key-url":
-		if len(args[1:]) < 1 {
-			secLog.Errorf("main:main() fetch-key-url: Invalid number of parameters, %s", message.InvalidInputProtocolViolation)
-			os.Exit(1)
-		}
-
-		conn, err := net.Dial("unix", rpcSocketFilePath)
-		if err != nil {
-			secLog.WithError(err).Errorf("main:main() fetch-key-url: failed to dial wlagent.sock, %s", message.BadConnection)
-			os.Exit(1)
-		}
-		defer conn.Close()
-
-		client := rpc.NewClient(conn)
-		defer client.Close()
-		var keyOut wlrpc.KeyOnly
-		var args = wlrpc.TransferURL{
-			URL: args[1],
-		}
-
-		err = client.Call("VirtualMachine.FetchKeyWithURL", &args, &keyOut)
-		if err != nil {
-			log.Error("main:main() fetch-key-url: Client call failed")
-			log.Tracef("%+v", err)
-			os.Exit(1)
-		}
-
-		retKey, err := json.Marshal(keyOut)
-		if err != nil {
-			log.Error("main:main() fetch-key-url while marshalling key")
-		}
-		fmt.Println(string(retKey))
-		os.Exit(0)
-
 	case "uninstall":
 		config.LogConfiguration(false)
 
