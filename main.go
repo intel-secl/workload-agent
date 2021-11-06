@@ -5,7 +5,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	keyproviderpb "github.com/containers/ocicrypt/utils/keyprovider"
 	"github.com/sirupsen/logrus"
@@ -70,7 +69,6 @@ func printUsage() {
 	fmt.Printf("    start                  Start wlagent\n")
 	fmt.Printf("    stop                   Stop wlagent\n")
 	fmt.Printf("    status                 Reports the status of wlagent service\n")
-	fmt.Printf("    fetch-key-url <keyUrl>      Fetch a key from the keyUrl\n")
 	fmt.Printf("    uninstall  [--purge]   Uninstall wlagent. --purge option needs to be applied to remove configuration and secureoverlay2 data files\n")
 	fmt.Printf("    setup [task]           Run setup task\n")
 	fmt.Printf("Available Tasks for setup:\n")
