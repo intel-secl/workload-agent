@@ -44,7 +44,6 @@ var (
 )
 
 func init() {
-	config.LogConfiguration(config.Configuration.LogEnableStdout)
 	log = cLog.GetDefaultLogger()
 	secLog = cLog.GetSecurityLogger()
 }
@@ -120,7 +119,6 @@ func main() {
 	}
 	switch arg := strings.ToLower(args[0]); arg {
 	case "--version", "-v":
-		config.LogConfiguration(false)
 		printVersion()
 
 	case "setup":
@@ -134,7 +132,7 @@ func main() {
 		// TODO : The right way to address this is to pass the arguments from the commandline
 		// to a function in the workload agent setup package and have it build a slice of tasks
 		// to run.
-		config.LogConfiguration(false)
+		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		var flags []string
 		if len(args) > 1 {
 			flags = args[2:]
@@ -215,9 +213,11 @@ func main() {
 		}
 
 	case "runservice":
+		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		runservice()
 
 	case "rungrpcservice":
+		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		runGRPCService()
 
 	case "start":
@@ -240,6 +240,7 @@ func main() {
 		}
 
 	case "start-vm":
+		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		if len(args[1:]) < 1 {
 			log.Errorf("main:main() start-vm: Invalid number of parameters %s", message.InvalidInputProtocolViolation)
 			os.Exit(1)
@@ -278,6 +279,7 @@ func main() {
 		}
 
 	case "prepare-vm":
+		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		if len(args[1:]) < 1 {
 			log.Errorf("main:main() prepare-vm: Invalid number of parameters %s", message.InvalidInputProtocolViolation)
 			os.Exit(1)
@@ -316,6 +318,7 @@ func main() {
 		}
 
 	case "stop-vm":
+		config.LogConfiguration(config.Configuration.LogEnableStdout)
 		if len(args[1:]) < 1 {
 			secLog.Errorf("main:main() stop-vm: Invalid number of parameters, %s", message.InvalidInputProtocolViolation)
 			os.Exit(1)
@@ -375,7 +378,6 @@ func main() {
 		fallthrough
 
 	case "help", "-help", "--help":
-		config.LogConfiguration(false)
 		printUsage()
 	}
 }
