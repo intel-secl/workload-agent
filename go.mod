@@ -21,6 +21,7 @@ replace (
 	intel/isecl/lib/flavor/v4 => github.com/intel-secl/flavor/v4 v4.1.0-Beta
 	intel/isecl/lib/platform-info/v4 => github.com/intel-secl/platform-info/v4 v4.1.0-Beta
 	intel/isecl/lib/tpmprovider/v4 => github.com/intel-secl/tpm-provider/v4 v4.1.0-Beta
-	intel/isecl/lib/verifier/v4 =>  github.com/intel-secl/verifier/v4 v4.1.0-Beta
+	intel/isecl/lib/verifier/v4 => github.com/intel-secl/verifier/v4 v4.1.0-Beta
 	intel/isecl/lib/vml/v4 => github.com/intel-secl/volume-management-library/v4 v4.1.0-Beta
+	github.com/intel-secl/intel-secl/v4 => github.com/intel-secl/intel-secl/v4 v4.1.0-Beta
 )
