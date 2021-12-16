@@ -10,7 +10,7 @@ else
 	undefine DOCKER_PROXY_FLAGS
 endif
 MONOREPO_GITURL := "https://github.com/intel-secl/intel-secl"
-MONOREPO_GITBRANCH := "v4.1.0-Beta"
+MONOREPO_GITBRANCH := "v4.1.0"
 
 .PHONY: wlagent, installer, all, clean, vmc-only
 
