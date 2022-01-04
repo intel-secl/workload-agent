@@ -1,6 +1,6 @@
 SHELL:=/bin/bash
 GITCOMMIT := $(shell git describe --always)
-VERSION := "v4.1.0"
+VERSION := "v4.2.0"
 BUILDDATE := $(shell TZ=UTC date +%Y-%m-%dT%H:%M:%S%z)
 PROXY_EXISTS := $(shell if [[ "${https_proxy}" || "${http_proxy}" ]]; then echo 1; else echo 0; fi)
 DOCKER_PROXY_FLAGS := ""
@@ -9,8 +9,8 @@ ifeq ($(PROXY_EXISTS),1)
 else
 	undefine DOCKER_PROXY_FLAGS
 endif
-MONOREPO_GITURL := "https://github.com/intel-secl/intel-secl"
-MONOREPO_GITBRANCH := "v4.1.0"
+MONOREPO_GITURL := "https://gitlab.devtools.intel.com/sst/isecl/intel-secl.git"
+MONOREPO_GITBRANCH := "v4.2/develop"
 
 .PHONY: wlagent, installer, all, clean, vmc-only
 
