@@ -7,7 +7,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.6.1
 	gopkg.in/yaml.v2 v2.3.0
-	intel/isecl/lib/common/v4 v4.0.1
+	intel/isecl/lib/common/v4 v4.0.2
 	intel/isecl/lib/platform-info/v4 v4.0.2
 	intel/isecl/lib/tpmprovider/v4 v4.0.2
 	intel/isecl/lib/verifier/v4 v4.0.2
@@ -15,11 +15,11 @@ require (
 )
 
 replace (
-	github.com/intel-secl/intel-secl/v4 => github.com/intel-innersource/applications.security.isecl.intel-secl/v4 v4.0.2/develop
-	intel/isecl/lib/common/v4 => github.com/intel-innersource/libraries.security.isecl.common/v4 v4.0.2/develop
-	intel/isecl/lib/flavor/v4 => github.com/intel-innersource/libraries.security.isecl.flavor/v4 v4.0.2/develop
-	intel/isecl/lib/platform-info/v4 => github.com/intel-innersource/libraries.security.isecl.platform-info/v4 v4.0.2/develop
-	intel/isecl/lib/tpmprovider/v4 => github.com/intel-innersource/libraries.security.isecl.tpm-provider/v4 v4.0.2/develop
-	intel/isecl/lib/verifier/v4 =>  github.com/intel-innersource/libraries.security.isecl.verifier/v4 v4.0.2/develop
-	intel/isecl/lib/vml/v4 => github.com/intel-innersource/libraries.security.isecl.volume-management/v4 v4.0.2/develop
+	intel/isecl/lib/common/v4 => github.com/intel-secl/common/v4 v4.0.2
+	intel/isecl/lib/flavor/v4 => github.com/intel-secl/flavor/v4 v4.0.2
+	intel/isecl/lib/platform-info/v4 => github.com/intel-secl/platform-info/v4 v4.0.2
+	intel/isecl/lib/tpmprovider/v4 => github.com/intel-secl/tpm-provider/v4 v4.0.2
+	intel/isecl/lib/verifier/v4 => github.com/intel-secl/verifier/v4 v4.0.2
+	intel/isecl/lib/vml/v4 => github.com/intel-secl/volume-management-library/v4 v4.0.2
+	github.com/intel-secl/intel-secl/v4 => github.com/intel-secl/intel-secl/v4 v4.0.2
 )
